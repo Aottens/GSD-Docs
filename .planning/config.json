@@ -1,0 +1,21 @@
+{
+  "mode": "yolo",
+  "depth": "comprehensive",
+  "parallelization": {
+    "enabled": true,
+    "plan_level": true,
+    "max_concurrent_agents": 4,
+    "min_plans_for_parallel": 2
+  },
+  "gates": {
+    "confirm_project": false,
+    "confirm_phases": false,
+    "confirm_roadmap": true,
+    "execute_next_plan": false,
+    "verify_before_next_phase": true
+  },
+  "safety": {
+    "always_confirm_destructive": true,
+    "always_confirm_external_services": true
+  }
+}
