@@ -24,10 +24,10 @@ Phases 1-3 are the minimum viable pipeline. After Phase 3, an engineer can run t
 **Plans:** 4 plans
 
 Plans:
-- [ ] 01-01-PLAN.md -- Plugin directory structure + CLAUDE-CONTEXT.md + shared references
-- [ ] 01-02-PLAN.md -- ROADMAP templates (4 types) + planning artifact templates
-- [ ] 01-03-PLAN.md -- /doc:new-fds command + workflow (core deliverable)
-- [ ] 01-04-PLAN.md -- End-to-end verification checkpoint
+- [x] 01-01-PLAN.md -- Plugin directory structure + CLAUDE-CONTEXT.md + shared references
+- [x] 01-02-PLAN.md -- ROADMAP templates (4 types) + planning artifact templates
+- [x] 01-03-PLAN.md -- /doc:new-fds command + workflow (core deliverable)
+- [x] 01-04-PLAN.md -- End-to-end verification checkpoint
 
 **Success Criteria:**
 
@@ -177,7 +177,7 @@ Plans:
 
 | Phase | Name | Requirements | Status |
 |-------|------|:------------:|--------|
-| 1 | Framework Foundation + /doc:new-fds | 12 | Pending |
+| 1 | Framework Foundation + /doc:new-fds | 12 | ✓ Complete |
 | 2 | Discuss + Plan Commands | 14 | Pending |
 | 3 | Write + Verify (Core Value) | 15 | Pending |
 | 4 | State Management + Recovery + Dynamic ROADMAP | 9 | Pending |
@@ -188,4 +188,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-07*
+*Last updated: 2026-02-07 — Phase 1 complete*

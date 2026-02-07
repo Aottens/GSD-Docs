@@ -7,13 +7,13 @@
 
 ### Project Initialization
 
-- [ ] **INIT-01**: `/doc:new-fds` classifies project as Type A, B, C, or D based on user responses
-- [ ] **INIT-02**: `/doc:new-fds` generates appropriate ROADMAP.md based on project type (6 phases Type A, 4-5 Type B, 3-4 Type C, 2 Type D)
-- [ ] **INIT-03**: `/doc:new-fds` creates PROJECT.md with project config (name, type, client, standards settings, language)
-- [ ] **INIT-04**: `/doc:new-fds` creates REQUIREMENTS.md with functional requirements derived from project scope
-- [ ] **INIT-05**: `/doc:new-fds` creates STATE.md initialized at Phase 1
-- [ ] **INIT-06**: `/doc:new-fds` scaffolds folder structure (.planning/, output/, diagrams/, export/)
-- [ ] **INIT-07**: For Type C/D projects, `/doc:new-fds` generates BASELINE.md capturing existing system as immutable reference
+- [x] **INIT-01**: `/doc:new-fds` classifies project as Type A, B, C, or D based on user responses
+- [x] **INIT-02**: `/doc:new-fds` generates appropriate ROADMAP.md based on project type (6 phases Type A, 4-5 Type B, 3-4 Type C, 2 Type D)
+- [x] **INIT-03**: `/doc:new-fds` creates PROJECT.md with project config (name, type, client, standards settings, language)
+- [x] **INIT-04**: `/doc:new-fds` creates REQUIREMENTS.md with functional requirements derived from project scope
+- [x] **INIT-05**: `/doc:new-fds` creates STATE.md initialized at Phase 1
+- [x] **INIT-06**: `/doc:new-fds` scaffolds folder structure (.planning/, output/, diagrams/, export/)
+- [x] **INIT-07**: For Type C/D projects, `/doc:new-fds` generates BASELINE.md capturing existing system as immutable reference
 - [ ] **INIT-08**: Dynamic ROADMAP evolution after System Overview phase — when >5 units identified, propose expanded phase grouping (3-5 units per phase, max 7)
 - [ ] **INIT-09**: User can accept, adjust, or reject proposed ROADMAP expansion
 
@@ -129,12 +129,12 @@
 
 ### Plugin Infrastructure
 
-- [ ] **PLUG-01**: All commands registered as .md files in `~/.claude/commands/doc/` with proper frontmatter
-- [ ] **PLUG-02**: Supporting files (references, templates) in `~/.claude/gsd-docs-industrial/`
+- [x] **PLUG-01**: All commands registered as .md files in `~/.claude/commands/doc/` with proper frontmatter
+- [x] **PLUG-02**: Supporting files (references, templates) in `~/.claude/gsd-docs-industrial/`
 - [ ] **PLUG-03**: Subagent definitions for doc-writer, doc-verifier, doc-planner, doc-researcher
-- [ ] **PLUG-04**: @-reference pattern for context injection from templates and references
-- [ ] **PLUG-05**: Configurable output language (Dutch/English) via PROJECT.md setting
-- [ ] **PLUG-06**: GSD-Docs runs alongside GSD without interference (separate /doc: namespace)
+- [x] **PLUG-04**: @-reference pattern for context injection from templates and references
+- [x] **PLUG-05**: Configurable output language (Dutch/English) via PROJECT.md setting
+- [x] **PLUG-06**: GSD-Docs runs alongside GSD without interference (separate /doc: namespace)
 
 ## v2 Requirements
 
@@ -162,13 +162,13 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INIT-01 | Phase 1 | Pending |
-| INIT-02 | Phase 1 | Pending |
-| INIT-03 | Phase 1 | Pending |
-| INIT-04 | Phase 1 | Pending |
-| INIT-05 | Phase 1 | Pending |
-| INIT-06 | Phase 1 | Pending |
-| INIT-07 | Phase 1 | Pending |
+| INIT-01 | Phase 1 | Complete |
+| INIT-02 | Phase 1 | Complete |
+| INIT-03 | Phase 1 | Complete |
+| INIT-04 | Phase 1 | Complete |
+| INIT-05 | Phase 1 | Complete |
+| INIT-06 | Phase 1 | Complete |
+| INIT-07 | Phase 1 | Complete |
 | INIT-08 | Phase 4 | Pending |
 | INIT-09 | Phase 4 | Pending |
 | DISC-01 | Phase 2 | Pending |
@@ -245,12 +245,12 @@
 | EXPT-04 | Phase 7 | Pending |
 | EXPT-05 | Phase 7 | Pending |
 | EXPT-06 | Phase 7 | Pending |
-| PLUG-01 | Phase 1 | Pending |
-| PLUG-02 | Phase 1 | Pending |
+| PLUG-01 | Phase 1 | Complete |
+| PLUG-02 | Phase 1 | Complete |
 | PLUG-03 | Phase 3 | Pending |
-| PLUG-04 | Phase 1 | Pending |
-| PLUG-05 | Phase 1 | Pending |
-| PLUG-06 | Phase 1 | Pending |
+| PLUG-04 | Phase 1 | Complete |
+| PLUG-05 | Phase 1 | Complete |
+| PLUG-06 | Phase 1 | Complete |
 
 **Coverage:**
 - v1 requirements: 89 total
@@ -259,4 +259,4 @@
 
 ---
 *Requirements defined: 2026-02-06*
-*Last updated: 2026-02-06 after initial definition*
+*Last updated: 2026-02-07 — Phase 1 requirements marked Complete*
