@@ -48,6 +48,8 @@ Progress: ██░░░░░░░░ ~14%
 - SUMMARY.md existence is completion proof, not STATE.md status (2026-02-07)
 - Command files tracked in plugin repo under commands/ for version control (2026-02-07)
 - Phase 1 verified complete through automated checks + human approval (2026-02-07)
+- Plugin files live in project repo, installed via directory junctions (install.ps1) — no admin required (2026-02-07)
+- GitHub remote: https://github.com/Aottens/GSD-Docs.git — push after each phase (2026-02-07)
 
 ## Blockers
 
@@ -56,8 +58,8 @@ Progress: ██░░░░░░░░ ~14%
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Phase 1 verified complete -- all 12 requirements marked Complete
-Resume file: None (begin Phase 2)
+Stopped at: Phase 1 complete + restructured to project repo + pushed to GitHub
+Resume file: .planning/phases/01-framework-foundation/.continue-here.md
 
 ---
 *Last updated: 2026-02-07*
