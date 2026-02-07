@@ -51,6 +51,14 @@ Plans:
 
 **Requirements:** DISC-01, DISC-02, DISC-03, DISC-04, DISC-06, PLAN-01, PLAN-02, PLAN-03, PLAN-04, PLAN-05, TMPL-01, TMPL-02, TMPL-03, TMPL-04
 
+**Plans:** 4 plans
+
+Plans:
+- [ ] 02-01-PLAN.md -- FDS section templates (equipment module, state machine, interface) + CONTEXT.md template
+- [ ] 02-02-PLAN.md -- /doc:discuss-phase command + workflow
+- [ ] 02-03-PLAN.md -- /doc:plan-phase command + workflow
+- [ ] 02-04-PLAN.md -- End-to-end verification checkpoint
+
 **Success Criteria:**
 
 1. Engineer runs `/doc:discuss-phase N` and receives gray area questions grouped by topic and specific to the phase content type (equipment: capacities/tolerances/failure modes, interfaces: protocols/rates, HMI: layout/navigation, safety: risk categories) -- items marked "Claude's Discretion" are documented but not asked
@@ -188,4 +196,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-07 — Phase 1 complete*
+*Last updated: 2026-02-07 -- Phase 2 planned*
