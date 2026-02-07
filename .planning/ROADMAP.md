@@ -21,6 +21,14 @@ Phases 1-3 are the minimum viable pipeline. After Phase 3, an engineer can run t
 
 **Requirements:** INIT-01, INIT-02, INIT-03, INIT-04, INIT-05, INIT-06, INIT-07, PLUG-01, PLUG-02, PLUG-04, PLUG-05, PLUG-06
 
+**Plans:** 4 plans
+
+Plans:
+- [ ] 01-01-PLAN.md -- Plugin directory structure + CLAUDE-CONTEXT.md + shared references
+- [ ] 01-02-PLAN.md -- ROADMAP templates (4 types) + planning artifact templates
+- [ ] 01-03-PLAN.md -- /doc:new-fds command + workflow (core deliverable)
+- [ ] 01-04-PLAN.md -- End-to-end verification checkpoint
+
 **Success Criteria:**
 
 1. Engineer runs `/doc:new-fds`, answers classification questions, and sees the project correctly classified as Type A, B, C, or D with the corresponding ROADMAP template generated (6 phases for Type A, 4-5 for B, 3-4 for C, 2 for D)
@@ -180,4 +188,4 @@ Phases 1-3 are the minimum viable pipeline. After Phase 3, an engineer can run t
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-06*
+*Last updated: 2026-02-07*
