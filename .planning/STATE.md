@@ -10,23 +10,23 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 - Phase: 1 of 7 (Framework Foundation + /doc:new-fds)
-- Plan: 1 of 4 in phase
+- Plan: 2 of 4 in phase
 - Status: In progress
-- Last activity: 2026-02-07 - Completed 01-01-PLAN.md (Plugin directory + CLAUDE-CONTEXT.md)
+- Last activity: 2026-02-07 - Completed 01-02-PLAN.md (Scaffold templates)
 
 ## Progress
 
-Progress: █░░░░░░░░░ ~4%
+Progress: ██░░░░░░░░ ~7%
 
 | Phase | Name | Plans | Status |
 |-------|------|-------|--------|
-| 1 | Framework Foundation + /doc:new-fds | 1/4 | ◆ In Progress |
-| 2 | Discuss + Plan Commands | -/- | ○ Pending |
-| 3 | Write + Verify (Core Value) | -/- | ○ Pending |
-| 4 | State Management + Recovery | -/- | ○ Pending |
-| 5 | Complete-FDS + Standards | -/- | ○ Pending |
-| 6 | Knowledge Transfer + Review | -/- | ○ Pending |
-| 7 | SDS Generation + Export | -/- | ○ Pending |
+| 1 | Framework Foundation + /doc:new-fds | 2/4 | In Progress |
+| 2 | Discuss + Plan Commands | -/- | Pending |
+| 3 | Write + Verify (Core Value) | -/- | Pending |
+| 4 | State Management + Recovery | -/- | Pending |
+| 5 | Complete-FDS + Standards | -/- | Pending |
+| 6 | Knowledge Transfer + Review | -/- | Pending |
+| 7 | SDS Generation + Export | -/- | Pending |
 
 ## Decisions
 
@@ -38,6 +38,9 @@ Progress: █░░░░░░░░░ ~4%
 - CLAUDE-CONTEXT.md uses XML section tags for semantic grouping (2026-02-07)
 - DOC > prefix for all stage banners, never GSD > (2026-02-07)
 - writing-guidelines.md kept minimal for Phase 3 expansion (2026-02-07)
+- Standalone templates per type, not base+overlay -- each type has genuinely different phase structures (2026-02-07)
+- BASELINE.md INSTRUCTIE bilingual Dutch+English as safety-critical directive (2026-02-07)
+- Templates define structure only (44-109 lines), command fills content (2026-02-07)
 
 ## Blockers
 
@@ -46,8 +49,8 @@ Progress: █░░░░░░░░░ ~4%
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 01-01-PLAN.md (Plugin directory structure + CLAUDE-CONTEXT.md + shared references)
-Resume file: .planning/phases/01-framework-foundation/01-02-PLAN.md
+Stopped at: Completed 01-02-PLAN.md (ROADMAP templates + planning artifact templates)
+Resume file: .planning/phases/01-framework-foundation/01-03-PLAN.md
 
 ---
 *Last updated: 2026-02-07*
