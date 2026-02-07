@@ -253,8 +253,8 @@
 | PLUG-06 | Phase 1 | Pending |
 
 **Coverage:**
-- v1 requirements: 76 total
-- Mapped to phases: 76
+- v1 requirements: 89 total
+- Mapped to phases: 89
 - Unmapped: 0 ✓
 
 ---
