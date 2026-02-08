@@ -5,24 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** Engineers can go from project brief to complete, verified FDS document through a structured, AI-assisted workflow
-**Current focus:** Phase 2 in progress - FDS templates created, commands next
+**Current focus:** Phase 2 in progress - discuss-phase command created, plan-phase next
 
 ## Current Position
 
 - Phase: 2 of 7 (Discuss + Plan Commands)
-- Plan: 1 of 4 in phase
+- Plan: 2 of 4 in phase
 - Status: In progress
-- Last activity: 2026-02-08 - Completed 02-01-PLAN.md (FDS section templates + CONTEXT.md template)
-- Next: Execute 02-02-PLAN.md
+- Last activity: 2026-02-08 - Completed 02-02-PLAN.md (/doc:discuss-phase command + workflow)
+- Next: Execute 02-03-PLAN.md
 
 ## Progress
 
-Progress: █████░░░░░░░░░░░░░░░░░░░░░░░ ~18%
+Progress: ██████░░░░░░░░░░░░░░░░░░░░░░ ~21%
 
 | Phase | Name | Plans | Status |
 |-------|------|-------|--------|
 | 1 | Framework Foundation + /doc:new-fds | 4/4 | ✓ Verified |
-| 2 | Discuss + Plan Commands | 1/4 | In progress |
+| 2 | Discuss + Plan Commands | 2/4 | In progress |
 | 3 | Write + Verify (Core Value) | -/- | Pending |
 | 4 | State Management + Recovery | -/- | Pending |
 | 5 | Complete-FDS + Standards | -/- | Pending |
@@ -53,6 +53,9 @@ Progress: █████░░░░░░░░░░░░░░░░░░�
 - Equipment module template: 9 subsections (5 required, 4 optional) with HTML comment markers (2026-02-08)
 - I/O table: 9 columns (Tag, Description, Type, Signal Range, Eng. Unit, PLC Address, Fail-safe State, Alarm Limits, Scaling) (2026-02-08)
 - CONTEXT.md template: XML-tagged sections matching CLAUDE-CONTEXT.md pattern (2026-02-08)
+- discuss-phase is interactive (AskUserQuestion), not a subagent spawner -- no Task tool needed (2026-02-08)
+- Gray areas derive from phase goal, not fixed list -- probing patterns as depth guidance (2026-02-08)
+- Cross-references to undocumented equipment: capture and flag, never block (2026-02-08)
 
 ## Blockers
 
@@ -61,7 +64,7 @@ Progress: █████░░░░░░░░░░░░░░░░░░�
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 02-01-PLAN.md (FDS section templates + CONTEXT.md template)
+Stopped at: Completed 02-02-PLAN.md (/doc:discuss-phase command + workflow)
 Resume file: None
 
 ---
