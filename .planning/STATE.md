@@ -5,24 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** Engineers can go from project brief to complete, verified FDS document through a structured, AI-assisted workflow
-**Current focus:** Phase 2 in progress - discuss-phase command created, plan-phase next
+**Current focus:** Phase 2 in progress - plan-phase command created, end-to-end verification next
 
 ## Current Position
 
 - Phase: 2 of 7 (Discuss + Plan Commands)
-- Plan: 2 of 4 in phase
+- Plan: 3 of 4 in phase
 - Status: In progress
-- Last activity: 2026-02-08 - Completed 02-02-PLAN.md (/doc:discuss-phase command + workflow)
-- Next: Execute 02-03-PLAN.md
+- Last activity: 2026-02-08 - Completed 02-03-PLAN.md (/doc:plan-phase command + workflow)
+- Next: Execute 02-04-PLAN.md
 
 ## Progress
 
-Progress: ██████░░░░░░░░░░░░░░░░░░░░░░ ~21%
+Progress: ████████░░░░░░░░░░░░░░░░░░░░ ~25%
 
 | Phase | Name | Plans | Status |
 |-------|------|-------|--------|
 | 1 | Framework Foundation + /doc:new-fds | 4/4 | ✓ Verified |
-| 2 | Discuss + Plan Commands | 2/4 | In progress |
+| 2 | Discuss + Plan Commands | 3/4 | In progress |
 | 3 | Write + Verify (Core Value) | -/- | Pending |
 | 4 | State Management + Recovery | -/- | Pending |
 | 5 | Complete-FDS + Standards | -/- | Pending |
@@ -56,6 +56,12 @@ Progress: ██████░░░░░░░░░░░░░░░░░�
 - discuss-phase is interactive (AskUserQuestion), not a subagent spawner -- no Task tool needed (2026-02-08)
 - Gray areas derive from phase goal, not fixed list -- probing patterns as depth guidance (2026-02-08)
 - Cross-references to undocumented equipment: capture and flag, never block (2026-02-08)
+- plan-phase is non-interactive (no AskUserQuestion) -- reads CONTEXT.md autonomously (2026-02-08)
+- Doc PLAN.md format: ## Goal/Sections/Context/Template/Standards/Writing Rules/Verification (not GSD XML) (2026-02-08)
+- Wave assignment: topological sort on dependency graph, independent to Wave 1, overview/summary last (2026-02-08)
+- Self-verification: 7 inline checks before completing, fix-and-retry pattern (2026-02-08)
+- Gap closure (--gaps): requires VERIFICATION.md, generates targeted fix plans as Wave 1 (2026-02-08)
+- EM subsection selection: 5 required always + 4 optional per CONTEXT.md mentions (2026-02-08)
 
 ## Blockers
 
@@ -64,7 +70,7 @@ Progress: ██████░░░░░░░░░░░░░░░░░�
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 02-02-PLAN.md (/doc:discuss-phase command + workflow)
+Stopped at: Completed 02-03-PLAN.md (/doc:plan-phase command + workflow)
 Resume file: None
 
 ---
