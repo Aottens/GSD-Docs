@@ -19,20 +19,20 @@
 
 ### Phase Workflow — Discuss
 
-- [ ] **DISC-01**: `/doc:discuss-phase N` reads ROADMAP.md to identify phase goals and scope
-- [ ] **DISC-02**: `/doc:discuss-phase N` identifies gray areas specific to the phase content type (equipment: capacities/tolerances/failure modes, interfaces: protocols/rates, HMI: layout/navigation, safety: risk categories)
-- [ ] **DISC-03**: `/doc:discuss-phase N` presents gray areas grouped by topic with structured questions
-- [ ] **DISC-04**: `/doc:discuss-phase N` captures all decisions in phase-N/CONTEXT.md
+- [x] **DISC-01**: `/doc:discuss-phase N` reads ROADMAP.md to identify phase goals and scope
+- [x] **DISC-02**: `/doc:discuss-phase N` identifies gray areas specific to the phase content type (equipment: capacities/tolerances/failure modes, interfaces: protocols/rates, HMI: layout/navigation, safety: risk categories)
+- [x] **DISC-03**: `/doc:discuss-phase N` presents gray areas grouped by topic with structured questions
+- [x] **DISC-04**: `/doc:discuss-phase N` captures all decisions in phase-N/CONTEXT.md
 - [ ] **DISC-05**: `/doc:discuss-phase N` updates RATIONALE.md with decision rationale for each significant choice
-- [ ] **DISC-06**: Items explicitly marked as "Claude's Discretion" are documented but not asked
+- [x] **DISC-06**: Items explicitly marked as "Claude's Discretion" are documented but not asked
 
 ### Phase Workflow — Plan
 
-- [ ] **PLAN-01**: `/doc:plan-phase N` reads CONTEXT.md decisions and ROADMAP.md phase goals
-- [ ] **PLAN-02**: `/doc:plan-phase N` generates one PLAN.md per section (NN-MM-PLAN.md format)
-- [ ] **PLAN-03**: Each PLAN.md includes: goal, sections, context (from CONTEXT.md), standards (if enabled), verification checklist
-- [ ] **PLAN-04**: `/doc:plan-phase N` assigns wave numbers for parallel execution based on dependency analysis
-- [ ] **PLAN-05**: `/doc:plan-phase N` self-verifies plans before completing
+- [x] **PLAN-01**: `/doc:plan-phase N` reads CONTEXT.md decisions and ROADMAP.md phase goals
+- [x] **PLAN-02**: `/doc:plan-phase N` generates one PLAN.md per section (NN-MM-PLAN.md format)
+- [x] **PLAN-03**: Each PLAN.md includes: goal, sections, context (from CONTEXT.md), standards (if enabled), verification checklist
+- [x] **PLAN-04**: `/doc:plan-phase N` assigns wave numbers for parallel execution based on dependency analysis
+- [x] **PLAN-05**: `/doc:plan-phase N` self-verifies plans before completing
 - [ ] **PLAN-06**: `/doc:plan-phase N --gaps` generates targeted fix plans from VERIFICATION.md gaps
 
 ### Phase Workflow — Write
@@ -65,10 +65,10 @@
 
 ### Content Templates
 
-- [ ] **TMPL-01**: Equipment module template with structured tables: description, operating states (entry/exit conditions), parameters (range/unit/default), interlocks (condition/action/priority), I/O (tag/type/description)
-- [ ] **TMPL-02**: State machine template with Mermaid stateDiagram-v2 + state descriptions + transition tables
-- [ ] **TMPL-03**: Interface template with overview table, signal list (name/type/description/direction), protocol details (polling/timeout/error handling)
-- [ ] **TMPL-04**: Templates support configurable language (Dutch/English)
+- [x] **TMPL-01**: Equipment module template with structured tables: description, operating states (entry/exit conditions), parameters (range/unit/default), interlocks (condition/action/priority), I/O (tag/type/description)
+- [x] **TMPL-02**: State machine template with Mermaid stateDiagram-v2 + state descriptions + transition tables
+- [x] **TMPL-03**: Interface template with overview table, signal list (name/type/description/direction), protocol details (polling/timeout/error handling)
+- [x] **TMPL-04**: Templates support configurable language (Dutch/English)
 
 ### State Management & Recovery
 
@@ -171,17 +171,17 @@
 | INIT-07 | Phase 1 | Complete |
 | INIT-08 | Phase 4 | Pending |
 | INIT-09 | Phase 4 | Pending |
-| DISC-01 | Phase 2 | Pending |
-| DISC-02 | Phase 2 | Pending |
-| DISC-03 | Phase 2 | Pending |
-| DISC-04 | Phase 2 | Pending |
+| DISC-01 | Phase 2 | Complete |
+| DISC-02 | Phase 2 | Complete |
+| DISC-03 | Phase 2 | Complete |
+| DISC-04 | Phase 2 | Complete |
 | DISC-05 | Phase 6 | Pending |
-| DISC-06 | Phase 2 | Pending |
-| PLAN-01 | Phase 2 | Pending |
-| PLAN-02 | Phase 2 | Pending |
-| PLAN-03 | Phase 2 | Pending |
-| PLAN-04 | Phase 2 | Pending |
-| PLAN-05 | Phase 2 | Pending |
+| DISC-06 | Phase 2 | Complete |
+| PLAN-01 | Phase 2 | Complete |
+| PLAN-02 | Phase 2 | Complete |
+| PLAN-03 | Phase 2 | Complete |
+| PLAN-04 | Phase 2 | Complete |
+| PLAN-05 | Phase 2 | Complete |
 | PLAN-06 | Phase 3 | Pending |
 | WRIT-01 | Phase 3 | Pending |
 | WRIT-02 | Phase 3 | Pending |
@@ -202,10 +202,10 @@
 | REVW-01 | Phase 6 | Pending |
 | REVW-02 | Phase 6 | Pending |
 | REVW-03 | Phase 6 | Pending |
-| TMPL-01 | Phase 2 | Pending |
-| TMPL-02 | Phase 2 | Pending |
-| TMPL-03 | Phase 2 | Pending |
-| TMPL-04 | Phase 2 | Pending |
+| TMPL-01 | Phase 2 | Complete |
+| TMPL-02 | Phase 2 | Complete |
+| TMPL-03 | Phase 2 | Complete |
+| TMPL-04 | Phase 2 | Complete |
 | STAT-01 | Phase 4 | Pending |
 | STAT-02 | Phase 4 | Pending |
 | STAT-03 | Phase 4 | Pending |
@@ -259,4 +259,4 @@
 
 ---
 *Requirements defined: 2026-02-06*
-*Last updated: 2026-02-07 — Phase 1 requirements marked Complete*
+*Last updated: 2026-02-08 — Phase 2 requirements marked Complete*

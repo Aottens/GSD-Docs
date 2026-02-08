@@ -186,7 +186,7 @@ Plans:
 | Phase | Name | Requirements | Status |
 |-------|------|:------------:|--------|
 | 1 | Framework Foundation + /doc:new-fds | 12 | ✓ Complete |
-| 2 | Discuss + Plan Commands | 14 | Complete |
+| 2 | Discuss + Plan Commands | 14 | ✓ Complete |
 | 3 | Write + Verify (Core Value) | 15 | Pending |
 | 4 | State Management + Recovery + Dynamic ROADMAP | 9 | Pending |
 | 5 | Complete-FDS + Standards + Assembly | 19 | Pending |
