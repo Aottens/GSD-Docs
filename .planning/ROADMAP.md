@@ -80,6 +80,15 @@ Plans:
 
 **Requirements:** PLAN-06, WRIT-01, WRIT-02, WRIT-03, WRIT-04, WRIT-05, WRIT-06, WRIT-08, VERF-01, VERF-02, VERF-03, VERF-04, VERF-06, VERF-07, PLUG-03
 
+**Plans:** 5 plans
+
+Plans:
+- [ ] 03-01-PLAN.md -- Subagent definitions (doc-writer, doc-verifier) + output templates (SUMMARY, VERIFICATION, CROSS-REFS)
+- [ ] 03-02-PLAN.md -- /doc:write-phase command + workflow (parallel writing with context isolation)
+- [ ] 03-03-PLAN.md -- /doc:verify-phase command + workflow (5-level goal-backward verification)
+- [ ] 03-04-PLAN.md -- Gap closure enhancement (plan-phase --gaps VERIFICATION.md parsing) + ENGINEER-TODO template
+- [ ] 03-05-PLAN.md -- End-to-end verification checkpoint
+
 **Success Criteria:**
 
 1. Engineer runs `/doc:write-phase N` and each section is written by a subagent that loads ONLY PROJECT.md + phase CONTEXT.md + its own PLAN.md + standards (if enabled) -- no cross-contamination from other sections' content
@@ -185,9 +194,9 @@ Plans:
 
 | Phase | Name | Requirements | Status |
 |-------|------|:------------:|--------|
-| 1 | Framework Foundation + /doc:new-fds | 12 | ✓ Complete |
-| 2 | Discuss + Plan Commands | 14 | ✓ Complete |
-| 3 | Write + Verify (Core Value) | 15 | Pending |
+| 1 | Framework Foundation + /doc:new-fds | 12 | Complete |
+| 2 | Discuss + Plan Commands | 14 | Complete |
+| 3 | Write + Verify (Core Value) | 15 | Planned |
 | 4 | State Management + Recovery + Dynamic ROADMAP | 9 | Pending |
 | 5 | Complete-FDS + Standards + Assembly | 19 | Pending |
 | 6 | Knowledge Transfer + Review | 9 | Pending |
@@ -196,4 +205,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-08 -- Phase 2 verified complete*
+*Last updated: 2026-02-10 -- Phase 3 planned (5 plans in 4 waves)*
