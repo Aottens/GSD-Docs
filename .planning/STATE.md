@@ -10,10 +10,10 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 - Phase: 3 of 7 (Write + Verify - Core Value) -- IN PROGRESS
-- Plan: 2 of 5 in phase (03-01, 03-02 done)
-- Status: Plan 03-02 complete - write-phase command and workflow orchestrator created
-- Last activity: 2026-02-10 - Executed 03-02-PLAN.md (write-phase command + workflow)
-- Next: Execute remaining Phase 3 plans (03-03 through 03-05)
+- Plan: 3 of 5 in phase (03-01, 03-02, 03-03 done)
+- Status: Plan 03-03 complete - verify-phase command with goal-backward methodology created
+- Last activity: 2026-02-10 - Executed 03-03-PLAN.md (verify-phase command + workflow)
+- Next: Execute remaining Phase 3 plans (03-04 through 03-05)
 
 ## Progress
 
@@ -23,7 +23,7 @@ Progress: ████████████████░░░░░░░�
 |-------|------|-------|--------|
 | 1 | Framework Foundation + /doc:new-fds | 4/4 | Verified |
 | 2 | Discuss + Plan Commands | 4/4 | ✓ Verified |
-| 3 | Write + Verify (Core Value) | 2/5 | In Progress |
+| 3 | Write + Verify (Core Value) | 3/5 | In Progress |
 | 4 | State Management + Recovery | -/- | Pending |
 | 5 | Complete-FDS + Standards | -/- | Pending |
 | 6 | Knowledge Transfer + Review | -/- | Pending |
@@ -70,6 +70,10 @@ Progress: ████████████████░░░░░░░�
 - CROSS-REFS.md: full context per reference (source/target/type/context/status), types: depends-on/related-to/see-also (2026-02-10)
 - write-phase orchestrator: wave-based parallel execution, max 4 concurrent writers, STATE.md checkpointing before/after waves (2026-02-10)
 - Context isolation: explicit file lists (no directory globs), writers never receive other plans' content (2026-02-10)
+- [Phase 03]: verify-phase is lean orchestrator (70 lines) delegating to comprehensive workflow (650 lines)
+- [Phase 03]: Goal-backward verification: derive 3-7 observable truths from phase goal before verification cascade
+- [Phase 03]: Gap closure: max 2 cycles, escalate to ENGINEER-TODO.md + phase BLOCKED when exceeded
+- [Phase 03]: Re-verification scope: Claude's discretion based on cross-reference impact (full phase vs fixed sections)
 
 ## Blockers
 
@@ -78,8 +82,8 @@ Progress: ████████████████░░░░░░░�
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed 03-02-PLAN.md (write-phase command and workflow orchestrator)
-Resume file: .planning/phases/03-write-verify-core-value/03-02-SUMMARY.md
+Stopped at: Completed 03-03-PLAN.md (verify-phase command and workflow)
+Resume file: .planning/phases/03-write-verify-core-value/03-03-SUMMARY.md
 
 ---
 *Last updated: 2026-02-10*
