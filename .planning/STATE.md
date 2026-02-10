@@ -10,20 +10,20 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 - Phase: 3 of 7 (Write + Verify - Core Value) -- IN PROGRESS
-- Plan: 3 of 5 in phase (03-01, 03-02, 03-03 done)
-- Status: Plan 03-03 complete - verify-phase command with goal-backward methodology created
-- Last activity: 2026-02-10 - Executed 03-03-PLAN.md (verify-phase command + workflow)
-- Next: Execute remaining Phase 3 plans (03-04 through 03-05)
+- Plan: 4 of 5 in phase (03-01, 03-02, 03-03, 03-04 done)
+- Status: Plan 03-04 complete - plan-phase --gaps enhancement with VERIFICATION.md parsing
+- Last activity: 2026-02-10 - Executed 03-04-PLAN.md (gap closure enhancement)
+- Next: Execute final Phase 3 plan (03-05)
 
 ## Progress
 
-Progress: ████████████████░░░░░░░░░░░░ ~35%
+Progress: ████████████████░░░░░░░░░░░░ ~40%
 
 | Phase | Name | Plans | Status |
 |-------|------|-------|--------|
 | 1 | Framework Foundation + /doc:new-fds | 4/4 | Verified |
 | 2 | Discuss + Plan Commands | 4/4 | ✓ Verified |
-| 3 | Write + Verify (Core Value) | 3/5 | In Progress |
+| 3 | Write + Verify (Core Value) | 4/5 | In Progress |
 | 4 | State Management + Recovery | -/- | Pending |
 | 5 | Complete-FDS + Standards | -/- | Pending |
 | 6 | Knowledge Transfer + Review | -/- | Pending |
@@ -74,6 +74,9 @@ Progress: ████████████████░░░░░░░�
 - [Phase 03]: Goal-backward verification: derive 3-7 observable truths from phase goal before verification cascade
 - [Phase 03]: Gap closure: max 2 cycles, escalate to ENGINEER-TODO.md + phase BLOCKED when exceeded
 - [Phase 03]: Re-verification scope: Claude's discretion based on cross-reference impact (full phase vs fixed sections)
+- [Phase 03]: Gap preview is informational only (non-interactive mode) - engineers can delete unwanted plans before write-phase
+- [Phase 03]: Gap grouping: same artifact + related levels = one plan, different artifacts = separate plans
+- [Phase 03]: Fix plans include gap_closure:true flag and original_plan field for traceability
 
 ## Blockers
 
@@ -82,8 +85,8 @@ Progress: ████████████████░░░░░░░�
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed 03-03-PLAN.md (verify-phase command and workflow)
-Resume file: .planning/phases/03-write-verify-core-value/03-03-SUMMARY.md
+Stopped at: Completed 03-04-PLAN.md (plan-phase --gaps enhancement + ENGINEER-TODO template)
+Resume file: .planning/phases/03-write-verify-core-value/03-04-SUMMARY.md
 
 ---
 *Last updated: 2026-02-10*
