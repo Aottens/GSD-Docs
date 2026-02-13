@@ -112,6 +112,15 @@ Plans:
 
 **Requirements:** INIT-08, INIT-09, VERF-08, STAT-01, STAT-02, STAT-03, STAT-04, STAT-05, STAT-06
 
+**Plans:** 5 plans
+
+Plans:
+- [ ] 04-01-PLAN.md -- STATE.md checkpoint enhancement + partial write detection (foundation)
+- [ ] 04-02-PLAN.md -- /doc:status command + workflow (progress display + next action)
+- [ ] 04-03-PLAN.md -- /doc:resume command + workflow + auto-detect in write-phase/verify-phase
+- [ ] 04-04-PLAN.md -- /doc:expand-roadmap command + workflow + verify-phase auto-trigger
+- [ ] 04-05-PLAN.md -- End-to-end verification checkpoint
+
 **Success Criteria:**
 
 1. Engineer runs `/doc:status` and sees a progress table showing per-phase status (pending, active, verified), current position (phase, plan, operation), and overall completion percentage -- derived from STATE.md + ROADMAP.md + actual file system state
@@ -197,7 +206,7 @@ Plans:
 | 1 | Framework Foundation + /doc:new-fds | 12 | Complete |
 | 2 | Discuss + Plan Commands | 14 | Complete |
 | 3 | Write + Verify (Core Value) | 15 | Planned |
-| 4 | State Management + Recovery + Dynamic ROADMAP | 9 | Pending |
+| 4 | State Management + Recovery + Dynamic ROADMAP | 9 | Planned |
 | 5 | Complete-FDS + Standards + Assembly | 19 | Pending |
 | 6 | Knowledge Transfer + Review | 9 | Pending |
 | 7 | SDS Generation + DOCX Export + Pilot | 11 | Pending |
@@ -205,4 +214,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-10 -- Phase 3 planned (5 plans in 4 waves)*
+*Last updated: 2026-02-13 -- Phase 4 planned (5 plans in 4 waves)*
