@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 - Phase: 4 of 7 (State Management + Recovery)
-- Plan: 3 of 5 in phase (Wave 2 complete - 3 plans done, 2 pending)
-- Status: Phase 4 in progress - /doc:resume command complete
-- Last activity: 2026-02-13 - Executed 04-03-PLAN.md (/doc:resume + auto-detect)
+- Plan: 4 of 5 in phase (Wave 3 complete - 4 plans done, 1 pending)
+- Status: Phase 4 in progress - /doc:expand-roadmap command complete
+- Last activity: 2026-02-13 - Executed 04-04-PLAN.md (/doc:expand-roadmap + auto-trigger)
 - Next: Continue Phase 4 execution
 
 ## Progress
@@ -24,7 +24,7 @@ Progress: ██████████████░░░░░░░░░�
 | 1 | Framework Foundation + /doc:new-fds | 4/4 | Verified |
 | 2 | Discuss + Plan Commands | 4/4 | ✓ Verified |
 | 3 | Write + Verify (Core Value) | 5/5 | ✓ Verified |
-| 4 | State Management + Recovery | 3/5 | In Progress |
+| 4 | State Management + Recovery | 4/5 | In Progress |
 | 5 | Complete-FDS + Standards | -/- | Pending |
 | 6 | Knowledge Transfer + Review | -/- | Pending |
 | 7 | SDS Generation + Export | -/- | Pending |
@@ -91,6 +91,10 @@ Progress: ██████████████░░░░░░░░░�
 - [Phase 04]: /doc:resume command uses Task tool for re-spawning write-phase or verify-phase subagents (2026-02-13)
 - [Phase 04]: Auto-detect resume in write-phase Step 3b with Y/n confirmation (default: Y) (2026-02-13)
 - [Phase 04]: Command-conflict warnings in write-phase (Step 3a) and verify-phase (Step 1a) when different command running during IN_PROGRESS status (2026-02-13)
+- [Phase 04]: Decimal phase numbering format {parent}.{sequence} (e.g., 4.1, 4.2) preserves existing phase numbers (2026-02-13)
+- [Phase 04]: ROADMAP expansion grouping: 3-5 units per phase, maximum 7 new phases, Claude's discretion on strategy (2026-02-13)
+- [Phase 04]: Interactive approval: one group at a time with approve/modify/skip options (2026-02-13)
+- [Phase 04]: Auto-trigger threshold: >5 units in System Overview triggers expansion proposal via verify-phase Step 6A (2026-02-13)
 
 ## Blockers
 
@@ -110,8 +114,8 @@ Browser-based UI so non-technical colleagues can run GSD-Docs from a server with
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 04-03-PLAN.md (Phase 4 Wave 2 - /doc:resume + auto-detect)
-Resume file: .planning/phases/04-state-management-recovery/04-03-SUMMARY.md
+Stopped at: Completed 04-04-PLAN.md (Phase 4 Wave 3 - /doc:expand-roadmap + auto-trigger)
+Resume file: .planning/phases/04-state-management-recovery/04-04-SUMMARY.md
 
 ---
 *Last updated: 2026-02-13*
