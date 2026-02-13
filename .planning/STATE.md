@@ -9,22 +9,22 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 
 ## Current Position
 
-- Phase: 3 of 7 (Write + Verify - Core Value) -- COMPLETE
-- Plan: 5 of 5 in phase (all plans complete)
-- Status: Phase 3 complete - write-verify-gap-closure loop verified and approved
-- Last activity: 2026-02-10 - Executed 03-05-PLAN.md (Phase 3 verification)
-- Next: Ready for Phase 4 planning (State Management + Recovery)
+- Phase: 4 of 7 (State Management + Recovery)
+- Plan: 1 of 5 in phase (Wave 1 complete - 1 plan done, 4 pending)
+- Status: Phase 4 in progress - checkpoint foundation complete
+- Last activity: 2026-02-13 - Executed 04-01-PLAN.md (STATE.md checkpointing + partial detection)
+- Next: Continue Phase 4 execution
 
 ## Progress
 
-Progress: ███████████████████░░░░░░░░░ ~50%
+Progress: █████████████░░░░░░░░░░░░░░░░░ ~44%
 
 | Phase | Name | Plans | Status |
 |-------|------|-------|--------|
 | 1 | Framework Foundation + /doc:new-fds | 4/4 | Verified |
 | 2 | Discuss + Plan Commands | 4/4 | ✓ Verified |
 | 3 | Write + Verify (Core Value) | 5/5 | ✓ Verified |
-| 4 | State Management + Recovery | -/- | Pending |
+| 4 | State Management + Recovery | 1/5 | In Progress |
 | 5 | Complete-FDS + Standards | -/- | Pending |
 | 6 | Knowledge Transfer + Review | -/- | Pending |
 | 7 | SDS Generation + Export | -/- | Pending |
@@ -79,16 +79,30 @@ Progress: ███████████████████░░░░�
 - [Phase 03]: Fix plans include gap_closure:true flag and original_plan field for traceability
 - [Phase 03]: Phase 3 verified complete through 10-category automated checks (78 checks) + human approval (2026-02-10)
 - [Phase 03]: Write-verify-gap-closure loop operational and ready for engineer use (2026-02-10)
+- [Phase 04]: STATE.md Current Operation section has 8 fields for crash recovery (command, phase, wave, wave_total, plans_done, plans_pending, status, started) (2026-02-13)
+- [Phase 04]: Partial write detection uses 4 heuristics (missing SUMMARY, < 200 chars, [TO BE COMPLETED], abrupt ending) with confidence levels (2026-02-13)
+- [Phase 04]: Verify-phase blocks on HIGH-confidence partials, warns on MEDIUM-confidence (2026-02-13)
 
 ## Blockers
 
 (None)
 
+## Future: v2.0 — Web Frontend
+
+Browser-based UI so non-technical colleagues can run GSD-Docs from a server without touching the CLI. Scope after v1.0 is complete.
+
+- **UX:** Dashboard home screen + wizard mode per command (classify → discuss → plan → write → verify)
+- **Auth:** Login from day one (single-user initially, scalable when lighter models allow concurrency)
+- **Concurrency:** One project at a time (local LLM constraint); auth built in for future multi-user scaling
+- **Feedback:** Progress bar + expandable live terminal output + notifications on completion
+- **Backend:** Local LLM (not Claude API) — model selection TBD
+- **Depends on:** v1.0 CLI pipeline complete and stable
+
 ## Session Continuity
 
-Last session: 2026-02-10
-Stopped at: Completed 03-05-PLAN.md (Phase 3 verification - write-verify loop operational)
-Resume file: .planning/phases/03-write-verify-core-value/03-05-SUMMARY.md
+Last session: 2026-02-13
+Stopped at: Completed 04-01-PLAN.md (Phase 4 Wave 1 - STATE.md checkpointing + partial detection)
+Resume file: .planning/phases/04-state-management-recovery/04-01-SUMMARY.md
 
 ---
-*Last updated: 2026-02-10*
+*Last updated: 2026-02-13*
