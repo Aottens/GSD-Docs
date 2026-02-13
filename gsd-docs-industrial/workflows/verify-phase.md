@@ -487,6 +487,103 @@ Phase {N} content is complete and ready.
 # Set phase {N} status to "✓ Verified"
 ```
 
+### ROADMAP Evolution Check (VERF-08)
+
+**Check if this is a System Overview phase that may require ROADMAP expansion.**
+
+**Step 1: Detect System Overview Phase**
+
+Read ROADMAP.md to check if the current phase is a System Overview phase:
+
+```bash
+# Extract phase goal for current phase
+grep -A 10 "^## Phase ${CURRENT_PHASE}:" .planning/ROADMAP.md | grep "^**Goal:**"
+```
+
+**System Overview indicators:**
+- Phase goal mentions "System Overview"
+- Phase goal mentions "equipment" OR "unit identification"
+- This is the first content phase after project setup (Type A/B projects)
+
+If NO indicators found: skip ROADMAP evolution check, proceed directly to "Show Next Up".
+
+If indicators found: proceed to Step 2.
+
+**Step 2: Count Equipment Units**
+
+Read all CONTENT.md files in the current phase directory:
+
+```bash
+PHASE_DIR=$(ls -d .planning/phases/${CURRENT_PHASE}-*/ 2>/dev/null | head -1)
+cat ${PHASE_DIR}/*-CONTENT.md 2>/dev/null
+cat ${PHASE_DIR}/*-SUMMARY.md 2>/dev/null
+```
+
+Parse for equipment module identifiers:
+- **Pattern 1:** Equipment Module references: `EM-NNN`, `Equipment Module NNN`
+- **Pattern 2:** Unit headings: `## Equipment Unit:`, `### Unit:`
+- **Pattern 3:** Explicit unit declarations: `Unit ID:`, `Unit Name:`
+- **Pattern 4:** Equipment lists in tables or bullet points
+
+Count unique units identified.
+
+**Step 3: Threshold Check and Auto-Trigger**
+
+If `unit_count <= 5`:
+```
+ROADMAP check: {unit_count} units identified (threshold: 5). No expansion needed.
+```
+Proceed to "Show Next Up".
+
+If `unit_count > 5`:
+```
+───────────────────────────────────────────────────────────────
+⚠ ROADMAP EVOLUTION TRIGGERED
+
+System Overview identified {unit_count} units (threshold: 5).
+The current ROADMAP may need expansion to handle this scope.
+
+Running /doc:expand-roadmap automatically...
+───────────────────────────────────────────────────────────────
+```
+
+**Step 4: Invoke Expansion Workflow**
+
+Execute the expand-roadmap workflow logic from:
+@/Users/aernoutottens/.claude/gsd-docs-industrial/workflows/expand-roadmap.md
+
+Pass context:
+- Unit list (from Step 2 parsing)
+- Unit count
+- After-phase: `${CURRENT_PHASE}` (current phase number)
+- Entry mode: auto-trigger
+
+The expansion workflow will:
+1. Propose phase groupings (3-5 units per group)
+2. Present groups interactively for approval/modification
+3. Insert decimal phases into ROADMAP.md if approved
+4. Create phase directories
+5. Update STATE.md with expansion decision
+
+**Step 5: Handle Expansion Outcome**
+
+After expansion completes (or is declined):
+
+If expansion **accepted**:
+- Display completion message from expand-roadmap workflow
+- Continue to "Show Next Up" (showing next phase OR first decimal phase)
+
+If expansion **declined**:
+- Display: "ROADMAP expansion declined. Continuing with current structure."
+- Continue to "Show Next Up"
+
+**Important notes:**
+- Auto-trigger implements VERF-08: "After System Overview phase verify PASS, trigger ROADMAP evolution check"
+- Engineer can accept, modify, or reject expansion during interactive loop
+- PASS result is unaffected by expansion decision
+- If expansion accepted, subsequent phases will use decimal numbering
+- The auto-trigger does NOT re-verify after expansion — new phases are empty and will go through their own discuss/plan/write/verify cycle
+
 **Show Next Up:**
 ```
 ───────────────────────────────────────────────────────────────
@@ -801,6 +898,12 @@ This step was already integrated into Step 4 (Spawn Verifier Subagent) as the sc
 - Update STATE.md after verification result
 - Phase status values: "In Progress", "GAPS_FOUND", "✓ Verified", "BLOCKED"
 - Track gap_closure_cycle in STATE.md
+
+**ROADMAP evolution:**
+- After System Overview phase verification PASS, check unit count
+- If >5 units, auto-trigger expand-roadmap workflow
+- Engineer can accept, modify, or reject expansion
+- PASS result is unaffected by expansion decision
 
 **Next Up blocks:**
 - Always show Next Up after PASS or GAPS_FOUND
