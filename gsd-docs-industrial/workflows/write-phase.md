@@ -312,6 +312,31 @@ Wave {W} Results:
 - 03-02: CONTENT.md (1.8KB), SUMMARY.md (135 words), [VERIFY]: 1
 ```
 
+**Partial Write Detection:**
+
+After the basic file existence checks, apply multi-heuristic partial write detection to each plan in the wave. Apply heuristics IN ORDER:
+
+1. **Missing SUMMARY.md** (confidence: HIGH) — If CONTENT.md exists but SUMMARY.md does not, the writer crashed before completing. Mark plan as partial. Action: flag for retry.
+
+2. **Content too short** (confidence: HIGH) — If CONTENT.md exists and is < 200 characters (bytes), content is likely a stub or crash artifact. Mark as partial. Action: flag for retry.
+
+3. **Completion marker** (confidence: HIGH) — If CONTENT.md contains the literal string `[TO BE COMPLETED]`, the writer explicitly signaled incompleteness. Mark as partial. Action: flag for retry.
+
+4. **Abrupt ending** (confidence: MEDIUM) — If the last non-empty line of CONTENT.md does not end with `.`, `!`, `?`, `|` (table row), or `-->` (HTML comment close), AND is not a markdown heading (starts with `#`), AND is not a markdown list marker (starts with `-`, `*`, or digit+`.`), content may have been truncated. Mark as partial with lower confidence. Action: flag for manual inspection.
+
+**IMPORTANT:** SUMMARY.md existence is the DEFINITIVE completion proof (established Phase 1 decision). Heuristics 2-4 are belt-and-suspenders checks for edge cases where SUMMARY.md exists but content is still compromised.
+
+**Display partial detection results after wave results table:**
+```
+Partial Write Detection:
+- 03-01: OK (SUMMARY.md exists, content 2.3KB)
+- 03-02: PARTIAL (missing SUMMARY.md) → will retry
+- 03-03: OK (SUMMARY.md exists, content 1.8KB)
+```
+
+**Update plans_pending based on partial detection:**
+Plans flagged as partial are NOT added to plans_done in the post-wave checkpoint (Step 4d). They remain in plans_pending for retry on resume.
+
 ### 4d. Post-wave Checkpoint
 
 After all writers in wave complete successfully, update STATE.md.

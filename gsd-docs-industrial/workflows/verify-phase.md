@@ -63,6 +63,76 @@ If no CONTENT.md files found:
 
 ---
 
+## Step 1.5: Partial Write Pre-flight Check
+
+Before proceeding to verification, check for partial writes that would invalidate verification results.
+
+**For each plan in the phase:**
+
+Apply the same 4-heuristic cascade used in write-phase Step 4c:
+
+1. **Missing SUMMARY.md** (confidence: HIGH)
+   - Check: CONTENT.md exists but SUMMARY.md does not
+   - Reason: Writer crashed before completing
+
+2. **Content too short** (confidence: HIGH)
+   - Check: CONTENT.md exists and file size < 200 bytes
+   - Reason: Content is a stub or crash artifact
+
+3. **[TO BE COMPLETED] marker** (confidence: HIGH)
+   - Check: CONTENT.md contains literal string `[TO BE COMPLETED]`
+   - Reason: Writer explicitly signaled incompleteness
+
+4. **Abrupt ending** (confidence: MEDIUM)
+   - Check: Last non-empty line does not end with `.`, `!`, `?`, `|`, or `-->`
+   - AND: Not a markdown heading (starts with `#`)
+   - AND: Not a list marker (starts with `-`, `*`, or digit+`.`)
+   - Reason: Content may have been truncated mid-sentence
+
+**If HIGH-confidence partials detected:**
+
+Display error box and STOP execution:
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║  PARTIAL WRITES DETECTED                                     ║
+╚══════════════════════════════════════════════════════════════╝
+
+{count} partial write(s) found in phase {N}:
+
+- {plan-id}: {reason} (HIGH confidence)
+- {plan-id}: {reason} (HIGH confidence)
+
+Verification cannot proceed with incomplete content.
+
+**To fix:**
+- Run /doc:resume to complete interrupted writing
+- Or run /doc:write-phase {N} to retry all incomplete plans
+```
+
+STOP execution — do not proceed to Step 2.
+
+**If only MEDIUM-confidence partials (abrupt ending):**
+
+Display WARNING but proceed with verification:
+
+```
+WARNING: {count} plan(s) have potential abrupt endings (MEDIUM confidence)
+
+- {plan-id}: Last line may be truncated
+- {plan-id}: Last line may be truncated
+
+Proceeding with verification. Manual review recommended.
+```
+
+Add note to VERIFICATION.md header when generated: `Warning: {count} plans have potential abrupt endings (medium confidence). Manual review recommended.`
+
+**If no partials detected:**
+
+Proceed silently to Step 2.
+
+---
+
 ## Step 2: Determine Verification Cycle
 
 **Check for existing VERIFICATION.md:**
