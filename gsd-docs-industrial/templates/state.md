@@ -21,6 +21,17 @@ Progress: {PROGRESS_BAR} 0%
 |-------|------|--------|
 {PHASE_TABLE}
 
+## Current Operation
+
+- command: (none)
+- phase: -
+- wave: -
+- wave_total: -
+- plans_done: []
+- plans_pending: []
+- status: IDLE
+- started: -
+
 ## Decisions
 
 (Populated during /doc:discuss-phase)

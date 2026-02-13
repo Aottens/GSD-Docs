@@ -121,15 +121,17 @@ Check if a previous write-phase execution was interrupted and can be resumed.
 grep -A 10 "^## Current Operation" .planning/STATE.md
 ```
 
-**Extract:**
-- command: (should be "write-phase" for resume)
-- phase: (should match current phase)
-- wave: (last completed wave)
-- wave_total: (total waves)
-- plans_done: (array of completed plan IDs)
-- plans_pending: (array of remaining plan IDs)
-- status: (IN_PROGRESS or COMPLETE)
-- started: (timestamp)
+**Extract fields explicitly (parse structured format):**
+```bash
+COMMAND=$(grep "^- command:" .planning/STATE.md | cut -d: -f2- | xargs)
+PHASE=$(grep "^- phase:" .planning/STATE.md | cut -d: -f2- | xargs)
+WAVE=$(grep "^- wave:" .planning/STATE.md | cut -d: -f2- | xargs)
+WAVE_TOTAL=$(grep "^- wave_total:" .planning/STATE.md | cut -d: -f2- | xargs)
+PLANS_DONE=$(grep "^- plans_done:" .planning/STATE.md | cut -d: -f2- | xargs)
+PLANS_PENDING=$(grep "^- plans_pending:" .planning/STATE.md | cut -d: -f2- | xargs)
+STATUS=$(grep "^- status:" .planning/STATE.md | cut -d: -f2- | xargs)
+STARTED=$(grep "^- started:" .planning/STATE.md | cut -d: -f2- | xargs)
+```
 
 **Resume detection logic:**
 ```bash
@@ -170,19 +172,32 @@ For each wave (in order), execute all plans in that wave in parallel.
 
 ### 4a. Pre-wave Checkpoint
 
-Before starting wave execution, update STATE.md with current operation state.
+Before starting wave execution, update STATE.md with current operation state using structured checkpoint format.
 
-**Update STATE.md:**
+**Update STATE.md Current Operation section:**
 ```markdown
 ## Current Operation
 - command: write-phase
 - phase: {N}
 - wave: {current_wave}
 - wave_total: {total_waves}
-- plans_done: [{completed plan IDs}]
-- plans_pending: [{remaining plan IDs}]
+- plans_done: [{completed plan IDs as comma-separated list}]
+- plans_pending: [{remaining plan IDs as comma-separated list}]
 - status: IN_PROGRESS
-- started: {timestamp}
+- started: {ISO 8601 timestamp, e.g. 2026-02-13T14:30:00Z}
+```
+
+**Example:**
+```markdown
+## Current Operation
+- command: write-phase
+- phase: 3
+- wave: 1
+- wave_total: 3
+- plans_done: []
+- plans_pending: [03-01, 03-02, 03-03, 03-04, 03-05]
+- status: IN_PROGRESS
+- started: 2026-02-13T14:30:00Z
 ```
 
 **Display:**
@@ -301,14 +316,27 @@ Wave {W} Results:
 
 After all writers in wave complete successfully, update STATE.md.
 
-**Update STATE.md:**
-- Add completed plans to plans_done array
-- Remove completed plans from plans_pending array
-- Increment wave counter
+**Update STATE.md Current Operation section:**
+- Add completed wave's plan IDs to plans_done array (comma-separated list)
+- Remove those plan IDs from plans_pending array
+- Increment wave counter to next wave number
 - Keep status as IN_PROGRESS (until all waves done)
 
-**Atomic checkpoint:**
-Write STATE.md only after ALL writers in wave complete. This ensures resume can pick up at wave boundaries.
+**Example transition:**
+```markdown
+Before wave 1 completes:
+- plans_done: []
+- plans_pending: [03-01, 03-02, 03-03, 03-04, 03-05]
+- wave: 1
+
+After wave 1 completes:
+- plans_done: [03-01, 03-02]
+- plans_pending: [03-03, 03-04, 03-05]
+- wave: 2
+```
+
+**CRITICAL - Atomic checkpoint:**
+Write STATE.md atomically — only after ALL writers in wave complete. This is the crash recovery boundary. If a crash occurs during wave execution, the pre-wave checkpoint is the recovery point, and completed plans in the interrupted wave will be re-verified (not re-executed) on resume.
 
 ---
 
@@ -380,21 +408,36 @@ OUTPUT_FILE="${PHASE_DIR}/${PHASE}-CROSS-REFS.md"
 
 After all waves complete successfully, update STATE.md to mark operation complete.
 
-**Update STATE.md:**
+**Update STATE.md Current Operation section:**
 ```markdown
 ## Current Operation
 - command: write-phase
 - phase: {N}
 - status: COMPLETE
-- completed: {timestamp}
-- plans_written: [{all plan IDs}]
+- completed: {ISO 8601 timestamp}
+- plans_written: [{all plan IDs as comma-separated list}]
 - verify_markers: {total [VERIFY] count across all sections}
 - cross_refs: {total cross-reference count}
 ```
 
-**Clear wave tracking:**
-- Remove wave, wave_total, plans_done, plans_pending fields
-- These are only needed during IN_PROGRESS status
+**Example:**
+```markdown
+## Current Operation
+- command: write-phase
+- phase: 3
+- status: COMPLETE
+- completed: 2026-02-13T15:45:00Z
+- plans_written: [03-01, 03-02, 03-03, 03-04, 03-05]
+- verify_markers: 12
+- cross_refs: 8
+```
+
+**Field changes on completion:**
+- Remove: wave, wave_total, plans_pending (no longer needed)
+- Rename: plans_done → plans_written (clearer completion semantics)
+- Add: completed timestamp
+- Keep: command, phase, status, plans_written, verify_markers, cross_refs
+- Remove: started (replaced by completed)
 
 ---
 
@@ -459,6 +502,7 @@ These are inferred values that should be confirmed for accuracy.
 - Pre-wave: status IN_PROGRESS
 - Post-wave: update plans_done, plans_pending
 - Final: status COMPLETE
+- The Current Operation section is the ONLY section that changes during write-phase execution. All other STATE.md sections (Progress, Decisions, etc.) remain untouched. This limits the blast radius of a checkpoint write.
 
 **Recovery strategy:**
 - Forward-only: on resume, never re-execute completed plans
