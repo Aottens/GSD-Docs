@@ -10,21 +10,21 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 - Phase: 4 of 7 (State Management + Recovery)
-- Plan: 2 of 5 in phase (Wave 2 complete - 2 plans done, 3 pending)
-- Status: Phase 4 in progress - /doc:status command complete
-- Last activity: 2026-02-13 - Executed 04-02-PLAN.md (/doc:status command)
+- Plan: 3 of 5 in phase (Wave 2 complete - 3 plans done, 2 pending)
+- Status: Phase 4 in progress - /doc:resume command complete
+- Last activity: 2026-02-13 - Executed 04-03-PLAN.md (/doc:resume + auto-detect)
 - Next: Continue Phase 4 execution
 
 ## Progress
 
-Progress: ██████████████░░░░░░░░░░░░░░░░ ~47%
+Progress: ██████████████░░░░░░░░░░░░░░░░ ~50%
 
 | Phase | Name | Plans | Status |
 |-------|------|-------|--------|
 | 1 | Framework Foundation + /doc:new-fds | 4/4 | Verified |
 | 2 | Discuss + Plan Commands | 4/4 | ✓ Verified |
 | 3 | Write + Verify (Core Value) | 5/5 | ✓ Verified |
-| 4 | State Management + Recovery | 2/5 | In Progress |
+| 4 | State Management + Recovery | 3/5 | In Progress |
 | 5 | Complete-FDS + Standards | -/- | Pending |
 | 6 | Knowledge Transfer + Review | -/- | Pending |
 | 7 | SDS Generation + Export | -/- | Pending |
@@ -88,6 +88,9 @@ Progress: ██████████████░░░░░░░░░�
 - [Phase 04]: Status command is read-only (Read/Bash/Glob/Grep tools only, no Task/Write)
 - [Phase 04]: Filesystem verification takes precedence over STATE.md status field
 - [Phase 04]: Next action logic has 9 branches covering all project states (crash recovery to completion)
+- [Phase 04]: /doc:resume command uses Task tool for re-spawning write-phase or verify-phase subagents (2026-02-13)
+- [Phase 04]: Auto-detect resume in write-phase Step 3b with Y/n confirmation (default: Y) (2026-02-13)
+- [Phase 04]: Command-conflict warnings in write-phase (Step 3a) and verify-phase (Step 1a) when different command running during IN_PROGRESS status (2026-02-13)
 
 ## Blockers
 
@@ -107,8 +110,8 @@ Browser-based UI so non-technical colleagues can run GSD-Docs from a server with
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 04-02-PLAN.md (Phase 4 Wave 2 - /doc:status command)
-Resume file: .planning/phases/04-state-management-recovery/04-02-SUMMARY.md
+Stopped at: Completed 04-03-PLAN.md (Phase 4 Wave 2 - /doc:resume + auto-detect)
+Resume file: .planning/phases/04-state-management-recovery/04-03-SUMMARY.md
 
 ---
 *Last updated: 2026-02-13*
