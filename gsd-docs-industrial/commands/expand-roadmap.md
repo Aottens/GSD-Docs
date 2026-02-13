@@ -19,7 +19,7 @@ Spawned by: `/doc:expand-roadmap [after-phase]` OR auto-triggered from verify-ph
 <execution_context>
 @/Users/aernoutottens/.claude/gsd-docs-industrial/workflows/expand-roadmap.md
 @/Users/aernoutottens/.claude/gsd-docs-industrial/references/ui-brand.md
-@/Users/aernoutottens/.claude/CLAUDE-CONTEXT.md
+@/Users/aernoutottens/.claude/gsd-docs-industrial/CLAUDE-CONTEXT.md
 </execution_context>
 
 <context>
