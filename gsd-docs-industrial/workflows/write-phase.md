@@ -114,7 +114,7 @@ If validation fails: show error box with details and abort.
 
 ## Step 3: Check for Resume State
 
-Check if a previous write-phase execution was interrupted and can be resumed.
+Check if a previous operation was interrupted. Handle both auto-detect resume (same command re-run) and command conflict warnings (different command running during interruption).
 
 **Read STATE.md current operation section:**
 ```bash
@@ -123,9 +123,9 @@ grep -A 10 "^## Current Operation" .planning/STATE.md
 
 **Extract fields explicitly (parse structured format):**
 ```bash
-COMMAND=$(grep "^- command:" .planning/STATE.md | cut -d: -f2- | xargs)
-PHASE=$(grep "^- phase:" .planning/STATE.md | cut -d: -f2- | xargs)
-WAVE=$(grep "^- wave:" .planning/STATE.md | cut -d: -f2- | xargs)
+INTERRUPTED_COMMAND=$(grep "^- command:" .planning/STATE.md | cut -d: -f2- | xargs)
+INTERRUPTED_PHASE=$(grep "^- phase:" .planning/STATE.md | cut -d: -f2- | xargs)
+INTERRUPTED_WAVE=$(grep "^- wave:" .planning/STATE.md | cut -d: -f2- | xargs)
 WAVE_TOTAL=$(grep "^- wave_total:" .planning/STATE.md | cut -d: -f2- | xargs)
 PLANS_DONE=$(grep "^- plans_done:" .planning/STATE.md | cut -d: -f2- | xargs)
 PLANS_PENDING=$(grep "^- plans_pending:" .planning/STATE.md | cut -d: -f2- | xargs)
@@ -133,30 +133,169 @@ STATUS=$(grep "^- status:" .planning/STATE.md | cut -d: -f2- | xargs)
 STARTED=$(grep "^- started:" .planning/STATE.md | cut -d: -f2- | xargs)
 ```
 
-**Resume detection logic:**
+### 3a. Command Conflict Warning
+
+Check if a DIFFERENT command or phase was interrupted. If so, warn the engineer before proceeding.
+
+**Locked user decision:** "Running a different command than what was interrupted triggers warn + confirm."
+
 ```bash
-if [[ "$COMMAND" == "write-phase" && "$STATUS" == "IN_PROGRESS" && "$PHASE" == "$CURRENT_PHASE" ]]; then
-  RESUME=true
+# Check for command conflict
+if [[ "$STATUS" == "IN_PROGRESS" ]]; then
+  # Case 1: Different command interrupted
+  if [[ "$INTERRUPTED_COMMAND" != "write-phase" ]]; then
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo " ⚠ WARNING: Interrupted Operation Detected"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "/doc:${INTERRUPTED_COMMAND} ${INTERRUPTED_PHASE} was interrupted during wave ${INTERRUPTED_WAVE}."
+    echo ""
+    echo "Proceeding with /doc:write-phase ${CURRENT_PHASE} may leave the interrupted"
+    echo "operation in an inconsistent state."
+    echo ""
+    echo "Options:"
+    echo "  1. Continue with write-phase ${CURRENT_PHASE} anyway"
+    echo "  2. Cancel and run /doc:resume to complete the interrupted operation"
+    echo ""
+    read -p "Selection (1-2): " CONFLICT_CHOICE
+
+    if [[ "$CONFLICT_CHOICE" == "2" ]]; then
+      echo ""
+      echo "Run /doc:resume to complete the interrupted operation."
+      exit 0
+    fi
+
+    echo ""
+    echo "Continuing with write-phase ${CURRENT_PHASE}..."
+    # Fall through to fresh start execution
+  fi
+
+  # Case 2: Different phase interrupted
+  if [[ "$INTERRUPTED_COMMAND" == "write-phase" && "$INTERRUPTED_PHASE" != "$CURRENT_PHASE" ]]; then
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo " ⚠ WARNING: Interrupted Operation Detected"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "/doc:write-phase ${INTERRUPTED_PHASE} was interrupted during wave ${INTERRUPTED_WAVE}."
+    echo ""
+    echo "Proceeding with /doc:write-phase ${CURRENT_PHASE} may leave phase ${INTERRUPTED_PHASE}"
+    echo "in an inconsistent state."
+    echo ""
+    echo "Options:"
+    echo "  1. Continue with write-phase ${CURRENT_PHASE} anyway"
+    echo "  2. Cancel and run /doc:resume to complete phase ${INTERRUPTED_PHASE}"
+    echo ""
+    read -p "Selection (1-2): " CONFLICT_CHOICE
+
+    if [[ "$CONFLICT_CHOICE" == "2" ]]; then
+      echo ""
+      echo "Run /doc:resume to complete the interrupted operation."
+      exit 0
+    fi
+
+    echo ""
+    echo "Continuing with write-phase ${CURRENT_PHASE}..."
+    # Fall through to fresh start execution
+  fi
 fi
 ```
 
-**If resuming:**
-- Extract plans_done list
-- Verify completed plans by checking file existence:
-  - ${PLAN_ID}-CONTENT.md exists
-  - ${PLAN_ID}-SUMMARY.md exists
-- If either file missing: remove plan from plans_done (forward-only recovery)
-- Filter out completed plans from execution plan
-- Display resume message:
+### 3b. Auto-Detect Resume (Same Command Re-run)
 
+If the interrupted operation is write-phase for the SAME phase, offer to resume.
+
+**Locked user decision:** "Auto-detect when re-running the same command that was interrupted."
+
+```bash
+# Resume detection: same command, same phase, IN_PROGRESS status
+if [[ "$INTERRUPTED_COMMAND" == "write-phase" && "$STATUS" == "IN_PROGRESS" && "$INTERRUPTED_PHASE" == "$CURRENT_PHASE" ]]; then
+  # Verify completed plans by checking file existence
+  IFS=',' read -ra DONE_ARRAY <<< "$PLANS_DONE"
+  IFS=',' read -ra PENDING_ARRAY <<< "$PLANS_PENDING"
+
+  VERIFIED_COMPLETE=()
+  INCOMPLETE=()
+
+  for plan_id in "${DONE_ARRAY[@]}"; do
+    plan_id=$(echo "$plan_id" | xargs)  # Trim whitespace
+
+    # Completion proof: BOTH files exist
+    if [[ -f "${PHASE_DIR}/${plan_id}-CONTENT.md" ]] && [[ -f "${PHASE_DIR}/${plan_id}-SUMMARY.md" ]]; then
+      VERIFIED_COMPLETE+=("$plan_id")
+    else
+      # STATE.md lied — crash corrupted checkpoint
+      INCOMPLETE+=("$plan_id")
+    fi
+  done
+
+  # Add pending plans to incomplete list
+  for plan_id in "${PENDING_ARRAY[@]}"; do
+    plan_id=$(echo "$plan_id" | xargs)
+    INCOMPLETE+=("$plan_id")
+  done
+
+  VERIFIED_COUNT=${#VERIFIED_COMPLETE[@]}
+  INCOMPLETE_COUNT=${#INCOMPLETE[@]}
+
+  # Display context summary
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo " Previous write-phase was interrupted"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "Started: ${STARTED}"
+  echo "Wave: ${INTERRUPTED_WAVE}/${WAVE_TOTAL}"
+  echo ""
+  echo "Completed: ${VERIFIED_COUNT} plans"
+  if [[ ${VERIFIED_COUNT} -gt 0 ]]; then
+    echo "  ${VERIFIED_COMPLETE[@]}"
+  fi
+  echo ""
+  echo "Remaining: ${INCOMPLETE_COUNT} plans"
+  if [[ ${INCOMPLETE_COUNT} -gt 0 ]]; then
+    echo "  ${INCOMPLETE[@]}"
+  fi
+  echo ""
+
+  # Smart default: auto-resume with confirmation
+  read -p "Resume from wave ${INTERRUPTED_WAVE}? (Y/n): " RESUME_CONFIRM
+  RESUME_CONFIRM=${RESUME_CONFIRM:-Y}  # Default: Y
+
+  if [[ "$RESUME_CONFIRM" =~ ^[Yy] ]]; then
+    # Resume: filter out completed plans from execution
+    RESUME=true
+    SKIP_PLANS=("${VERIFIED_COMPLETE[@]}")
+
+    echo ""
+    echo "DOC > Resuming from Wave ${INTERRUPTED_WAVE} (${VERIFIED_COUNT} plans already complete)"
+    echo ""
+  else
+    # Declined resume
+    echo ""
+    read -p "Start fresh? This will re-execute ALL plans including previously completed ones. (y/N): " FRESH_CONFIRM
+    FRESH_CONFIRM=${FRESH_CONFIRM:-N}  # Default: N (don't start fresh)
+
+    if [[ "$FRESH_CONFIRM" =~ ^[Yy] ]]; then
+      echo ""
+      echo "Starting fresh execution..."
+      RESUME=false
+      SKIP_PLANS=()
+    else
+      echo ""
+      echo "Operation cancelled. Run /doc:resume or /doc:status to continue."
+      exit 0
+    fi
+  fi
+else
+  # No interrupted state or different command/phase
+  RESUME=false
+  SKIP_PLANS=()
+fi
 ```
-DOC > Resuming from Wave {N} ({count} plans already complete)
 
-Completed plans: 03-01, 03-02
-Remaining plans: 03-03, 03-04, 03-05
-```
-
-**If no resume state or fresh start:**
+**If fresh start (no resume):**
 - Proceed with all plans
 - Display:
 

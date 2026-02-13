@@ -8,6 +8,101 @@ Comprehensive workflow for goal-backward verification of FDS phase content using
 
 ## Step 1: Parse Arguments and Validate Phase
 
+### 1a. Check for Command Conflict
+
+Before proceeding, check if a different operation was interrupted. If so, warn the engineer.
+
+**Locked user decision:** "Running a different command than what was interrupted triggers warn + confirm."
+
+**Read STATE.md current operation section:**
+```bash
+grep -A 10 "^## Current Operation" .planning/STATE.md
+```
+
+**Extract fields explicitly:**
+```bash
+INTERRUPTED_COMMAND=$(grep "^- command:" .planning/STATE.md | cut -d: -f2- | xargs)
+INTERRUPTED_PHASE=$(grep "^- phase:" .planning/STATE.md | cut -d: -f2- | xargs)
+INTERRUPTED_WAVE=$(grep "^- wave:" .planning/STATE.md | cut -d: -f2- | xargs)
+STATUS=$(grep "^- status:" .planning/STATE.md | cut -d: -f2- | xargs)
+```
+
+**Check for command conflict:**
+```bash
+# Case 1: Different command interrupted (not verify-phase)
+if [[ "$STATUS" == "IN_PROGRESS" && "$INTERRUPTED_COMMAND" != "verify-phase" ]]; then
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo " ⚠ WARNING: Interrupted Operation Detected"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "/doc:${INTERRUPTED_COMMAND} ${INTERRUPTED_PHASE} was interrupted during wave ${INTERRUPTED_WAVE}."
+  echo ""
+
+  # Special note if write-phase was interrupted
+  if [[ "$INTERRUPTED_COMMAND" == "write-phase" ]]; then
+    echo "Verification may find incomplete content from the interrupted write operation."
+    echo ""
+  fi
+
+  echo "Proceeding with /doc:verify-phase ${CURRENT_PHASE} may leave the interrupted"
+  echo "operation in an inconsistent state."
+  echo ""
+  echo "Options:"
+  echo "  1. Continue with verify-phase ${CURRENT_PHASE} anyway"
+  echo "  2. Cancel and run /doc:resume to complete the interrupted operation"
+  echo ""
+  read -p "Selection (1-2): " CONFLICT_CHOICE
+
+  if [[ "$CONFLICT_CHOICE" == "2" ]]; then
+    echo ""
+    echo "Run /doc:resume to complete the interrupted operation."
+    exit 0
+  fi
+
+  echo ""
+  echo "Continuing with verify-phase ${CURRENT_PHASE}..."
+fi
+
+# Case 2: verify-phase for same phase interrupted (re-run)
+if [[ "$STATUS" == "IN_PROGRESS" && "$INTERRUPTED_COMMAND" == "verify-phase" && "$INTERRUPTED_PHASE" == "$CURRENT_PHASE" ]]; then
+  # Auto-detect: verify-phase is idempotent
+  echo ""
+  echo "Previous verify-phase was interrupted. Re-running verification."
+  echo ""
+fi
+
+# Case 3: verify-phase for different phase interrupted
+if [[ "$STATUS" == "IN_PROGRESS" && "$INTERRUPTED_COMMAND" == "verify-phase" && "$INTERRUPTED_PHASE" != "$CURRENT_PHASE" ]]; then
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo " ⚠ WARNING: Interrupted Operation Detected"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "/doc:verify-phase ${INTERRUPTED_PHASE} was interrupted."
+  echo ""
+  echo "Proceeding with /doc:verify-phase ${CURRENT_PHASE} may leave phase ${INTERRUPTED_PHASE}"
+  echo "verification incomplete."
+  echo ""
+  echo "Options:"
+  echo "  1. Continue with verify-phase ${CURRENT_PHASE} anyway"
+  echo "  2. Cancel and run /doc:resume to complete phase ${INTERRUPTED_PHASE}"
+  echo ""
+  read -p "Selection (1-2): " CONFLICT_CHOICE
+
+  if [[ "$CONFLICT_CHOICE" == "2" ]]; then
+    echo ""
+    echo "Run /doc:resume to complete the interrupted operation."
+    exit 0
+  fi
+
+  echo ""
+  echo "Continuing with verify-phase ${CURRENT_PHASE}..."
+fi
+```
+
+### 1b. Parse Arguments and Validate
+
 **Parse phase number from $ARGUMENTS:**
 ```
 Example: /doc:verify-phase 3 → phase = "03"
