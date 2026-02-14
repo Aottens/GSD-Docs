@@ -174,6 +174,15 @@ Plans:
 
 **Requirements:** DISC-05, WRIT-07, VERF-05, REVW-01, REVW-02, REVW-03, KNOW-01, KNOW-02, KNOW-03
 
+**Plans:** 5 plans
+
+Plans:
+- [ ] 06-01-PLAN.md -- Templates (RATIONALE, EDGE-CASES, FRESH-EYES, REVIEW) + discuss-phase RATIONALE capture
+- [ ] 06-02-PLAN.md -- Doc-writer edge case capture + write-phase edge case aggregation
+- [ ] 06-03-PLAN.md -- Fresh Eyes subagent + verify-phase Fresh Eyes offer after PASS
+- [ ] 06-04-PLAN.md -- /doc:review-phase command + interactive section-by-section review workflow
+- [ ] 06-05-PLAN.md -- End-to-end verification checkpoint (96 automated checks + human approval)
+
 **Success Criteria:**
 
 1. During `/doc:discuss-phase`, each significant decision automatically updates RATIONALE.md with the decision, reasoning, alternatives considered, and section reference -- so a new engineer can understand not just "what" but "why"
