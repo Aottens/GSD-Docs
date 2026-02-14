@@ -1,0 +1,329 @@
+{
+  "version": "1.0",
+  "description": "Canonical SDS section ordering for document assembly. Consumed by /doc:generate-sds workflow to structure software design specification content. Parallel to fds-structure.json but focused on software architecture and implementation.",
+  "placeholder_stub": "[TO BE COMPLETED]",
+  "based_on": {
+    "fds_version": "1.0",
+    "description": "SDS is derived from FDS content. This field cross-references the source FDS version for traceability."
+  },
+  "sds_structure": {
+    "preset": "equipment-first",
+    "available_presets": {
+      "equipment-first": "Primary sections organized by equipment modules (default). Software structure detailed within each module. Matches FDS structure for easy cross-reference.",
+      "software-first": "Primary sections organized by software architecture layers (program organization, FB hierarchy, communication). Equipment modules as implementation details. Alternative for software-heavy projects."
+    },
+    "note": "This field supports future SDS structure revision without breaking existing projects. Currently only equipment-first is implemented."
+  },
+
+  "sections": [
+    {
+      "id": "1",
+      "title": { "en": "Introduction", "nl": "Introductie" },
+      "depth": 1,
+      "required": true,
+      "source_type": "system-overview",
+      "children": [
+        {
+          "id": "1.1",
+          "title": { "en": "Purpose and Scope", "nl": "Doel en Scope" },
+          "depth": 2,
+          "required": true,
+          "source_type": "system-overview"
+        },
+        {
+          "id": "1.2",
+          "title": { "en": "Document Conventions", "nl": "Document Conventies" },
+          "depth": 2,
+          "required": true,
+          "source_type": "system-overview"
+        },
+        {
+          "id": "1.3",
+          "title": { "en": "References", "nl": "Referenties" },
+          "depth": 2,
+          "required": true,
+          "source_type": "system-overview"
+        },
+        {
+          "id": "1.4",
+          "title": { "en": "Abbreviations", "nl": "Afkortingen" },
+          "depth": 2,
+          "required": true,
+          "source_type": "auto-generated"
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "title": { "en": "Software Architecture Overview", "nl": "Software Architectuur Overzicht" },
+      "depth": 1,
+      "required": true,
+      "source_type": "software-architecture",
+      "children": [
+        {
+          "id": "2.1",
+          "title": { "en": "Program Structure", "nl": "Programmastructuur" },
+          "depth": 2,
+          "required": true,
+          "source_type": "software-architecture",
+          "description": "Overall TIA Portal project organization: OBs, FCs, FBs, DBs. CPU allocation if multi-PLC."
+        },
+        {
+          "id": "2.2",
+          "title": { "en": "FB Hierarchy Overview", "nl": "FB Hiërarchie Overzicht" },
+          "depth": 2,
+          "required": true,
+          "source_type": "software-architecture",
+          "description": "High-level FB composition showing how equipment modules relate to each other. Mermaid diagram showing FB call tree."
+        },
+        {
+          "id": "2.3",
+          "title": { "en": "Communication Architecture", "nl": "Communicatie Architectuur" },
+          "depth": 2,
+          "required": true,
+          "source_type": "software-architecture",
+          "description": "Network topology, protocols (PROFINET, Ethernet/IP), PLC-to-PLC communication, SCADA links."
+        }
+      ]
+    },
+    {
+      "id": "3",
+      "title": { "en": "Typicals Library Reference", "nl": "Typicals Bibliotheek Referentie" },
+      "depth": 1,
+      "required": true,
+      "source_type": "typicals-library",
+      "children": [
+        {
+          "id": "3.1",
+          "title": { "en": "Library Metadata", "nl": "Bibliotheek Metadata" },
+          "depth": 2,
+          "required": true,
+          "source_type": "typicals-library",
+          "description": "Library name, version, platform (TIA Portal V18+), last updated, load mode (external path or imported)."
+        },
+        {
+          "id": "3.2",
+          "title": { "en": "Typicals Summary", "nl": "Typicals Overzicht" },
+          "depth": 2,
+          "required": true,
+          "source_type": "typicals-library",
+          "description": "Table listing all typicals used in this project, which equipment modules use them, and key interface summary."
+        },
+        {
+          "id": "3.3",
+          "title": { "en": "Unmatched Equipment Modules", "nl": "Ongepaarde Apparatuurmodules" },
+          "depth": 2,
+          "required": false,
+          "source_type": "typicals-library",
+          "description": "Lists equipment modules that need NEW TYPICAL development. May be empty if all modules matched."
+        }
+      ]
+    },
+    {
+      "id": "4",
+      "title": { "en": "Equipment Modules", "nl": "Apparatuurmodules" },
+      "depth": 1,
+      "required": true,
+      "source_type": "dynamic",
+      "children": []
+    },
+    {
+      "id": "5",
+      "title": { "en": "Interfaces", "nl": "Interfaces" },
+      "depth": 1,
+      "required": true,
+      "source_type": "interfaces",
+      "children": [
+        {
+          "id": "5.1",
+          "title": { "en": "PLC-SCADA Interface", "nl": "PLC-SCADA Interface" },
+          "depth": 2,
+          "required": true,
+          "source_type": "interfaces",
+          "description": "Tags exposed to SCADA, OPC UA server configuration, data refresh rates, alarm routing."
+        },
+        {
+          "id": "5.2",
+          "title": { "en": "PLC-PLC Communication", "nl": "PLC-PLC Communicatie" },
+          "depth": 2,
+          "required": false,
+          "source_type": "interfaces",
+          "description": "S7 communication, shared memory, handshake protocols for multi-PLC systems."
+        },
+        {
+          "id": "5.3",
+          "title": { "en": "Field Bus Interfaces", "nl": "Veldbus Interfaces" },
+          "depth": 2,
+          "required": true,
+          "source_type": "interfaces",
+          "description": "PROFINET, PROFIBUS, EtherNet/IP device configuration and diagnostics."
+        },
+        {
+          "id": "5.4",
+          "title": { "en": "External System Interfaces", "nl": "Externe Systeem Interfaces" },
+          "depth": 2,
+          "required": false,
+          "source_type": "interfaces",
+          "description": "MES integration, database connections, third-party equipment protocols."
+        }
+      ]
+    },
+    {
+      "id": "6",
+      "title": { "en": "HMI/SCADA Integration", "nl": "HMI/SCADA Integratie" },
+      "depth": 1,
+      "required": true,
+      "source_type": "hmi-scada",
+      "children": [
+        {
+          "id": "6.1",
+          "title": { "en": "Screen Structure", "nl": "Schermstructuur" },
+          "depth": 2,
+          "required": true,
+          "source_type": "hmi-scada",
+          "description": "Navigation hierarchy, screen templates, user roles and permissions."
+        },
+        {
+          "id": "6.2",
+          "title": { "en": "Faceplate Mapping", "nl": "Faceplate Mapping" },
+          "depth": 2,
+          "required": true,
+          "source_type": "hmi-scada",
+          "description": "Which equipment modules map to which HMI faceplates, tag binding conventions."
+        },
+        {
+          "id": "6.3",
+          "title": { "en": "Alarm Configuration", "nl": "Alarmconfiguratie" },
+          "depth": 2,
+          "required": true,
+          "source_type": "hmi-scada",
+          "description": "Alarm priority levels, acknowledgment requirements, alarm text templates."
+        }
+      ]
+    },
+    {
+      "id": "7",
+      "title": { "en": "Appendices", "nl": "Bijlagen" },
+      "depth": 1,
+      "required": false,
+      "source_type": "appendices",
+      "children": [
+        {
+          "id": "7.1",
+          "title": { "en": "Complete Signal List", "nl": "Volledige Signaallijst" },
+          "depth": 2,
+          "required": false,
+          "source_type": "auto-generated",
+          "description": "Consolidated list of all PLC tags, data types, addresses. Auto-generated from equipment modules."
+        },
+        {
+          "id": "7.2",
+          "title": { "en": "Parameter Summary", "nl": "Parameter Overzicht" },
+          "depth": 2,
+          "required": false,
+          "source_type": "auto-generated",
+          "description": "All configurable parameters across equipment modules with default values and ranges."
+        },
+        {
+          "id": "7.3",
+          "title": { "en": "FB Instance List", "nl": "FB Instantielijst" },
+          "depth": 2,
+          "required": false,
+          "source_type": "auto-generated",
+          "description": "Complete list of all FB instances with DB numbers and CPU assignments."
+        }
+      ]
+    }
+  ],
+
+  "dynamic_sections": {
+    "equipment_modules": {
+      "parent_id": "4",
+      "source": "fds_equipment_modules",
+      "per_unit": true,
+      "description": "One subsection per equipment module from source FDS. Subsection numbering follows 4.x pattern where x is sequential and matches FDS section 4.x for cross-reference.",
+      "subsections": [
+        {
+          "suffix": "1",
+          "title": { "en": "Typical Assignment", "nl": "Typical Toewijzing" },
+          "required": true,
+          "source_field": "typical_assignment",
+          "description": "Which typical(s) matched this equipment module, confidence level, library reference. If unmatched: 'NEW TYPICAL NEEDED' marker."
+        },
+        {
+          "suffix": "2",
+          "title": { "en": "FB Composition", "nl": "FB Compositie" },
+          "required": true,
+          "source_field": "fb_composition",
+          "description": "Which FBs compose this module, hierarchy diagram showing parent-child relationships, calling sequence."
+        },
+        {
+          "suffix": "3",
+          "title": { "en": "Instantiation", "nl": "Instantiatie" },
+          "required": true,
+          "source_field": "instantiation",
+          "description": "DB instances, instance names following naming conventions, PLC/CPU mapping, memory allocation."
+        },
+        {
+          "suffix": "4",
+          "title": { "en": "Parameter Configuration", "nl": "Parameter Configuratie" },
+          "required": true,
+          "source_field": "parameter_configuration",
+          "description": "Parameter values derived from FDS requirements, typical defaults, engineering overrides. Cross-references FDS section 4.x.3."
+        },
+        {
+          "suffix": "5",
+          "title": { "en": "Data Flow", "nl": "Data Flow" },
+          "required": true,
+          "source_field": "data_flow",
+          "description": "Inputs/outputs, interconnections between FBs within this module, data exchange with other modules. Mermaid flowchart."
+        },
+        {
+          "suffix": "6",
+          "title": { "en": "State Machine Implementation", "nl": "Toestandsmachine Implementatie" },
+          "required": true,
+          "source_field": "state_machine",
+          "description": "Mapping from FDS operating states (section 4.x.2) to FB state variables, transition logic, state synchronization."
+        }
+      ],
+      "required_subsections": ["typical_assignment", "fb_composition", "instantiation", "parameter_configuration", "data_flow", "state_machine"],
+      "optional_subsections": []
+    }
+  },
+
+  "mapping_conventions": {
+    "description": "How the /doc:generate-sds workflow maps FDS content to SDS sections",
+    "static_sections": {
+      "system-overview": "Maps to section 1 (Introduction) - reuses FDS section 1 with software focus adjustment",
+      "software-architecture": "Maps to section 2 (Software Architecture Overview) - derived from FDS system architecture (section 2) but focused on PLC program structure, not hardware",
+      "typicals-library": "Maps to section 3 (Typicals Library Reference) - generated from CATALOG.json and typical matching results",
+      "interfaces": "Maps to section 5 (Interfaces) - derived from FDS section 5 but detailed at software level (tags, protocols, data structures)",
+      "hmi-scada": "Maps to section 6 (HMI/SCADA Integration) - software implementation of FDS HMI visualization requirements",
+      "appendices": "Maps to section 7 (Appendices) - auto-generated from equipment module SDS sections"
+    },
+    "dynamic_sections": {
+      "equipment_modules": "Maps to section 4.x subsections from FDS section 4.x. Each FDS equipment module generates one SDS equipment module section with 6 required subsections. Numbering maintained for cross-reference (FDS 4.3 → SDS 4.3)."
+    },
+    "auto_generated": {
+      "abbreviations": "Section 1.4 auto-generated from FDS abbreviations plus SDS-specific additions (FB names, DB references, protocol acronyms)",
+      "signal_list": "Section 7.1 auto-generated from all equipment module I/O tables (FDS 4.x.5) with added PLC tag names and DB references",
+      "parameter_summary": "Section 7.2 auto-generated from all equipment module parameter configuration sections (SDS 4.x.4)",
+      "fb_instance_list": "Section 7.3 auto-generated from all equipment module instantiation sections (SDS 4.x.3)"
+    }
+  },
+
+  "assembly_workflow_instructions": {
+    "step_1": "Verify source FDS exists and passes verification (VERIFICATION.md must show PASS)",
+    "step_2": "Load project-specific typicals library from PROJECT.md typicals.library_path or typicals.imported_path",
+    "step_3": "Parse FDS ROADMAP.md and fds-structure.json to discover all equipment modules (section 4.x)",
+    "step_4": "For each equipment module: run typical matching algorithm, generate typical_assignment subsection with confidence and status",
+    "step_5": "Create SDS section 4.x for each FDS section 4.x with 6 required subsections per dynamic_sections.equipment_modules template",
+    "step_6": "Derive static sections 1, 2, 5, 6 from corresponding FDS sections with software implementation focus",
+    "step_7": "Generate section 3 (Typicals Library Reference) from CATALOG.json and matching results, including unmatched equipment list",
+    "step_8": "For any required section without content, insert placeholder_stub text",
+    "step_9": "Auto-generate appendices: abbreviations (1.4), signal list (7.1), parameter summary (7.2), FB instance list (7.3)",
+    "step_10": "Number all sections according to hierarchy, build cross-reference table to FDS sections",
+    "step_11": "Generate TRACEABILITY.md linking every FDS requirement to SDS implementation section",
+    "step_12": "Assemble final document with: frontmatter (title page, revision history, ToC, abbreviations) + body (sections 1-7) + appendices"
+  }
+}

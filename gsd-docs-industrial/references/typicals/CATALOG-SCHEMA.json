@@ -1,0 +1,257 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GSD-Docs Typicals Catalog Schema",
+  "description": "JSON schema defining the structure of project-specific typicals catalogs. Projects create their own CATALOG.json matching this schema. Consumed by /doc:generate-sds workflow for typical matching and SDS content generation.",
+  "schema_version": "1.0",
+  "type": "object",
+  "required": ["schema_version", "library", "typicals"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Version of this schema format. Allows future evolution without breaking existing catalogs. Current: 1.0",
+      "enum": ["1.0"]
+    },
+    "library": {
+      "type": "object",
+      "description": "Metadata about the typicals library. Identifies which library version this catalog describes.",
+      "required": ["name", "version", "platform", "updated"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Human-readable library name. Examples: 'Acme Corp Standard Library', 'Customer XYZ Typicals', 'Internal Control Modules v3'",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "description": "Library version following semantic versioning (e.g., '2.3.1') or custom scheme (e.g., 'V18_2024-Q2')",
+          "minLength": 1
+        },
+        "platform": {
+          "type": "string",
+          "description": "Target PLC platform and minimum version. Examples: 'TIA Portal V18', 'TIA Portal V17 SP2', 'TIA Portal V19'",
+          "pattern": "^TIA Portal V\\d+"
+        },
+        "updated": {
+          "type": "string",
+          "format": "date",
+          "description": "Last update date in ISO 8601 format (YYYY-MM-DD). Used to track library freshness."
+        },
+        "load_mode": {
+          "type": "string",
+          "enum": ["external", "imported"],
+          "description": "How this library is loaded. 'external': referenced via path in PROJECT.md (shared library). 'imported': copied into project references/ folder (self-contained)."
+        },
+        "path": {
+          "type": "string",
+          "description": "File system path to library if load_mode is 'external'. Omit for imported libraries."
+        }
+      }
+    },
+    "typicals": {
+      "type": "array",
+      "description": "List of all typicals (function blocks) available in this library. Each typical represents a control module building block.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "category", "description", "interfaces"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for this typical. Usually matches FB name. Examples: 'FB_AnalogIn', 'FB_ValveCtrl', 'FB_MotorCtrl'",
+            "pattern": "^FB_[A-Za-z0-9_]+$"
+          },
+          "type": {
+            "type": "string",
+            "description": "Typical classification. Standard types align with ISA-88/PackML concepts.",
+            "enum": ["Control Module", "Equipment Module", "Utility", "Communication", "Diagnostics"]
+          },
+          "category": {
+            "type": "string",
+            "description": "Functional category for grouping. Examples: 'Analog I/O', 'Valves', 'Motors', 'Conveyors', 'Safety'",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "description": "Brief functional description. One sentence explaining what this typical does. Will appear in SDS typical assignment tables.",
+            "minLength": 10,
+            "maxLength": 200
+          },
+          "interfaces": {
+            "type": "object",
+            "description": "Input and output interfaces for this typical. Used for matching equipment modules based on I/O requirements.",
+            "required": ["inputs", "outputs"],
+            "properties": {
+              "inputs": {
+                "type": "array",
+                "description": "Input parameters and signals for this FB.",
+                "items": {
+                  "type": "object",
+                  "required": ["name", "dataType"],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Input parameter name. Examples: 'Enable', 'SetPoint', 'SensorValue'",
+                      "minLength": 1
+                    },
+                    "dataType": {
+                      "type": "string",
+                      "description": "TIA Portal data type. Examples: 'BOOL', 'INT', 'REAL', 'WORD', 'UDT_AlarmConfig'",
+                      "minLength": 1
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "Optional description of this input's purpose."
+                    }
+                  }
+                }
+              },
+              "outputs": {
+                "type": "array",
+                "description": "Output parameters and signals from this FB.",
+                "items": {
+                  "type": "object",
+                  "required": ["name", "dataType"],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Output parameter name. Examples: 'Status', 'Value', 'Error', 'CurrentState'",
+                      "minLength": 1
+                    },
+                    "dataType": {
+                      "type": "string",
+                      "description": "TIA Portal data type. Examples: 'BOOL', 'INT', 'REAL', 'WORD', 'UDT_StateInfo'",
+                      "minLength": 1
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "Optional description of this output's purpose."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "use_cases": {
+            "type": "array",
+            "description": "Common use cases or equipment types where this typical applies. Used by matching algorithm. Examples: ['Temperature sensors', 'Pressure transmitters', 'Level sensors']",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "states": {
+            "type": "array",
+            "description": "Operating states if this typical implements a state machine (PackML-compatible typicals). Optional for simple I/O typicals.",
+            "items": {
+              "type": "object",
+              "required": ["name", "description"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "State name. Use PackML standard names where applicable: IDLE, STARTING, EXECUTE, STOPPING, ABORTING, etc.",
+                  "minLength": 1
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Brief description of what happens in this state.",
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          "documentation": {
+            "type": "string",
+            "description": "Optional path to detailed documentation for this typical (PDF, DOCX, or HTML). Relative to library root or absolute path."
+          }
+        }
+      }
+    }
+  },
+
+  "example": {
+    "description": "Example CATALOG.json entry showing a complete typical definition for FB_AnalogIn",
+    "catalog": {
+      "schema_version": "1.0",
+      "library": {
+        "name": "Acme Corp Standard Library",
+        "version": "2.3.1",
+        "platform": "TIA Portal V18",
+        "updated": "2026-01-15",
+        "load_mode": "external",
+        "path": "//server/libraries/AcmeStandard_v2.3.1.al18"
+      },
+      "typicals": [
+        {
+          "id": "FB_AnalogIn",
+          "type": "Control Module",
+          "category": "Analog I/O",
+          "description": "Processes analog input signals with scaling, filtering, and alarm limits. Supports 4-20mA and 0-10V sensors.",
+          "interfaces": {
+            "inputs": [
+              {
+                "name": "RawValue",
+                "dataType": "INT",
+                "description": "Raw ADC value from PLC input card (0-27648 for 4-20mA)"
+              },
+              {
+                "name": "ScaleLow",
+                "dataType": "REAL",
+                "description": "Engineering unit value at 4mA (e.g., 0.0 for 0-100°C range)"
+              },
+              {
+                "name": "ScaleHigh",
+                "dataType": "REAL",
+                "description": "Engineering unit value at 20mA (e.g., 100.0 for 0-100°C range)"
+              },
+              {
+                "name": "AlarmHigh",
+                "dataType": "REAL",
+                "description": "High alarm limit in engineering units"
+              },
+              {
+                "name": "AlarmLow",
+                "dataType": "REAL",
+                "description": "Low alarm limit in engineering units"
+              },
+              {
+                "name": "FilterTime",
+                "dataType": "REAL",
+                "description": "First-order filter time constant in seconds (0 = no filtering)"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "Value",
+                "dataType": "REAL",
+                "description": "Scaled and filtered value in engineering units"
+              },
+              {
+                "name": "AlarmHighActive",
+                "dataType": "BOOL",
+                "description": "TRUE when value exceeds AlarmHigh threshold"
+              },
+              {
+                "name": "AlarmLowActive",
+                "dataType": "BOOL",
+                "description": "TRUE when value falls below AlarmLow threshold"
+              },
+              {
+                "name": "Status",
+                "dataType": "WORD",
+                "description": "Status bits: bit 0 = Valid, bit 1 = Error, bit 2 = Out of Range"
+              }
+            ]
+          },
+          "use_cases": [
+            "Temperature sensors (PT100, thermocouple)",
+            "Pressure transmitters",
+            "Level sensors",
+            "Flow meters",
+            "Any 4-20mA or 0-10V analog sensor"
+          ],
+          "documentation": "docs/FB_AnalogIn_v2.3.pdf"
+        }
+      ]
+    }
+  }
+}
