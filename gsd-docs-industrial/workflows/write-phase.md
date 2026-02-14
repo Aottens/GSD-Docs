@@ -502,6 +502,65 @@ After wave 1 completes:
 **CRITICAL - Atomic checkpoint:**
 Write STATE.md atomically — only after ALL writers in wave complete. This is the crash recovery boundary. If a crash occurs during wave execution, the pre-wave checkpoint is the recovery point, and completed plans in the interrupted wave will be re-verified (not re-executed) on resume.
 
+### 4e. Aggregate Edge Cases
+
+After all writers in wave complete, collect edge case temporary files and aggregate into per-phase EDGE-CASES.md.
+
+**Collect edge case temporary files:**
+```bash
+PHASE_DIR=".planning/phases/${PADDED_PHASE}-${PHASE_NAME}"
+EDGE_CASE_FILE="${PHASE_DIR}/${PADDED_PHASE}-EDGE-CASES.md"
+
+# Initialize EDGE-CASES.md if first wave with edge cases
+if [ ! -f "$EDGE_CASE_FILE" ]; then
+  # Check if any writers produced edge cases this wave
+  EDGE_CASE_TMPS=$(find ${PHASE_DIR} -name "*-edge-cases.tmp" 2>/dev/null)
+  if [ -n "$EDGE_CASE_TMPS" ]; then
+    # Create from template
+    cp ~/.claude/gsd-docs-industrial/templates/edge-cases.md "$EDGE_CASE_FILE"
+    # Fill header placeholders (phase number, name, timestamp)
+  fi
+fi
+
+# Aggregate from all writers in this wave
+for PLAN_FILE in ${PHASE_DIR}/*-PLAN.md; do
+  PLAN_ID=$(basename "$PLAN_FILE" -PLAN.md)
+  TMP_FILE="${PHASE_DIR}/${PLAN_ID}-edge-cases.tmp"
+
+  if [ -f "$TMP_FILE" ]; then
+    # Read each line and append to correct severity section
+    while IFS='|' read -r _ SEVERITY SITUATION BEHAVIOR RECOVERY REASON SECTION _; do
+      SEVERITY=$(echo "$SEVERITY" | xargs)
+      # Append to matching severity section in EDGE-CASES.md
+      # CRITICAL entries also get blockquote warning box format
+    done < "$TMP_FILE"
+
+    # Remove temporary file after aggregation
+    rm "$TMP_FILE"
+  fi
+done
+```
+
+**CRITICAL edge cases get visual distinction:**
+When aggregating a CRITICAL entry, add both the table row AND a blockquote warning box:
+
+```markdown
+> **CRITICAL EDGE CASE**
+>
+> **Situation:** {situation}
+> **Behavior:** {behavior}
+> **Recovery:** {recovery}
+> **Reason:** {reason}
+```
+
+**Cross-phase reference check:**
+After aggregating edge cases, scan for section references outside current phase scope. For each cross-phase reference found, append entry to CROSS-REFS.md (only if not already present).
+
+**Display per-wave edge case summary:**
+```
+Edge cases (Wave {W}): {CRITICAL} CRITICAL, {WARNING} WARNING, {INFO} INFO
+```
+
 ---
 
 ## Step 5: Aggregate Cross-References
@@ -624,6 +683,13 @@ CONTENT.md files: {count} ({total size})
 SUMMARY.md files: {count}
 [VERIFY] markers: {count} (engineer review needed)
 Cross-references: {count} ({resolved} resolved, {pending} pending)
+Edge cases: {total_count} ({critical} CRITICAL, {warning} WARNING, {info} INFO)
+  See: {EDGE_CASE_FILE path}
+```
+
+If zero edge cases across all waves, display:
+```
+Edge cases: 0 (none identified)
 ```
 
 **If [VERIFY] markers > 0, display note:**
@@ -695,5 +761,13 @@ These are inferred values that should be confirmed for accuracy.
 - Deduplicate identical entries
 - Update status based on target file existence
 - Log warnings for conflicts (same ref, different type/context)
+
+**Edge case aggregation:**
+- Writers create temporary files: {plan-id}-edge-cases.tmp
+- Orchestrator aggregates AFTER wave completes (serial, no race condition)
+- Temporary files deleted after aggregation
+- EDGE-CASES.md is per-phase (in phase directory, not project-wide)
+- CRITICAL entries get blockquote warning box format for visual distinction
+- Cross-phase edge case references logged to CROSS-REFS.md automatically
 
 </workflow>
