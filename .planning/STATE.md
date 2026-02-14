@@ -9,11 +9,11 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 
 ## Current Position
 
-- Phase: 5 of 7 (Complete-FDS + Standards)
-- Plan: 5 of 5 in phase (All plans complete - Phase 5 verified)
-- Status: Phase 5 verified complete
-- Last activity: 2026-02-14 - Phase 5 verified (103 automated checks + human approval + goal verification)
-- Next: Continue to Phase 6 (Knowledge Transfer + Review)
+- Phase: 6 of 7 (Knowledge Transfer + Review)
+- Plan: 2 of 5 in phase (Plans 06-01, 06-02 complete)
+- Status: In Progress
+- Last activity: 2026-02-14 - Plan 06-02 complete (Edge case capture system)
+- Next: Continue with Plan 06-03
 
 ## Progress
 
@@ -26,7 +26,7 @@ Progress: █████████████████████░░�
 | 3 | Write + Verify (Core Value) | 5/5 | ✓ Verified |
 | 4 | State Management + Recovery | 5/5 | ✓ Verified |
 | 5 | Complete-FDS + Standards | 5/5 | ✓ Verified |
-| 6 | Knowledge Transfer + Review | -/- | Pending |
+| 6 | Knowledge Transfer + Review | 2/5 | In Progress |
 | 7 | SDS Generation + Export | -/- | Pending |
 
 ## Decisions
@@ -117,6 +117,11 @@ Progress: █████████████████████░░�
 - [Phase 05]: --force flag allows DRAFT assembly with broken references, DRAFT suffix prevents accidental client delivery (2026-02-14)
 - [Phase 05]: Archive is COPY not MOVE - original phase files remain for continued work (2026-02-14)
 - [Phase 05]: Phase 5 verified complete through 11-category automated checks (103 checks) + human approval (2026-02-14)
+- [Phase 06]: Edge case capture is non-blocking - zero edge cases per section is acceptable (2026-02-14)
+- [Phase 06]: Design Reason field is REQUIRED for all edge cases - explains WHY system behaves this way (2026-02-14)
+- [Phase 06]: CRITICAL edge cases get dual format: table row + blockquote warning box for visual distinction (2026-02-14)
+- [Phase 06]: Temporary file pattern ({plan-id}-edge-cases.tmp) prevents race conditions between parallel writers (2026-02-14)
+- [Phase 06]: EDGE-CASES.md is per-phase (in phase directory, not project-wide) (2026-02-14)
 
 ## Blockers
 
@@ -136,8 +141,8 @@ Browser-based UI so non-technical colleagues can run GSD-Docs from a server with
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Phase 5 verified complete — standards, assembly, version management operational
-Resume file: N/A (phase complete)
+Stopped at: Completed 06-02-PLAN.md — edge case capture system implemented
+Resume file: N/A
 
 ---
 *Last updated: 2026-02-14*
