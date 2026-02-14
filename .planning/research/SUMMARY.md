@@ -1,207 +1,490 @@
 # Project Research Summary
 
-**Project:** GSD-Docs Industrial
-**Domain:** Claude Code plugin for industrial FDS/SDS documentation generation
-**Researched:** 2026-02-06
+**Project:** GSD-Docs Industrial v2.0 — Web GUI for FDS/SDS Document Generation
+**Domain:** Industrial automation engineering documentation (Web-based AI-powered document generation)
+**Researched:** 2026-02-14
 **Confidence:** HIGH
 
 ## Executive Summary
 
-GSD-Docs Industrial is a Claude Code plugin -- not a traditional software project. The entire deliverable consists of Markdown command files with YAML frontmatter, Markdown reference/template files, JSON configuration, and one DOCX template. There is no build step, no package.json, no transpilation. The "stack" is Claude Code's built-in plugin system: files placed in `~/.claude/commands/doc/` become `/doc:*` slash commands, and files in `~/.claude/agents/` become subagents spawned via the Task tool. The GSD reference implementation (v1.6.4) provides a proven, directly replicable architecture for command-driven orchestration with subagent delegation, wave-based parallelism, and file-based state management. GSD-Docs maps 1:1 to GSD's structure; only the payload changes from source code to technical documentation.
+GSD-Docs v2.0 wraps the proven v1.0 CLI workflow with a modern web interface to make industrial document generation accessible to engineering teams. The v1.0 CLI foundation (Claude Code commands, templates, domain knowledge) is validated and remains the source of truth. The v2.0 web GUI adds a FastAPI backend that orchestrates the same workflows and a React frontend that provides visual project management, real-time progress feedback, and document preview capabilities.
 
-The recommended approach is to build GSD-Docs as a direct structural analogue of GSD, with the core value loop (discuss -> plan -> write -> verify) as the centerpiece. The framework supports 4 project types (A: new + standards, B: new flex, C: modification large, D: modification small/TWN) with dynamic ROADMAP evolution for large projects. Each write operation gets a fresh subagent context containing only the current plan, project config, phase decisions, and relevant standards -- preventing the cross-contamination that is the primary quality risk in multi-section AI-assisted documentation. Equipment module templates enforce structured output (states, parameters, interlocks, I/O with ranges and units), and goal-backward verification checks content substance, not just file existence.
+The recommended approach is **orchestration over reimplementation**: The backend reads existing workflow .md files and executes their logic in Python, the frontend provides the interface layer, and all domain knowledge (templates, standards, typicals) remains file-based. This preserves CLI compatibility while adding the usability benefits of a web interface. The architecture separates concerns cleanly: FastAPI backend replaces Claude Code as orchestrator, React frontend handles visualization, SQLite stores only metadata, and the filesystem remains the source of truth for documents.
 
-The key risks are context cross-contamination between sections (which produces plausible-looking but factually wrong content -- a safety concern in industrial automation), infinite verification-fix loops (which waste tokens and erode user trust), and section numbering collapse during document assembly (which produces unprofessional output). All three are preventable with architectural discipline established in the earliest build phases: fresh context per writer, maximum 2 gap-closure iterations, and symbolic references resolved only at assembly time.
+Key risks center on real-time communication reliability and context management. Long-running LLM tasks (2-5 minutes) require persistent task storage with WebSocket reconnection logic to survive network hiccups and browser refreshes. Multi-step document generation workflows must implement checkpoint-based resumption to recover from failures without restarting from scratch. Context window budgeting is critical to prevent token limit failures on large technical documents. These risks are mitigated through Redis-backed task persistence, SSE for one-way streaming with automatic reconnection, and explicit token counting with context summarization.
 
 ## Key Findings
 
 ### Recommended Stack
 
-GSD-Docs has no traditional technology stack. The framework is entirely plain files that Claude Code discovers and loads at command invocation time.
+The v2.0 stack adds web infrastructure around the proven v1.0 CLI foundation. Backend uses FastAPI 0.129+ with async/await throughout, Anthropic SDK 0.79+ for Claude API integration, and SQLite 3.45+ with SQLAlchemy async for metadata. Real-time updates use sse-starlette 3.2+ for server-to-client streaming (simpler than WebSockets for one-way communication). Frontend uses React 18.3+ with TypeScript 5.7+, Vite 6.1+ for build tooling (40x faster than Create React App), shadcn/ui for accessible copy-paste components, TanStack Query 6.1+ for server state, and Zustand 5.0+ for minimal client state. Deployment is VM-based with systemd service management and Nginx reverse proxy (no Docker per requirement).
 
 **Core technologies:**
-- **Claude Code custom commands** (`~/.claude/commands/doc/*.md`): The only mechanism for registering `/doc:*` slash commands. Frontmatter-driven with YAML fields for name, description, allowed-tools, argument-hint, and model.
-- **Claude Code subagents** (`~/.claude/agents/*.md`): Specialized agents (doc-writer, doc-verifier, doc-planner, doc-reviewer, doc-sds-generator) spawned via the Task tool for heavy operations with fresh context.
-- **Markdown + YAML frontmatter**: The command file format. Not negotiable -- this is what Claude Code parses.
-- **JSON** (`config.json`, `CATALOG.json`): Structured configuration and typicals catalog.
+- **FastAPI 0.129+**: Async API orchestration — industry standard with automatic OpenAPI docs and native Pydantic validation
+- **Anthropic SDK 0.79+**: Claude API integration — official SDK with streaming, fast-mode, and structured outputs
+- **sse-starlette 3.2+**: Server-Sent Events — simpler than WebSockets for unidirectional server-to-client streaming with built-in browser auto-reconnect
+- **SQLite 3.45+ + SQLAlchemy 2.1+**: Metadata storage — no server required, perfect for team server (5-20 users), stores projects/files/sessions not documents
+- **React 18.3+ + TypeScript 5.7+**: UI framework — industry standard with excellent TypeScript support and mature ecosystem
+- **Vite 6.1+**: Build tool — 40x faster than CRA, HMR in milliseconds, first-class TypeScript support
+- **shadcn/ui + Radix UI 1.2+**: Component library — copy-paste ownership model, built on accessible headless primitives
+- **TanStack Query 6.1+**: Server state — automatic caching, background refetching, eliminates API boilerplate
+- **Zustand 5.0+**: Client state — minimal API for UI state only (sidebar, theme, selected panel)
 
-**External dependencies (export only):**
-- **Pandoc 3.x**: Markdown-to-DOCX conversion with `--reference-doc` for corporate styling.
-- **mermaid-cli 11.x** (requires Node.js 18+): Renders Mermaid diagrams to PNG before Pandoc conversion.
-
-**Critical version requirements:** None for the core framework. Pandoc 3.x for DOCX export. Node.js 18+ LTS if using mermaid-cli.
+**Critical version requirements:**
+- Pydantic 2.10+ (v2 is 5-50x faster, FastAPI requires v2)
+- Node.js 20.19+ (required for Vite 6 and Tailwind 4)
+- Tailwind CSS 4.1+ (5x faster builds, requires Safari 16.4+, Chrome 111+, Firefox 128+)
 
 ### Expected Features
 
-**Must have (table stakes) -- the framework fails without these:**
-- **TS-1: Project classification** (Type A/B/C/D) and scaffolding -- entry point for everything
-- **TS-2: Discuss-plan-write-verify workflow** -- this IS the product; without it, it is just a template
-- **TS-3: Equipment module documentation structure** -- states, parameters, interlocks, I/O in structured tables
-- **TS-4: Goal-backward verification** -- checks substance, not just file existence (5 levels: exists, substantive, complete, consistent, standards)
-- **TS-5: Gap closure loop** -- verify -> plan --gaps -> write -> re-verify, self-correcting
-- **TS-6: State management** (STATE.md) -- multi-session survival across days/weeks
-- **TS-7: Fresh context per write task** -- correctness guarantee against cross-contamination
-- **TS-8: Document assembly** (complete-fds) -- merge phases into single FDS with section numbering and cross-refs
-- **TS-9: DOCX export** -- industrial clients receive DOCX, not markdown
-- **TS-10: Resume/recovery** -- forward-only, detect incomplete operations
+Web GUI features split into three priority tiers based on user value vs implementation cost analysis.
 
-**Should have (differentiators) -- significant value beyond basic templates:**
-- **D-1: Gray area identification** (discuss-phase) -- front-loads decisions, saves 20-30% revision cycles
-- **D-2: FDS-to-SDS transformation** with typicals matching (CATALOG.json) -- saves 40-60% SDS time
-- **D-3: Dynamic ROADMAP evolution** -- adapts to project complexity after System Overview
-- **D-4: Cross-reference registry** (CROSS-REFS.md) -- automates the most labor-intensive quality check
-- **D-5: Knowledge transfer** (RATIONALE.md, EDGE-CASES.md, Fresh Eyes) -- preserves the "why"
-- **D-7: Parallel wave-based writing** -- cuts wall-clock time via parallel subagents
+**Must have (v2.0 launch — table stakes):**
+- **Project wizard with guided setup** — 3-5 step flow for Type A/B/C/D classification, language selection, reference upload, and baseline selection; reduces errors during initialization
+- **Phase timeline/progress visualization** — Linear timeline showing 3-phase FDS workflow (Discuss → Plan → Write → Verify → Review) with completion status; primary navigation
+- **Embedded chat panel for discussion phases** — AI discussion interface inline with workflow; maintains context, differentiates from generic chatbot by being workflow-aware
+- **Real-time progress feedback** — SSE streaming for long-running LLM calls (30s-3min); prevents "is it frozen?" anxiety with section-level granularity
+- **Human-in-the-loop review gates** — Approve/reject/request-changes workflow for verify-phase and review-phase; non-negotiable for professional document generation
+- **Basic document preview** — Markdown rendering with Mermaid diagram support; engineers need to see output without exporting to DOCX
+- **Reference file upload** — Drag-and-drop for per-project files (PDFs, DOCX, images); discuss-phase useless without reference context
+- **DOCX export** — Download button wrapping existing Pandoc export with huisstijl.docx template
+- **Error recovery/resume** — Detect incomplete state from STATE.md and offer resume; critical for 3-hour generation runs that crash
+- **Project list dashboard** — Browse existing projects with status, last modified, project type; engineers need access point
 
-**Defer to post-MVP:**
-- D-2 (FDS-to-SDS): Requires CATALOG.json investment; FDS alone is valuable
-- D-3 (Dynamic ROADMAP): Start static; add evolution when handling real large projects
-- D-6 (Standards opt-in): Bake in for Type A first; make configurable later
-- D-7 (Parallel waves): Sequential writing works; parallelism is optimization
-- D-9 (Version management): Simple file naming initially
-- D-10 (BASELINE.md): Type C/D support after Type A/B is solid
+**Should have (v2.x after validation):**
+- **Shared reference library** — Global library with admin management plus per-project overrides; team knowledge accumulation
+- **Confidence-based SDS typicals matching display** — Surface CATALOG.json matching scores, show "NEW TYPICAL NEEDED" for unknown equipment; builds trust
+- **Gap closure loop visualization** — Show verify → re-plan → re-write cycles transparently; max 2 iterations per v1.0 logic
+- **Standards compliance panel** — Opt-in PackML/ISA-88 verification overlay with violation indicators
+- **Phase-specific context visualization** — Debug view showing which reference docs/baseline sections fed each writer; transparency builds trust
+- **Document outline tree with navigation** — Expandable/collapsible tree for large FDS; linear scroll works for MVP
+
+**Defer (v3.0+ future consideration):**
+- **Local LLM support** — Provider abstraction ready but requires v3.0 milestone; API costs manageable, model quality unproven for technical docs
+- **Multi-user team features** — Role-based access, project sharing, activity logs; v2.0 single-engineer per project
+- **Client portal** — Read-only review access for external clients; email PDF works for now
+- **Version comparison UI** — Diff view between FDS versions; engineers use Word's compare feature
+- **Mobile/tablet UI** — Responsive design for field access; engineering work is desktop-based
+
+**Anti-features (avoid):**
+- **Real-time collaborative editing** — Document generation is single-engineer per v1.0 design; use async review-phase instead
+- **Full auto-generation (zero human input)** — Equipment details cannot be inferred; results in hallucinated/unsafe content
+- **Inline Markdown editing in GUI** — Creates divergence from file-backed state; breaks CLI compatibility
+- **Database-backed document storage** — STATE.md must remain human-readable and git-trackable
+- **Live DOCX preview** — Requires Word rendering engine; Markdown preview sufficient
 
 ### Architecture Approach
 
-GSD-Docs is a command-driven orchestration system with four layers: Command Layer (thin orchestrators in `~/.claude/commands/doc/`), Reference Layer (domain knowledge, templates, standards in `~/.claude/gsd-docs-industrial/`), Project State Layer (per-project `.planning/` with STATE.md as the system's memory), and Output Layer (assembled FDS/SDS documents + DOCX exports). Commands are thin -- they load context via @-references and delegate heavy work to subagents. Subagents get fresh context with explicit boundaries (only current plan + project config + phase decisions + standards). STATE.md is read first and written last by every command.
+The architecture implements **orchestration over reimplementation**: the backend becomes the orchestrator (replacing Claude Code), the frontend is the interface, and domain knowledge (templates, standards, workflows) remains in files. The workflow engine reads .md files from v1.0 and executes equivalent Python logic rather than embedding workflow steps in API routes. The LLM provider abstraction allows swapping Claude → local models via config change, not code rewrite.
 
 **Major components:**
-1. **Command files** (12 commands) -- entry points that define allowed tools, load execution context, and orchestrate subagent delegation
-2. **Workflow files** (10 workflows) -- detailed execution logic that subagents follow, loaded via @-references
-3. **Templates** (17+ files) -- scaffolding for ROADMAP, PLAN, CONTENT, VERIFICATION, organized by project type and section type
-4. **References** (8+ files) -- domain knowledge: standards (PackML, ISA-88), writing guidelines, verification patterns, typicals catalog
-5. **State machine** (STATE.md) -- progress tracking, decision memory, crash recovery across sessions
+1. **FastAPI Backend** — Replaces Claude Code as orchestrator; loads v1.0 templates/workflows, calls Anthropic SDK, streams progress via SSE
+2. **Workflow Engine** — Reads .md workflow files, translates steps to Python execution, maintains STATE.md checkpoints, implements wave-based parallelization
+3. **LLM Provider Abstraction** — `LLMProvider` interface with `ClaudeProvider` (v2.0) and `LocalProvider` stub (v3.0); entire codebase calls `get_llm_provider().complete()`
+4. **React Frontend** — Visual interface for workflows; Zustand stores for projects/phases, TanStack Query for API data, SSE EventSource for real-time updates
+5. **Domain Knowledge Loader** — Loads templates (equipment-module.md), standards (PackML/ISA-88), prompts (doc-writer.md) from v1.0 file structure unchanged
+6. **State Manager** — Reads/writes STATE.md for checkpoint/resume; detects crashes, enables forward-only recovery
+7. **SQLite Metadata Store** — Projects table, files table, sessions table; NOT documents (documents remain file-based for CLI compatibility)
+8. **File Storage** — `/projects/{id}/.planning/` for state, `/references/shared/` for global library, `/references/projects/{id}/` for per-project uploads
 
-**Key patterns:** Orchestrator + subagent delegation, wave-based parallelization, goal-backward verification, conditional standards loading, forward-only recovery, SUMMARY.md as cross-phase bridge.
+**Data flow (Phase Writing example):**
+```
+Engineer clicks "Write Phase 3"
+  → POST /api/phases/3/write
+    → Workflow Engine loads write-phase.md
+      → Discover PLAN.md files, group by wave
+        → Background Task Queue (ARQ + Redis) spawns parallel writers per wave
+          → Each writer: Domain Knowledge Loader builds isolated context
+            → LLM Provider calls Claude with streaming
+              → SSE broadcasts progress per section
+                → React EventSource updates progress UI
+          → Write CONTENT.md + SUMMARY.md to filesystem
+        → State Manager checkpoints wave completion in STATE.md
+      → Aggregate CROSS-REFS.md
+    → Return success
+  → Frontend updates phase timeline
+```
+
+**Key architectural patterns:**
+- **Workflow translation**: .md files are SSOT; Python reads and executes them
+- **Provider abstraction**: Model-agnostic `LLMProvider` interface for future local models
+- **SSE over WebSockets**: One-way streaming simpler than bidirectional; browser auto-reconnect built-in
+- **Hybrid storage**: SQLite for searchable metadata, filesystem for human-readable documents
+- **Wave-based parallelization**: Group plans by wave number, execute waves sequentially, plans within wave parallel
+- **Context isolation**: Each section writer receives only relevant context (no cross-plan leakage)
 
 ### Critical Pitfalls
 
-1. **Context cross-contamination** (CRITICAL) -- Writer subagent for EM-400 loads or inherits content from EM-200, producing plausible but factually wrong content. **Prevention:** Each writer loads ONLY PROJECT.md + CONTEXT.md + its own PLAN.md + standards. Orchestrator never reads other plans' CONTENT.md before spawning. Verification cross-checks equipment IDs against plan scope.
+From PITFALLS.md, the five highest-impact risks requiring upfront architectural decisions:
 
-2. **Infinite verification-fix loops** (CRITICAL) -- Verify finds gaps, fixes introduce new gaps, system spins without converging. **Prevention:** Maximum 2 gap-closure cycles per phase. Scoped re-verification (check only targeted gaps). Escalate to `human_needed` after limit.
+1. **WebSocket connection drops during long LLM tasks** — Engineers start 2-5 minute generation, connection drops (network hiccup, browser refresh), backend continues burning API tokens, user sees frozen UI and restarts duplicating work. **Prevention:** Decouple task execution from connection lifecycle. Use Redis Streams for persistent chunk storage, Redis Pub/Sub for notifications, client auto-reconnection with task ID fetches missed chunks. Add heartbeat keepalive every 15 seconds. **Phase:** Phase 1 (Core Infrastructure) — architectural decision that must be made upfront.
 
-3. **Section numbering collapse at assembly** (CRITICAL) -- Phase-relative section numbers collide in final document; cross-references become wrong after ROADMAP evolution. **Prevention:** Use symbolic references during writing (e.g., `{EM-200-interlocks}`). Numbering applied only at complete-fds assembly time. CROSS-REFS.md stores plan-ID + section-ID, not numbers.
+2. **Blocking FastAPI event loop with synchronous file operations** — Uploading 50MB reference document uses `open().write()`, blocks worker thread for seconds, entire app becomes unresponsive under concurrent load. **Prevention:** Use `aiofiles` for all file operations, async context managers, chunked streaming for large files. Set file size limits (100MB max). Real-world measurements show 40% throughput gain with async I/O. **Phase:** Phase 1 (Core Infrastructure) — establish file handling patterns from start.
 
-4. **STATE.md corruption during parallel crashes** (CRITICAL) -- Parallel writer A crashes, writer B completes, STATE.md shows wave as done, plan A is silently lost. **Prevention:** SUMMARY.md existence is the ONLY completion proof. Resume logic scans for PLAN.md without matching SUMMARY.md. STATE.md is never the primary source of truth for plan completion.
+3. **Claude API rate limits without retry-after header handling** — Multiple concurrent calls hit rate limit (50 req/min Tier 1), naive retry ignores `retry-after` header, thundering herd makes congestion worse. **Prevention:** Read and respect `retry-after` header, exponential backoff with jitter as fallback, request queuing with rate tracking, per-user quotas, circuit breakers. **Phase:** Phase 1 (Core Infrastructure) — LLM client service must implement correctly upfront.
 
-5. **Template explosion across 4 project types** (CRITICAL) -- 4 types x 2 standards combos x N languages = copy-paste maintenance hell. **Prevention:** Template inheritance with type-specific overrides. Standards as composable modules, not conditional blocks. Language as late-binding. Test all 4 types before release.
+4. **Shared state divergence between CLI and web** — CLI uses file-based locking, web needs concurrent access, developers duplicate state logic, projects created via CLI don't appear correctly in web UI. **Prevention:** Create shared state management library used by both CLI and web, abstract storage interface (file-based for CLI, Redis for web), unified validation, transactional updates. **Phase:** Phase 1 (Core Infrastructure) — foundational architecture, retrofitting extremely costly.
+
+5. **Unvalidated file uploads with content-type spoofing** — Accept user files checking only `Content-Type` header (client-controlled), malicious PDF with spoofed header creates RCE/SSRF/DoS vulnerabilities. **Prevention:** Defense-in-depth validation: magic number validation with `python-magic`, file extension whitelist, size limits, UUID-based storage filenames, sandboxed parsing, virus scanning. **Phase:** Phase 2 (File Management) — security gate, cannot be deferred.
+
+**Additional high-impact pitfalls:**
+- **Missing resumption points for interrupted workflows** — Multi-step workflow fails mid-process, restarts from scratch wasting time/tokens. **Prevention:** Workflow state machines with persistent checkpoints, manual override support, resumption from any completed checkpoint. **Phase:** Phase 3 (Phase Orchestration).
+- **Context window limits in multi-step generation** — Accumulate context across steps, exceed 200K token limit, API fails. **Prevention:** Explicit token counting with `anthropic.count_tokens()`, context budgeting, summarization of previous steps, prompt caching for 60-90% cost reduction. **Phase:** Phase 3 (Phase Orchestration).
+- **SSE vs WebSocket mismatch** — Use WebSockets for one-way streaming, unnecessary complexity. **Prevention:** Use SSE for server-to-client (LLM tokens, progress), reserve WebSockets for bidirectional (collaborative editing). **Phase:** Phase 1 (Core Infrastructure).
 
 ## Implications for Roadmap
 
-Based on combined research, the build decomposes into 7 phases following the dependency chain identified in ARCHITECTURE.md and validated against the feature dependency graph in FEATURES.md.
+Based on combined research, the roadmap should follow an **infrastructure-first, features-incremental** approach. The critical architectural decisions (real-time communication, file handling, state management, LLM abstraction) must be in place before building user-facing workflows. Each phase delivers a vertical slice of functionality that can be validated independently.
 
-### Phase 1: Framework Foundation + new-fds
+### Phase 1: Core Infrastructure & Project Management
+**Rationale:** Foundational architecture must support all subsequent phases. WebSocket reconnection logic, async file I/O patterns, LLM provider abstraction, and shared CLI/web state management are architectural decisions that cannot be retrofitted. Establishing these upfront prevents costly refactoring later. Project creation and listing provides immediate user value for testing infrastructure.
 
-**Rationale:** Every subsequent command depends on the `.planning/` directory structure and PROJECT.md/ROADMAP.md that new-fds creates. The template composition architecture must be established here to prevent Pitfall 5 (template explosion). The SUMMARY.md-as-completion-proof pattern must be established here to prevent Pitfall 4 (STATE.md corruption).
-**Delivers:** Working `/doc:new-fds` command that classifies projects (Type A/B/C/D), generates ROADMAP from type-specific template, scaffolds .planning/ directory, creates PROJECT.md + REQUIREMENTS.md + STATE.md + config.json. Also: framework directory structure (`~/.claude/gsd-docs-industrial/`), CLAUDE-CONTEXT.md, ui-brand.md, and the template composition pattern.
-**Features addressed:** TS-1 (Project Classification), TS-6 (State Management foundation)
-**Pitfalls to avoid:** Pitfall 5 (template explosion -- invest in composition architecture), Pitfall 4 (establish SUMMARY.md = completion proof)
+**Delivers:**
+- FastAPI skeleton with CORS, Pydantic settings, async SQLAlchemy
+- SQLite metadata store (projects, files, sessions tables)
+- LLM provider abstraction (`LLMProvider` interface, `ClaudeProvider` implementation with retry-after handling)
+- File storage structure (`/projects/`, `/references/`)
+- SSE infrastructure with Redis-backed task persistence and reconnection logic
+- Async file handling utilities with `aiofiles`
+- Shared state management library (abstract storage, unified validation)
+- Workflow engine foundation (load .md files, parse steps)
+- React + Vite setup with routing, Zustand stores, TanStack Query
+- Project creation API (wraps `new-fds.md` workflow)
+- Project list dashboard UI
+- Basic error handling and logging
 
-### Phase 2: Discuss + Plan Commands
+**Addresses features:**
+- Project list dashboard (table stakes)
+- Project creation with Type A/B/C/D classification
 
-**Rationale:** Planning depends on ROADMAP + PROJECT from Phase 1. Writing (Phase 3) depends on PLAN.md files from this phase. The discuss-phase front-loads gray area identification, which is the primary differentiator (D-1) and should be available from the earliest usable version.
-**Delivers:** Working `/doc:discuss-phase` producing CONTEXT.md with captured decisions. Working `/doc:plan-phase` producing PLAN.md files with wave assignments and verification criteria. FDS section templates (equipment module, state machine, interface). doc-planner subagent.
-**Features addressed:** TS-2 (core workflow -- discuss + plan legs), D-1 (Gray Area Identification), TS-3 (EM documentation structure via templates)
-**Pitfalls to avoid:** Pitfall 7 (CONTEXT.md overload -- enforce 1500 word limit + priority tiers), Pitfall 6 (ROADMAP evolution -- use directory names, not just numbers)
+**Avoids pitfalls:**
+- Pitfall 1: WebSocket connection drops (Redis-backed persistence + SSE)
+- Pitfall 2: Blocking file I/O (aiofiles from start)
+- Pitfall 3: Claude rate limits (retry-after header handling in LLM client)
+- Pitfall 4: CLI/web state divergence (shared state library)
+- Pitfall 7: SSE vs WebSocket mismatch (choose SSE for one-way)
 
-### Phase 3: Write + Verify (Core Value Delivery)
+**Needs research:** No — web infrastructure patterns well-documented
 
-**Rationale:** This is the core value loop. Writing and verification are inseparable because gap closure ties them together. This phase produces the first real FDS content and validates it. The fresh-context-per-writer pattern (TS-7) must be correct here or the entire framework fails.
-**Delivers:** Working `/doc:write-phase` with wave-based subagent execution. doc-writer subagent with fresh context isolation. CONTENT.md + SUMMARY.md generation. Working `/doc:verify-phase` with 5-level goal-backward checking. Gap closure loop (verify -> plan --gaps -> write -> re-verify, max 2 cycles). CROSS-REFS.md logging. EDGE-CASES.md logging. doc-verifier subagent. Writing guidelines and verification patterns references.
-**Features addressed:** TS-2 (write + verify legs), TS-4 (Goal-Backward Verification), TS-5 (Gap Closure), TS-7 (Fresh Context), D-7 (Parallel Wave Writing), D-8 (SUMMARY.md)
-**Pitfalls to avoid:** Pitfall 1 (context cross-contamination -- strict context loading rules), Pitfall 2 (infinite loops -- max 2 retries + scoped re-verification), Pitfall 9 (SUMMARY.md quality -- mandatory structure + validation)
+---
 
-### Phase 4: State Management + Recovery + Review
+### Phase 2: Reference Library & File Management
+**Rationale:** Reference files are critical input for discuss-phase and write-phase workflows. File upload must have proper security validation (magic numbers, not just Content-Type) before allowing any uploads. This phase also establishes the shared/per-project library architecture that supports discuss-phase context assembly.
 
-**Rationale:** Once the core write/verify cycle works, robustness features make the system production-ready. Crash recovery requires the write infrastructure to exist. Dynamic ROADMAP evolution triggers after Phase 2 (System Overview) verification, so verify-phase must exist first.
-**Delivers:** Working `/doc:status` command. Working `/doc:resume` with interrupt detection and forward-only recovery. Partial write detection. Dynamic ROADMAP evolution (post-System Overview expansion). `/doc:review-phase` for client feedback. REVIEW.md template.
-**Features addressed:** TS-10 (Resume/Recovery), TS-6 (State Management -- full implementation), D-3 (Dynamic ROADMAP Evolution)
-**Pitfalls to avoid:** Pitfall 4 (STATE.md corruption -- SUMMARY.md as completion proof), Pitfall 6 (ROADMAP evolution -- migration of artifacts when phases renumber)
+**Delivers:**
+- File upload API with defense-in-depth validation (magic numbers via `python-magic`, extension whitelist, size limits, UUID storage)
+- Reference library storage (`/references/shared/`, `/references/projects/{id}/`)
+- File metadata in SQLite (files table with project_id, category, path, mime_type)
+- Reference library UI (drag-and-drop upload, file listing, categorization)
+- File download endpoint (proxy, not direct serving)
+- Reference file context loading for workflows
+- File cleanup on project deletion
 
-### Phase 5: Standards Integration (PackML, ISA-88)
+**Addresses features:**
+- Reference file upload (table stakes)
+- Shared reference library (should-have, foundation for v2.x global library)
 
-**Rationale:** Standards are opt-in enhancements to the core workflow. The core must work without them first (Type B and D projects never use them). Building standards as an overlay on top of a working writer/verifier ensures the conditional loading pattern works correctly.
-**Delivers:** PackML reference files (STATE-MODEL.md, UNIT-MODES.md). ISA-88 reference files (EQUIPMENT-HIERARCHY.md, TERMINOLOGY.md). Conditional loading mechanism in orchestrators. Standards compliance checks in doc-verifier. Standards-aware FDS section templates.
-**Features addressed:** D-6 (Standards Opt-In)
-**Pitfalls to avoid:** Pitfall 8 (Standards terminology drift -- composable modules, terminology enforcement post-processing, verification checks against reference lists)
+**Avoids pitfalls:**
+- Pitfall 5: File upload security (magic number validation, sandboxed storage)
 
-### Phase 6: Complete-FDS + Knowledge Transfer
+**Needs research:** No — file handling patterns established
 
-**Rationale:** Document assembly is the "end of the line" for FDS production. It requires all upstream content to exist. Knowledge transfer documents (RATIONALE, EDGE-CASES) have been accumulated during Phases 2-4 and are aggregated here. This is where symbolic cross-references resolve to actual section numbers.
-**Delivers:** Working `/doc:complete-fds` with cross-phase merging, strict cross-reference validation, orphan section detection. RATIONALE.md aggregation. EDGE-CASES.md aggregation. ENGINEER-TODO.md generation (complex diagrams flagged for manual creation). Fresh Eyes review. `/doc:release` for version management. Archive workflow.
-**Features addressed:** TS-8 (Document Assembly), D-4 (Cross-Reference Validation), D-5 (Knowledge Transfer), D-9 (Version Management), D-11 (ENGINEER-TODO.md)
-**Pitfalls to avoid:** Pitfall 3 (section numbering collapse -- symbolic references resolved only here), Pitfall 14 (orphan content -- scan for unreferenced CONTENT.md files)
+---
 
-### Phase 7: SDS Generation + DOCX Export
+### Phase 3: Discussion Workflow & Chat Interface
+**Rationale:** Discuss-phase is the first interactive workflow, establishing patterns for all subsequent phase workflows. Chat panel is a key differentiator vs generic document tools. This phase validates the workflow engine, LLM integration, and real-time communication under real user interaction.
 
-**Rationale:** SDS depends on a complete FDS. DOCX export depends on final documents. These are downstream transformations, not core authoring. Export is the final delivery format and has the most external dependencies (Pandoc, mermaid-cli).
-**Delivers:** Working `/doc:generate-sds` with typicals matching from CATALOG.json. TRACEABILITY.md linking FDS requirements to SDS implementation. Working `/doc:export` with Pandoc + huisstijl.docx. Mermaid diagram rendering with complexity fallback. Full pipeline: brief -> FDS -> SDS -> DOCX.
-**Features addressed:** D-2 (FDS-to-SDS Transformation), TS-9 (DOCX Export)
-**Pitfalls to avoid:** Pitfall 10 (export fragility -- pin Pandoc version, test with reference document, complexity budget per diagram), Pitfall 13 (typicals catalog staleness -- version tracking per typical)
+**Delivers:**
+- `discuss-phase.md` workflow implementation in Python
+- `/api/phases/{phase}/discuss` endpoint
+- Workflow execution: load ROADMAP goals, call LLM to identify gray areas, stream questions via SSE
+- Chat panel component (WebSocket-connected, displays questions, captures answers)
+- Discussion state management (conversation history in CONTEXT.md)
+- Phase timeline component (visualization of ROADMAP phases)
+- SSE event handling in React (EventSource hook)
+- Discussion completion triggers plan-phase enablement
+
+**Addresses features:**
+- Embedded chat panel (table stakes, differentiator)
+- Phase timeline visualization (table stakes)
+
+**Uses stack:**
+- Anthropic SDK for Claude API
+- sse-starlette for streaming questions
+- React EventSource for real-time updates
+
+**Implements architecture:**
+- Workflow Engine executing .md workflows
+- Domain Knowledge Loader providing ROADMAP context
+- State Manager updating STATE.md checkpoints
+
+**Needs research:** No — workflow patterns from v1.0, chat UI well-documented
+
+---
+
+### Phase 4: Planning Workflow & Section Organization
+**Rationale:** Plan-phase establishes the section structure that write-phase executes. This phase implements wave-based section dependencies (frontmatter parsing) and generates PLAN.md files that drive subsequent writing. Validation of wave logic critical before parallel execution in Phase 5.
+
+**Delivers:**
+- `plan-phase.md` workflow implementation
+- `/api/phases/{phase}/plan` endpoint
+- Workflow: load section templates, generate PLAN.md files with frontmatter (wave, depends_on)
+- PLAN.md frontmatter parsing (YAML)
+- Wave dependency validation (no circular deps)
+- Document outline component (tree view of planned sections)
+- Plan editing UI (adjust wave assignments, dependencies)
+- Plan completion enables write-phase
+
+**Addresses features:**
+- Document outline tree view (should-have foundation, enhanced in v2.x)
+
+**Uses stack:**
+- Domain Knowledge Loader for section templates
+- State Manager for plan file tracking
+
+**Implements architecture:**
+- Wave-based parallelization foundation (groups plans by wave)
+
+**Needs research:** No — planning logic from v1.0
+
+---
+
+### Phase 5: Writing Workflow & Real-Time Progress
+**Rationale:** Write-phase is the most complex workflow: wave-based parallel execution, long-running LLM calls, context isolation per section, progress streaming. This phase validates the entire architecture under production-like load. Background task queue (ARQ + Redis) enables parallel writers.
+
+**Delivers:**
+- `write-phase.md` workflow implementation
+- `/api/phases/{phase}/write` endpoint
+- Background task queue setup (ARQ + Redis)
+- Parallel section writing (spawn tasks per wave, await wave completion)
+- Context isolation (each writer receives only relevant PLAN, CONTEXT, standards)
+- Progress streaming via SSE (section start/progress/complete events)
+- CONTENT.md and SUMMARY.md file generation
+- CROSS-REFS.md aggregation
+- Progress indicator component (wave/section progress bars)
+- Document preview component (react-markdown + Mermaid rendering)
+- Write completion enables verify-phase
+
+**Addresses features:**
+- Real-time progress feedback (table stakes)
+- Basic document preview (table stakes)
+
+**Uses stack:**
+- ARQ + Redis for background tasks
+- sse-starlette for progress streaming
+- react-markdown + remark-gfm for preview
+- Mermaid rendering in browser
+
+**Implements architecture:**
+- Wave-based parallelization (sequential waves, parallel within wave)
+- Context isolation (no cross-plan leakage)
+- SSE progress broadcasting from background tasks
+
+**Avoids pitfalls:**
+- Pitfall 6: Missing resumption points (checkpoint after each wave in STATE.md)
+- Pitfall 8: Context window limits (context budget per section, no full document context)
+
+**Needs research:** No — wave parallelization patterns established
+
+---
+
+### Phase 6: Verification & Gap Closure
+**Rationale:** Verify-phase implements the 5-level quality checks (goals, standards, completeness, safety, cross-references). Gap detection and closure loop (re-plan → re-write, max 2 iterations) validates workflow resumption logic. This phase exercises error recovery and checkpoint resumption.
+
+**Delivers:**
+- `verify-phase.md` workflow implementation
+- `/api/phases/{phase}/verify` endpoint
+- 5-level verification (goal-backward, standards-forward, completeness, safety, cross-ref)
+- VERIFICATION.md generation with gap details
+- Gap closure loop (detect gaps → re-plan → re-write → re-verify, max 2 iterations)
+- Verification results UI (display gaps, severity, recommendations)
+- Fix trigger (human initiates re-plan/re-write)
+- Verification completion or gap-fix-needed state
+
+**Addresses features:**
+- Gap closure loop visualization (should-have)
+- Standards compliance panel foundation (opt-in in v2.x)
+
+**Implements architecture:**
+- Workflow resumption from checkpoints (verify → re-plan → re-write)
+
+**Avoids pitfalls:**
+- Pitfall 6: Missing resumption points (test checkpoint recovery in gap closure)
+
+**Needs research:** No — verification logic from v1.0
+
+---
+
+### Phase 7: Review & Human-in-the-Loop
+**Rationale:** Review-phase captures client feedback and engineer approval before FDS assembly. Human-in-the-loop gates are non-negotiable for professional document generation. This phase validates the approve/reject/request-changes workflow and feedback storage in CONTEXT.md.
+
+**Delivers:**
+- `review-phase.md` workflow implementation
+- `/api/phases/{phase}/review` endpoint
+- Review UI (approve/reject/request-changes buttons)
+- Feedback capture form (client comments, engineer notes)
+- Feedback storage in CONTEXT.md
+- Review status tracking (pending → approved → changes-requested)
+- Review completion enables complete-fds
+- Approve triggers next phase, request-changes triggers re-write
+
+**Addresses features:**
+- Human-in-the-loop review gates (table stakes)
+
+**Needs research:** No — review workflow from v1.0
+
+---
+
+### Phase 8: FDS Assembly & Export
+**Rationale:** Assembles complete FDS from phase sections, resolves cross-references, integrates diagrams, and exports to DOCX via Pandoc. This phase delivers the final output format and validates the entire end-to-end workflow from project creation to export.
+
+**Delivers:**
+- `complete-fds.md` workflow implementation
+- `/api/export/fds` endpoint
+- FDS.md assembly (merge sections in order)
+- Cross-reference resolution (CROSS-REFS.md → final links)
+- Mermaid diagram rendering (mmdc CLI → PNG)
+- DOCX export via Pandoc subprocess (huisstijl.docx template)
+- Export UI (format options, download)
+- Export progress streaming
+- Export history tracking
+
+**Addresses features:**
+- DOCX export (table stakes)
+- Document preview with Mermaid (enhanced from Phase 5)
+
+**Uses stack:**
+- Pandoc for DOCX export
+- Mermaid CLI (mmdc) for diagram rendering
+
+**Needs research:** No — export logic from v1.0
+
+---
+
+### Phase 9: SDS Generation
+**Rationale:** SDS generation is post-FDS workflow, leverages completed FDS as input. Typicals matching (CATALOG.json) and confidence scoring are SDS-specific features. This phase can be developed after FDS workflow proven.
+
+**Delivers:**
+- `generate-sds.md` workflow implementation
+- `/api/export/sds` endpoint
+- Typicals matching (CATALOG.json lookup, confidence scoring)
+- SDS scaffolding from FDS equipment modules
+- "NEW TYPICAL NEEDED" detection for unknown equipment
+- SDS preview UI
+- SDS export to DOCX
+
+**Addresses features:**
+- Confidence-based SDS typicals matching (should-have)
+
+**Needs research:** Potentially — if typicals matching algorithm unclear from v1.0
+
+---
+
+### Phase 10: Error Recovery & Production Hardening
+**Rationale:** Crash recovery, graceful shutdown, monitoring, and production deployment patterns. This phase validates resilience under failure conditions and prepares for multi-user deployment.
+
+**Delivers:**
+- Resume detection (`/api/projects/{id}/resume` endpoint)
+- STATE.md parsing to detect incomplete phases
+- Resume UI (offer resume from last checkpoint)
+- Graceful shutdown (SIGTERM handler, complete in-flight requests)
+- systemd service files (FastAPI, ARQ worker)
+- Nginx reverse proxy config (SSL, static files, WebSocket upgrade, SSE)
+- Monitoring (token usage tracking, error logging, performance metrics)
+- Backup scripts (SQLite, project files)
+- Production checklist verification
+
+**Addresses features:**
+- Error recovery/resume (table stakes)
+
+**Avoids pitfalls:**
+- Pitfall 1: Connection drops (validate reconnection and resumption)
+- Pitfall 6: Missing resumption (test crash recovery)
+
+**Needs research:** No — systemd/Nginx deployment well-documented
+
+---
 
 ### Phase Ordering Rationale
 
-- **Dependency chain drives order:** Each phase produces artifacts consumed by the next. new-fds -> discuss/plan -> write/verify -> state/recovery -> standards -> assembly -> export.
-- **Core value first:** Phases 1-3 are the minimum viable pipeline. After Phase 3, an engineer can run the full discuss -> plan -> write -> verify cycle and produce verified FDS sections. Everything after Phase 3 makes it better; Phases 1-3 make it work.
-- **Risk mitigation front-loaded:** The three critical architectural decisions (fresh context per writer, SUMMARY.md as completion proof, symbolic references) are established in Phases 1-3 where they can be validated early.
-- **Standards as overlay:** Phase 5 adds standards on top of a working system, ensuring the conditional loading pattern is correct and the core never depends on standards presence.
-- **Export last:** External tool dependencies (Pandoc, mermaid-cli) are isolated in Phase 7. The framework is fully functional in Markdown without export capability.
+- **Infrastructure first (Phase 1-2):** Architectural decisions (SSE, async I/O, LLM abstraction, state management, file security) must be in place before workflows. Retrofitting these is prohibitively expensive.
+- **Workflows incremental (Phase 3-9):** Each workflow phase builds on previous (discuss → plan → write → verify → review → complete → SDS). This matches the natural document generation sequence and allows validation at each step.
+- **Production last (Phase 10):** Hardening happens after core workflows proven. Error recovery patterns discovered during Phase 3-9 inform Phase 10 implementation.
+- **Architecture dependencies drive order:** Phase 3 (discussion) requires Phase 1 (SSE + LLM client), Phase 5 (writing) requires Phase 4 (planning), Phase 6 (verification) requires Phase 5 (content exists), Phase 8 (export) requires Phase 7 (review completion).
 
 ### Research Flags
 
-**Phases likely needing deeper research during planning:**
-- **Phase 3 (Write + Verify):** The doc-writer subagent prompt and verification patterns are novel -- no direct GSD equivalent for documentation-specific content quality checks. The wave dependency analysis logic needs design work. This phase carries the most implementation risk.
-- **Phase 6 (Complete-FDS):** Section numbering algorithm and cross-reference resolution at assembly time have no GSD precedent. This is a documentation-specific problem that must be designed from scratch.
-- **Phase 7 (SDS Generation):** Typicals matching algorithm (FDS equipment descriptions -> CATALOG.json function blocks) is entirely new. The semantic matching logic needs research.
+**Phases needing deeper research during planning:**
+- **Phase 9 (SDS Generation):** If typicals matching algorithm unclear from v1.0 CATALOG.json, may need research on confidence scoring heuristics and "NEW TYPICAL NEEDED" detection rules.
 
 **Phases with standard patterns (skip research-phase):**
-- **Phase 1 (Framework Foundation):** Directly maps to GSD's `new-project.md`. Well-documented command registration pattern. Copy structure, adapt content.
-- **Phase 2 (Discuss + Plan):** Maps to GSD's `discuss-phase.md` and `plan-phase.md`. Established GSD patterns. Domain-specific content (gray area catalogs) is the main work, not architecture.
-- **Phase 4 (State + Recovery):** Maps to GSD's `resume-work.md` and `progress.md`. Forward-only recovery is a proven GSD pattern.
-- **Phase 5 (Standards):** Content creation (writing PackML/ISA-88 reference files), not architectural work. Conditional loading pattern is already defined.
+- **Phase 1 (Core Infrastructure):** FastAPI + React patterns well-documented, SSE/async I/O established best practices
+- **Phase 2 (File Management):** File upload security patterns clear from PITFALLS.md research
+- **Phase 3-8 (Workflows):** Logic already exists in v1.0 .md workflows, implementation is translation not discovery
+- **Phase 10 (Production):** systemd/Nginx deployment patterns mature and documented
+
+**Overall:** Minimal additional research needed. The v1.0 workflows are the specification; research already covered stack, features, architecture, and pitfalls comprehensively.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Verified against GSD v1.6.4 source files and official Claude Code documentation. No ambiguity -- the "stack" is Claude Code's plugin system. |
-| Features | MEDIUM-HIGH | Specification v2.7.0 is detailed and internally consistent. Domain knowledge verified against IACS Engineering, RealPars, ISA-88 sources. Minor gap: real-world usage data for discuss-phase question quality is assumed, not validated. |
-| Architecture | HIGH | Derived from reading actual GSD source files (24 commands, 7 references, 6 workflows). 1:1 mapping is proven by structural analysis. The component boundary rules and data flows are directly verified. |
-| Pitfalls | HIGH | Critical pitfalls derived from GSD architecture analysis + domain-specific research (multi-agent failures, context rot). Prevention strategies grounded in specification sections. Phase-specific warnings are concrete and actionable. |
+| Stack | HIGH | Official documentation for FastAPI, React, Anthropic SDK. Version compatibility verified. Deployment patterns proven (systemd/Nginx). |
+| Features | HIGH | Table stakes vs differentiators grounded in web UI patterns, AI document tools, and engineering workflows. v1.0 CLI provides feature reference. |
+| Architecture | HIGH | Patterns sourced from production FastAPI+LLM deployments, real-time communication guides, and agentic workflow systems. Orchestration-over-reimplementation aligns with v1.0 constraint. |
+| Pitfalls | HIGH | Based on official docs, production guides, and 2026 best practices. Critical pitfalls backed by multiple sources (WebSocket reliability, async I/O, rate limits, security). |
 
 **Overall confidence:** HIGH
 
+The research is comprehensive across all four dimensions (stack, features, architecture, pitfalls). Sources include official documentation (Anthropic SDK, FastAPI, React, SQLAlchemy), production guides (deployment, monitoring, security), and domain-specific research (AI document tools, engineering workflows, LLM integration patterns). The v1.0 CLI provides a validated reference implementation that de-risks workflow logic. The only uncertainty is whether typicals matching needs deeper research (Phase 9), but this can be deferred until FDS workflow is proven.
+
 ### Gaps to Address
 
-- **doc-writer prompt quality:** The most critical unknown. How well the writer subagent produces structured FDS content (states, parameters, interlocks, I/O with ranges/units) depends entirely on the quality of the system prompt and templates. This must be iterated during Phase 3 implementation.
-- **Wave dependency analysis:** The specification says plans get wave assignments, but the algorithm for determining which sections can be parallel vs. which have dependencies is not specified. This needs design during Phase 2 planning.
-- **CONTEXT.md size management:** The 1500-word limit and priority tier structure are recommendations from pitfalls research, not specification mandates. The actual effective limit depends on how much context doc-writer subagents need for quality output.
-- **Cross-reference resolution algorithm:** The symbolic-to-numbered reference resolution at complete-fds time is a novel requirement with no GSD precedent. The algorithm needs design during Phase 6 planning.
-- **Typicals matching semantics:** How CATALOG.json entries map to FDS equipment descriptions is specified at a high level but the matching algorithm (exact vs. fuzzy, confidence thresholds, "NEW TYPICAL NEEDED" triggers) needs design during Phase 7.
-- **Template composition mechanism:** The prevention for Pitfall 5 recommends template inheritance with type-specific overrides, but the exact mechanism (base + override files vs. conditional includes vs. parameterized templates) needs decision during Phase 1 planning.
+- **Typicals matching confidence algorithm (Phase 9):** If CATALOG.json matching logic unclear from v1.0 code, may need research during Phase 9 planning on confidence scoring heuristics and equipment identification patterns.
+- **Production monitoring specifics:** While monitoring patterns clear, specific metrics to track (token usage per user, API latency percentiles, error rates by phase) should be defined during Phase 10 based on operational needs discovered in Phase 1-9.
+- **Multi-user concurrency patterns:** v2.0 targets 5-20 users, but concurrent editing edge cases (two engineers editing same project) deferred to v2.x. If concurrent access issues emerge, may need locking/conflict resolution research.
+
+**How to handle:**
+- **Typicals matching:** Review v1.0 CATALOG.json implementation during Phase 9 planning. If algorithm unclear, run `/gsd:research-phase` to research equipment identification and confidence scoring patterns.
+- **Monitoring:** Define initial metric set in Phase 1 (basic health checks), expand incrementally in Phase 3-9 based on discovered failure modes, finalize in Phase 10.
+- **Concurrency:** Document "single engineer per project" constraint in v2.0. If multi-user demand emerges, defer to v2.x with proper research on optimistic locking / conflict resolution.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- GSD reference implementation v1.6.4 (`~/.claude/get-shit-done/`) -- 24 command files, 7 reference files, 6 workflow files read directly
-- GSD-Docs SPECIFICATION.md v2.7.0 -- the SSOT for all GSD-Docs behavior, read directly
-- [Claude Code Slash Commands Documentation](https://code.claude.com/docs/en/slash-commands)
-- [Claude Code Subagents Documentation](https://code.claude.com/docs/en/sub-agents)
-- [Claude Code Plugins Reference](https://code.claude.com/docs/en/plugins-reference)
-- [Claude Code Skills Documentation](https://code.claude.com/docs/en/skills)
+- **Anthropic SDK releases** (https://github.com/anthropics/anthropic-sdk-python/releases) — Official Python SDK, latest v0.79.0 (Feb 2026), streaming, structured outputs, prompt caching
+- **FastAPI documentation** (https://fastapi.tiangolo.com/) — Official docs for async API, background tasks, WebSockets, deployment
+- **React documentation** (https://react.dev/) — Official React 18 docs, hooks, TypeScript patterns
+- **Vite documentation** (https://vite.dev/) — Official build tool docs, v6 with Node.js 20+ requirement
+- **TanStack Query documentation** (https://tanstack.com/query/latest) — Official docs for server state management, caching, mutations
+- **shadcn/ui** (https://ui.shadcn.com/) — Official component library, Radix UI + Tailwind, copy-paste ownership
+- **Tailwind CSS v4** (https://tailwindcss.com/blog/tailwindcss-v4) — Official v4 release, 5x faster builds, CSS-first config
+- **Zustand documentation** (https://zustand.docs.pmnd.rs/) — Official minimal state library docs
+- **SQLAlchemy 2.1** (https://docs.sqlalchemy.org/en/21/) — Official ORM docs, async support, improved typing
+- **Alembic documentation** (https://alembic.sqlalchemy.org/en/latest/) — Official migration tool docs
 
 ### Secondary (MEDIUM confidence)
-- [IACS Engineering - FDS](https://iacsengineering.com/functional-specifications/) -- FDS structure, time savings claims
-- [RealPars - What Is an FDS](https://www.realpars.com/blog/fds) -- FDS components and purpose
-- [Malisko - Essential Documentation for Controls Engineers](https://malisko.com/essential-documentation/) -- URS/FDS/HDS/SDS chain
-- [PackML Overview](https://www.automationreadypanels.com/automation-and-systems/packml-the-packaging-machine-language-driving-automation/) -- state model, naming
-- [Multi-Agent LLM System Failures (arXiv 2025)](https://arxiv.org/html/2503.13657v1) -- inter-agent misalignment
-- [Context Rot research by Chroma (2025)](https://tilburg.ai/2025/03/context-window-management/) -- context degradation
+- **FastAPI production deployment** (https://render.com/articles/fastapi-production-deployment-best-practices) — Server workers, Gunicorn + Uvicorn patterns
+- **Building SSE MCP Server with FastAPI** (https://www.ragie.ai/blog/building-a-server-sent-events-sse-mcp-server-with-fastapi) — SSE vs WebSocket comparison, streaming patterns
+- **Vite React TypeScript setup** (https://medium.com/@robinviktorsson/complete-guide-to-setting-up-react-with-typescript-and-vite-2025-468f6556aaf2) — Project initialization, tooling config
+- **FastAPI CORS configuration** (https://davidmuraya.com/blog/fastapi-cors-configuration/) — Production CORS setup, security considerations
+- **Deploy FastAPI with Nginx** (https://docs.vultr.com/how-to-deploy-a-fastapi-application-with-gunicorn-and-nginx-on-ubuntu-2404) — systemd services, reverse proxy config
+- **FastAPI systemd deployment** (https://ashfaque.medium.com/deploy-fastapi-app-on-debian-with-nginx-uvicorn-and-systemd-2d4b9b12d724) — Unix socket, service files
+- **Web wizard design patterns** (https://www.nngroup.com/articles/wizards/) — NN/G guidelines for multi-step flows
+- **Human-in-the-loop AI patterns** (https://www.permit.io/blog/human-in-the-loop-for-ai-agents-best-practices-frameworks-use-cases-and-demo) — Review queues, approval workflows
+- **Document generation tools comparison** (https://www.templafy.com/what-is-document-generation/) — Generic doc gen vs AI writing vs engineering DMS
+- **LLM provider abstraction** (https://www.entrio.io/blog/implementing-llm-agnostic-architecture-generative-ai-module) — Model-agnostic patterns, API gateway
+- **Agentic workflow architectures** (https://www.stack-ai.com/blog/the-2026-guide-to-agentic-workflow-architectures) — Checkpointing, resumption, state machines
+- **Claude API rate limits** (https://docs.claude.com/en/api/rate-limits) — Official rate limit docs, retry-after header
+- **How to Fix Claude API 429 Error** (https://www.aifreeapi.com/en/posts/fix-claude-api-429-rate-limit-error) — Retry strategies, backoff patterns
+- **Prompt caching cost reduction** (https://medium.com/tr-labs-ml-engineering-blog/prompt-caching-the-secret-to-60-cost-reduction-in-llm-applications-6c792a0ac29b) — 60-90% cost savings patterns
+- **FastAPI file upload security** (https://betterstack.com/community/guides/scaling-python/uploading-files-using-fastapi/) — Magic number validation, chunked streaming
+- **Building secure file upload API** (https://noone-m.github.io/2025-12-10-fastapi-file-upload/) — Defense-in-depth validation, sandboxing
+- **How to Handle LLM Streams That Survive Reconnects** (https://upstash.com/blog/resumable-llm-streams) — Redis-backed persistence, reconnection patterns
 
 ### Tertiary (LOW confidence)
-- [Stack Overflow 2025 Developer Survey](https://simonwillison.net/2025/Dec/31/the-year-in-llms/) -- 46% distrust AI accuracy (cited indirectly)
-- [PLCtalk - FDS Discussion](https://www.plctalk.net/forums/threads/functional-design-specification.63433/) -- practitioner perspectives (access limited)
+- None — all sources verified with official docs or multiple corroborating sources
 
 ---
-*Research completed: 2026-02-06*
+*Research completed: 2026-02-14*
 *Ready for roadmap: yes*

@@ -1,416 +1,300 @@
-# Feature Landscape
-
-**Domain:** Industrial FDS/SDS documentation generation (Claude Code plugin)
-**Researched:** 2026-02-06
-**Confidence:** MEDIUM-HIGH (specification is detailed; domain knowledge verified against industry sources)
-
----
-
-## Table Stakes
-
-Features users expect. Missing any of these means the framework does not deliver on its core promise of "brief to verified FDS."
-
-### TS-1: Project Classification and Scaffolding
-
-| Aspect | Detail |
-|--------|--------|
-| **Feature** | Classify project (Type A/B/C/D), generate appropriate folder structure, ROADMAP, PROJECT.md |
-| **Why Expected** | Engineers need the framework to understand their project type before anything else. A tool that forces one-size-fits-all structure is useless for a small TWN (Type D, 30 min) and equally useless for a 100-motor newbuild (Type A). |
-| **Complexity** | Medium |
-| **Spec Reference** | SPECIFICATION.md section 3, section 4.1 (`/doc:new-fds`) |
-| **Dependencies** | None -- this is the entry point |
-| **Notes** | Must handle the 4 types cleanly: Type A (new + standards), Type B (new flex), Type C (mod large + BASELINE.md), Type D (mod small/TWN). Classification drives everything downstream. |
-
-### TS-2: Structured Discuss-Plan-Write-Verify Workflow
-
-| Aspect | Detail |
-|--------|--------|
-| **Feature** | Phase-based workflow: discuss gray areas, plan sections, write content, verify goals |
-| **Why Expected** | This IS the product. Without the discuss-plan-write-verify loop, you just have a fancy template. The GSD workflow pattern is the core value proposition -- structured AI-assisted authoring with human decisions captured at the right moments. |
-| **Complexity** | High (4 distinct commands, each with specific behavior) |
-| **Spec Reference** | SPECIFICATION.md sections 4.2-4.5 |
-| **Dependencies** | TS-1 (project must exist) |
-| **Notes** | Each step must produce specific artifacts: CONTEXT.md (discuss), PLAN.md (plan), CONTENT.md + SUMMARY.md (write), VERIFICATION.md (verify). The loop is the product. |
-
-### TS-3: Equipment Module Documentation Structure
-
-| Aspect | Detail |
-|--------|--------|
-| **Feature** | Structured EM documentation: description, operating states, parameters (with ranges/units), interlocks (with conditions/actions), I/O lists (with tags/types) |
-| **Why Expected** | This is the core content of any FDS. Industry practice demands that every equipment module has states, parameters, interlocks, and I/O documented in structured tables. An FDS without these is not an FDS -- it is a narrative document. Source: IACS Engineering, RealPars, industry consensus. |
-| **Complexity** | Medium (template-driven, but domain knowledge critical) |
-| **Spec Reference** | SPECIFICATION.md section 5.1.1 (templates/fds/section-equipment-module.md) |
-| **Dependencies** | TS-2 (written during write-phase) |
-| **Notes** | Tables must include: state entry/exit conditions, parameter ranges with units, interlock priorities, I/O signal tags with types (DI/DO/AI/AO). Missing ranges or units on parameters is a verification gap -- spec already catches this. |
-
-### TS-4: Goal-Backward Verification
-
-| Aspect | Detail |
-|--------|--------|
-| **Feature** | Verification that checks whether goals are achieved (not just whether files exist). Detects stubs, missing content, inconsistencies with decisions. |
-| **Why Expected** | Task completion does not equal goal achievement. A section can be written but still miss critical information. Manual FDS review is the biggest bottleneck in industrial projects -- 50% of FDS time is spent reviewing and correcting. Automated verification that catches gaps before human review is a minimum viable feature. |
-| **Complexity** | High (requires understanding goal semantics, not just file presence) |
-| **Spec Reference** | SPECIFICATION.md section 4.5 |
-| **Dependencies** | TS-2 (must have content to verify), TS-3 (must know what complete EM documentation looks like) |
-| **Notes** | Five verification levels: Exists, Substantive, Complete, Consistent (with CONTEXT.md decisions), Standards (PackML/ISA-88 compliance). All five are table stakes. |
-
-### TS-5: Gap Closure Loop
-
-| Aspect | Detail |
-|--------|--------|
-| **Feature** | When verification finds gaps: generate fix plans, write fixes, re-verify. Automatic cycle until PASS. |
-| **Why Expected** | Without gap closure, verification is just reporting -- it finds problems but does not fix them. The engineer is back to manual correction. The loop (verify -> plan --gaps -> write -> re-verify) is what makes the framework self-correcting. |
-| **Complexity** | Medium (reuses existing plan/write/verify commands with --gaps flag) |
-| **Spec Reference** | SPECIFICATION.md section 4.5 (GAPS_FOUND flow) |
-| **Dependencies** | TS-4 (gaps must be detected first) |
-| **Notes** | Fix plans should be minimal and targeted -- only addressing the specific gap, not rewriting entire sections. |
-
-### TS-6: State Management and Progress Tracking
-
-| Aspect | Detail |
-|--------|--------|
-| **Feature** | STATE.md tracking current position, completed phases, decisions, blockers. Survives /clear and session changes. |
-| **Why Expected** | Industrial FDS projects span days to weeks. Claude Code sessions are ephemeral. Without persistent state, every session requires the engineer to manually re-orient the AI. STATE.md is what makes multi-session work possible. |
-| **Complexity** | Low-Medium |
-| **Spec Reference** | SPECIFICATION.md section 2.2, section 9.7 |
-| **Dependencies** | TS-1 (STATE.md created at project init) |
-| **Notes** | Must include: current phase, current plan, status, list of completed items, decisions log, blockers. Updated before and after each operation for crash recovery. |
-
-### TS-7: Fresh Context Per Write Task
-
-| Aspect | Detail |
-|--------|--------|
-| **Feature** | Each section write task loads only: PROJECT.md + CONTEXT.md + current PLAN.md + standards. No cross-contamination from other sections. |
-| **Why Expected** | Context pollution is the primary failure mode of AI-assisted multi-section writing. If the AI carries information from EM-100 while writing EM-200, it will inadvertently mix parameters, states, or interlocks. Fresh context is essential for correctness in a domain where incorrect cross-talk between equipment modules is a safety concern. |
-| **Complexity** | Medium (requires subagent spawning pattern from GSD) |
-| **Spec Reference** | SPECIFICATION.md section 4.4 |
-| **Dependencies** | TS-2 (write-phase command) |
-| **Notes** | This is a constraint, not a feature in the user-visible sense. But it is table stakes for correctness. The subagent pattern from GSD handles this naturally. |
-
-### TS-8: Document Assembly (complete-fds)
-
-| Aspect | Detail |
-|--------|--------|
-| **Feature** | Merge all phase CONTENT.md files into a single FDS document with proper section numbering, cross-references, and table of contents. |
-| **Why Expected** | The FDS must be delivered as a single coherent document, not a folder of markdown fragments. Engineers deliver one FDS document to clients. Assembly with proper numbering and cross-references is the minimum expected output. |
-| **Complexity** | Medium-High (section numbering, cross-ref resolution, orphan detection) |
-| **Spec Reference** | SPECIFICATION.md section 4.7 |
-| **Dependencies** | All phases must be verified (TS-4) |
-| **Notes** | Must handle: section renumbering (phase-based sections -> document sections), cross-reference resolution, broken reference detection, orphan section warning. |
-
-### TS-9: DOCX Export with Corporate Styling
-
-| Aspect | Detail |
-|--------|--------|
-| **Feature** | Export final FDS/SDS as .docx with corporate template (heading styles, headers/footers, logo, page numbering, table formatting). |
-| **Why Expected** | Industrial clients receive DOCX documents. Nobody delivers an FDS as a markdown file or PDF-from-browser. Corporate styling is non-negotiable -- the document must look professional with the integrator's branding. Source: industry standard practice, every industrial integrator. |
-| **Complexity** | Medium (Pandoc + reference docx template) |
-| **Spec Reference** | SPECIFICATION.md section 8 |
-| **Dependencies** | TS-8 (document must be assembled first), external: Pandoc + mermaid-cli installed |
-| **Notes** | Pandoc with --reference-doc is the proven approach. Mermaid diagrams must be pre-rendered to PNG before Pandoc conversion. huisstijl.docx template must be provided by the integrator. |
-
-### TS-10: Resume/Recovery
-
-| Aspect | Detail |
-|--------|--------|
-| **Feature** | Resume work after session interruption, crash, or /clear. Detect incomplete operations, offer continuation options. |
-| **Why Expected** | LLM sessions crash. Networks timeout. Engineers close laptops. A tool that loses progress is not a professional tool. Forward-only recovery (what is written stays written, retry only incomplete items) is the minimum. |
-| **Complexity** | Medium |
-| **Spec Reference** | SPECIFICATION.md section 4.11, section 9.7 |
-| **Dependencies** | TS-6 (STATE.md must track operation checkpoints) |
-| **Notes** | Partial write detection: CONTENT.md < 200 chars or [TO BE COMPLETED] marker or abrupt ending. Recovery is forward-only -- never rollback completed work. |
-
----
-
-## Differentiators
-
-Features that set this framework apart from manual documentation or basic template-filling. Not expected by default, but significantly valuable.
-
-### D-1: Gray Area Identification (discuss-phase)
-
-| Aspect | Detail |
-|--------|--------|
-| **Feature** | AI identifies domain-specific gray areas for each phase type (e.g., "What is the settling time for the weigh cell?" for equipment phases, "What protocol for external interface?" for interface phases) before writing begins. |
-| **Value Proposition** | Manual FDS writing discovers gray areas mid-writing, causing rework. discuss-phase front-loads these decisions. This alone can save 20-30% of revision cycles. The AI brings domain knowledge to ask questions the engineer might not think to ask until later. |
-| **Complexity** | Medium-High (requires domain knowledge embedded in prompts per phase type) |
-| **Spec Reference** | SPECIFICATION.md section 4.2 |
-| **Dependencies** | TS-1 (must know project type), phase-specific gray area catalogs |
-| **Notes** | Gray areas differ by content type: Equipment (capacities, tolerances, failure modes, timing), Interfaces (protocols, polling rates, error handling), HMI (layout, navigation, alarm presentation), Safety (risk categories, interlock priorities). The quality of discuss-phase questions determines the quality of the entire FDS. |
-
-### D-2: FDS-to-SDS Transformation with Typicals Matching
-
-| Aspect | Detail |
-|--------|--------|
-| **Feature** | Automatically transform FDS equipment descriptions into SDS software design, matching against a typicals library (CATALOG.json) of reusable function blocks. |
-| **Value Proposition** | SDS creation is highly repetitive -- most equipment modules map to known function block patterns. Automating this mapping saves 40-60% of SDS writing time (source: Rockwell reusable process object libraries claim 40% reduction). When no match exists, the system flags "NEW TYPICAL NEEDED" rather than hallucinating. |
-| **Complexity** | High (semantic matching, catalog maintenance, traceability) |
-| **Spec Reference** | SPECIFICATION.md section 4.8, section 7 |
-| **Dependencies** | TS-8 (FDS must be complete), CATALOG.json must be populated |
-| **Notes** | Generates TRACEABILITY.md linking each FDS requirement to SDS implementation. The typicals catalog is a long-term investment that grows with each project. Initial catalog will be small -- flag unmatched equipment explicitly. |
-
-### D-3: Dynamic ROADMAP Evolution
-
-| Aspect | Detail |
-|--------|--------|
-| **Feature** | After System Overview phase, automatically analyze identified units and propose expanded ROADMAP with logically grouped phases (3-5 units per phase). |
-| **Value Proposition** | Large projects (20+ units) are unworkable with static phase structure. A discuss-phase with 60+ gray area questions is chaos. Dynamic grouping keeps each phase manageable while adapting to project complexity. No manual planning tool does this automatically. |
-| **Complexity** | Medium-High |
-| **Spec Reference** | SPECIFICATION.md section 3.5 |
-| **Dependencies** | TS-2 (System Overview phase must be complete), TS-4 (verification triggers evolution) |
-| **Notes** | Grouping criteria: functional area (primary), process sequence (secondary), max 7 units per phase (target 3-5). Engineer can accept, adjust, or reject proposed grouping. Also applies to Type C modifications (group by change area). |
-
-### D-4: Cross-Reference Registry and Validation
-
-| Aspect | Detail |
-|--------|--------|
-| **Feature** | Automatically track all cross-references between sections (CROSS-REFS.md), validate at verify-phase (warn) and complete-fds (block on broken refs), detect orphan sections. |
-| **Value Proposition** | Cross-reference consistency is the single most labor-intensive quality check in FDS review. Manual cross-ref validation in a 100-page FDS takes hours and still misses issues. Automated tracking and validation eliminates an entire category of review effort. |
-| **Complexity** | Medium-High |
-| **Spec Reference** | SPECIFICATION.md section 9.6 |
-| **Dependencies** | TS-2 (refs created during writing), TS-8 (final validation at assembly) |
-| **Notes** | Two validation levels: warn-only during phases (targets may not exist yet), strict-block at complete-fds. The --force flag allows generation with [BROKEN REF] placeholders and DRAFT suffix. Orphan detection catches sections nobody references (possible dead content). |
-
-### D-5: Knowledge Transfer Documents
-
-| Aspect | Detail |
-|--------|--------|
-| **Feature** | Automatically generate RATIONALE.md (why decisions were made), EDGE-CASES.md (failure modes and recovery), and Fresh Eyes review (simulated new-engineer read). |
-| **Value Proposition** | FDS documents tell you WHAT the system does. RATIONALE.md tells you WHY. This is the information that is always lost -- six months later, nobody remembers why the settling time is 3 seconds. EDGE-CASES.md captures failure modes that are often missing from traditional FDS. Fresh Eyes catches ambiguities before the client does. |
-| **Complexity** | Medium |
-| **Spec Reference** | SPECIFICATION.md section 9.1-9.4 |
-| **Dependencies** | TS-2 (generated during discuss/write/verify phases) |
-| **Notes** | Timing is critical: RATIONALE at discuss (when decisions are made), EDGE-CASES at write (when failure modes surface), Fresh Eyes after verify PASS (when content is complete). These are triggered automatically at the right moments, not manual afterthoughts. |
-
-### D-6: Standards-as-Opt-In (PackML, ISA-88)
-
-| Aspect | Detail |
-|--------|--------|
-| **Feature** | PackML state model and ISA-88 equipment hierarchy loaded conditionally based on PROJECT.md settings. Never pushed -- only applied when explicitly enabled. Verification checks compliance when enabled. |
-| **Value Proposition** | Many integrators work with clients who require PackML/ISA-88 compliance, but many do not. A tool that forces standards alienates half the market. Opt-in standards with automatic compliance checking when enabled serves both audiences. |
-| **Complexity** | Medium |
-| **Spec Reference** | SPECIFICATION.md section 6 |
-| **Dependencies** | TS-1 (standards config in PROJECT.md), TS-4 (compliance checked at verify) |
-| **Notes** | When PackML enabled: exact state names enforced (IDLE, STARTING, EXECUTE, etc.), state transitions validated, modes checked. When ISA-88 enabled: terminology enforced (Unit, Equipment Module, Control Module), hierarchy depth validated. When disabled: engineer uses their own structure freely. |
-
-### D-7: Parallel Wave-Based Writing
-
-| Aspect | Detail |
-|--------|--------|
-| **Feature** | Group independent sections into waves and write them in parallel using subagents, each with fresh context. |
-| **Value Proposition** | A phase with 6 equipment modules takes 6x as long sequentially. Wave-based parallelism (from GSD) cuts wall-clock time significantly. With 4 parallel agents, a 6-section phase drops from ~30 min to ~10 min. |
-| **Complexity** | Medium (reuses GSD subagent pattern) |
-| **Spec Reference** | SPECIFICATION.md section 4.4 |
-| **Dependencies** | TS-7 (fresh context enables safe parallelism) |
-| **Notes** | Wave ordering respects dependencies: foundation sections first, dependent sections in later waves. Each subagent produces CONTENT.md + SUMMARY.md. Dependency analysis determines wave assignments during plan-phase. |
-
-### D-8: SUMMARY.md for AI Context Efficiency
-
-| Aspect | Detail |
-|--------|--------|
-| **Feature** | Per-section 150-word summaries (facts only, no prose) that allow AI agents to understand section content without loading full CONTENT.md. |
-| **Value Proposition** | Cross-reference checking and verification need to understand what is in each section. Loading all CONTENT.md files would blow the context window. SUMMARY.md provides a compact representation that enables multi-section awareness without context pollution. This is an AI-native feature that has no manual equivalent. |
-| **Complexity** | Low |
-| **Spec Reference** | SPECIFICATION.md section 4.4 (SUMMARY.md format) |
-| **Dependencies** | TS-2 (generated alongside CONTENT.md during write-phase) |
-| **Notes** | Must include: factual counts (states, parameters, interlocks, I/O), key decisions, dependencies on other sections, cross-refs. Format is strictly structured -- not a paragraph summary but a structured data block. |
-
-### D-9: Version Management
-
-| Aspect | Detail |
-|--------|--------|
-| **Feature** | vMAJOR.MINOR versioning with clear semantics: internal drafts (v0.x), client releases (v1.0, v2.0), post-feedback iterations (v1.x). FDS and SDS versioned independently. |
-| **Value Proposition** | Industrial projects have formal release cycles to clients. Mixing internal drafts with client versions causes confusion and contractual issues. Clear version semantics with `/doc:release` commands prevent accidental client exposure of drafts. |
-| **Complexity** | Low |
-| **Spec Reference** | SPECIFICATION.md section 9.5 |
-| **Dependencies** | TS-6 (versions tracked in STATE.md) |
-| **Notes** | SDS references its source FDS version on the frontpage. SDS can version independently (typicals update, SCL refactor) without FDS change. Release history maintained in STATE.md. |
-
-### D-10: Modification Project Support (BASELINE.md)
-
-| Aspect | Detail |
-|--------|--------|
-| **Feature** | For Type C/D modification projects: capture existing system as BASELINE.md, generate only delta documentation. AI instructed to treat baseline as given and describe only changes. |
-| **Value Proposition** | Modification projects are the majority of industrial automation work (roughly 60-70% of projects are modifications, not greenfield). A tool that only handles new builds misses the primary use case. Delta documentation prevents the AI from suggesting rewrites of working systems. |
-| **Complexity** | Medium |
-| **Spec Reference** | SPECIFICATION.md section 3.4 |
-| **Dependencies** | TS-1 (BASELINE.md generated during new-fds for Type C/D) |
-| **Notes** | BASELINE.md has explicit instructions: "AI MUST treat this as given. ONLY describe the DELTA." This prevents the most common AI failure mode in modification projects -- suggesting improvements to systems that are working and contractually unchanged. |
-
-### D-11: ENGINEER-TODO.md for Complex Diagrams
-
-| Aspect | Detail |
-|--------|--------|
-| **Feature** | When diagrams exceed Mermaid complexity limits (>15 nodes, >10 states, >4 sequence participants), automatically add to ENGINEER-TODO.md with description, section reference, and priority. |
-| **Value Proposition** | Honest about AI limitations. Rather than generating broken or unreadable diagrams, the system flags them for human creation in proper tools (Visio, Draw.io). This prevents the quality trap of "AI-generated but unreadable" diagrams. |
-| **Complexity** | Low |
-| **Spec Reference** | SPECIFICATION.md section 8.2.3 |
-| **Dependencies** | TS-8 (generated at complete-fds) |
-| **Notes** | Triggers: Mermaid syntax error at >15 nodes, state diagram >10 states, sequence >4 participants, nested subgraphs >2 levels. Each TODO item includes: section reference, diagram type, description, priority. |
-
----
-
-## Anti-Features
-
-Features to explicitly NOT build. Common mistakes in this domain that would reduce value or create false confidence.
-
-### AF-1: PLC Code Generation
-
-| Anti-Feature | Why Avoid | What to Do Instead |
-|---|---|---|
-| Generating actual PLC code (SCL, Ladder, Structured Text) from the SDS | SDS describes software DESIGN, not executable code. PLC code generation from natural language descriptions is unreliable and potentially unsafe in industrial contexts. A valve that opens when it should close because of a code generation error is a safety incident. Engineers must write and test code themselves. | SDS describes function block structure, interfaces, parameters, and behavior. The engineer uses this as a specification for manual coding. CATALOG.json provides typicals as reference, not as deployed code. |
-
-### AF-2: Real-Time Collaboration / Multi-User Editing
-
-| Anti-Feature | Why Avoid | What to Do Instead |
-|---|---|---|
-| Google Docs-style real-time multi-user editing of FDS sections | Adds massive complexity (conflict resolution, locking, merge) for a use case that rarely exists. FDS writing is typically done by one engineer or a small team taking turns. The review cycle (review-phase) is the collaboration mechanism. | Use `/doc:review-phase` for structured client/engineer review. Use git for version history. The framework is single-user at write time, multi-stakeholder at review time. This matches actual industrial workflows. |
-
-### AF-3: Automated P&ID / Electrical Diagram Generation
-
-| Anti-Feature | Why Avoid | What to Do Instead |
-|---|---|---|
-| Generating P&ID (Process & Instrumentation Diagrams) or electrical schematics | These are engineering drawings governed by strict standards (ISA-5.1 for P&ID, IEC 61082 for electrical). They require CAD tools (AutoCAD, EPLAN, Visio) and professional engineering review. AI-generated P&IDs would be at best decorative and at worst dangerously misleading. | Reference external Engineering Package as attachments. Optionally embed pre-existing diagrams as images. P&IDs are INPUT to the FDS process, not OUTPUT. |
-
-### AF-4: Natural Language Requirements Extraction from Meetings
-
-| Anti-Feature | Why Avoid | What to Do Instead |
-|---|---|---|
-| Automatically extracting requirements from meeting transcripts or emails | Requirements in industrial automation must be explicit, validated, and traceable. Automatically extracted requirements are by definition unvalidated. False requirements are worse than missing requirements -- they cause builds that don't match needs. | The discuss-phase IS the structured requirements capture mechanism. The engineer drives the conversation, the AI asks clarifying questions, decisions are explicitly captured in CONTEXT.md. Human-in-the-loop is not a limitation -- it is the quality mechanism. |
-
-### AF-5: Full-Auto Mode (No Human Decisions)
-
-| Anti-Feature | Why Avoid | What to Do Instead |
-|---|---|---|
-| "Generate entire FDS from project brief with zero human input" | This would produce a technically plausible but factually wrong document. Equipment capacities, failure modes, safety requirements, and client-specific decisions CANNOT be inferred from a brief. The 2025 Stack Overflow survey found 46% of developers do not trust AI accuracy -- in industrial automation, the stakes are higher. | The discuss-plan-write-verify workflow is deliberately human-in-the-loop. The AI structures the work and drafts content. The engineer makes decisions and validates output. This produces documents that are both efficient AND trustworthy. |
-
-### AF-6: Database-Backed State Management
-
-| Anti-Feature | Why Avoid | What to Do Instead |
-|---|---|---|
-| Using SQLite/PostgreSQL for state tracking instead of STATE.md | Adds deployment complexity, requires database setup, makes state opaque (not human-readable), and breaks the "everything is markdown" principle. Engineers need to be able to read and fix STATE.md manually when things go wrong. | STATE.md as flat file. Human-readable, git-trackable, manually editable. Complexity budget should go into document quality, not infrastructure. |
-
-### AF-7: Integrated Review/Approval Workflow (BPM)
-
-| Anti-Feature | Why Avoid | What to Do Instead |
-|---|---|---|
-| Built-in approval chains, digital signatures, routing to reviewers | This is a document management system feature, not a document generation feature. Building this duplicates SharePoint/Documentum/etc. and diverts effort from the core value proposition. | Generate the FDS document. Hand it off to whatever approval system the client uses. review-phase captures feedback, but the formal approval process is outside scope. |
-
-### AF-8: Client-Specific Knowledge Base / RAG System
-
-| Anti-Feature | Why Avoid | What to Do Instead |
-|---|---|---|
-| Building a retrieval-augmented generation system that indexes previous FDS documents for the same client | Massive infrastructure investment (vector DB, embedding pipeline, retrieval tuning) for marginal benefit. Previous FDS documents may be outdated, may reference decommissioned equipment, and may contain errors that would propagate. The typicals library (CATALOG.json) handles the "reuse" case cleanly. | CATALOG.json for reusable function block patterns. BASELINE.md for modification context. These are curated, version-controlled knowledge sources -- not a dump of old documents. |
-
----
+# Feature Research
+
+**Domain:** Web-based industrial document generation GUI (FDS/SDS automation)
+**Researched:** 2026-02-14
+**Confidence:** HIGH
+
+## Feature Landscape
+
+### Table Stakes (Users Expect These)
+
+Features users assume exist. Missing these = product feels incomplete.
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| **Project wizard with guided setup** | Standard for complex configuration flows; reduces errors during project initialization | MEDIUM | 3-5 steps: project type (A/B/C/D), language (Dutch/English), reference files, baseline selection (Type C/D only). Must support validation before proceeding. |
+| **Phase timeline/progress visualization** | Engineers need to understand where they are in multi-phase workflow | LOW | Linear timeline showing 3 FDS phases (Discuss → Plan → Write → Verify → Review) with completion status. Leverage existing STATE.md for data. |
+| **Document outline tree view** | Essential for navigating hierarchical document structure (chapters/sections) | MEDIUM | Tree navigation for FDS sections, expandable/collapsible nodes. Must handle dynamic sections added during write phase. Integration with STATE.md section tracking. |
+| **Real-time progress feedback for AI tasks** | Long-running LLM calls (30s-3min) feel broken without feedback | MEDIUM | Progress indicators for discuss/plan/write/verify operations with estimated time remaining. Use SSE or WebSocket for server-push updates. Phase-level granularity sufficient. |
+| **Human-in-the-loop review gates** | Engineers must verify AI output before proceeding; table stakes for professional document generation | HIGH | Review UI for verify-phase and review-phase with approve/reject/request-changes workflow. Must pause automation, show diffs/changes, capture feedback in CONTEXT.md. |
+| **File upload with drag-and-drop** | Modern web UI standard for reference document management | LOW | Standard dropzone.js or similar for reference files. Multi-file support required. Must handle PDF, DOCX, images. |
+| **Document preview (not raw Markdown)** | Engineers need to see rendered output, not source | MEDIUM | Convert Markdown to readable preview. Basic rendering sufficient for v2.0; full DOCX preview deferred. Support Mermaid diagram rendering since v1.0 generates them. |
+| **Project list/dashboard** | Multiple concurrent projects expected; need access point | LOW | List view of all projects with status, last modified, project type. Clicking opens project detail view. SQLite metadata query. |
+| **Error recovery/resume capability** | Crashes happen; losing hours of AI generation is unacceptable | MEDIUM | Leverage existing v1.0 /doc:resume logic. GUI must detect incomplete state and offer resume. Forward-only strategy already proven. |
+| **Export to DOCX** | Final deliverable format for clients; non-negotiable | LOW | Wrapper around existing v1.0 Pandoc + huisstijl.docx export. Download button with progress indicator. |
+
+### Differentiators (Competitive Advantage)
+
+Features that set the product apart. Not required, but valuable.
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| **Embedded chat panel for discussion phases** | Inline AI discussion feels natural vs switching tools; maintains context within workflow | MEDIUM | Chat UI embedded in phase view during discuss-phase. Pre-populate with v1.0 prompts from /doc:discuss-phase. Conversation history stored in CONTEXT.md. Differentiates from generic chatbot by being workflow-aware. |
+| **Shared reference library + per-project overrides** | Team knowledge accumulation; new projects inherit standards but can customize | MEDIUM | Two-tier architecture: global shared library (read-only for engineers, admin-managed) + per-project uploads that override/supplement. Tagging/categorization for findability. Unique to domain-specific tools. |
+| **Confidence-based SDS typicals matching** | Prevents hallucinated SDS content; shows "NEW TYPICAL NEEDED" for unknown equipment | HIGH | Surface existing v1.0 CATALOG.json matching + confidence scores in GUI. Visual indication when confidence < threshold. Shows engineer why typical was selected. Builds trust in AI output. |
+| **Gap closure loop visualization** | Shows verify → write → re-verify cycles; builds trust by making AI refinement visible | MEDIUM | Visual indicator when gap detected in verification, showing re-planning and re-write cycles. Max 2 iterations per v1.0 logic. Transparency in AI iteration rare in document tools. |
+| **Bilingual template system (Dutch/English)** | Single workflow, dual language output; critical for international engineering firms | LOW | Leverage existing v1.0 templates. Language selector in project wizard. Differentiates from English-only AI tools. |
+| **Standards compliance overlay (PackML/ISA-88)** | Opt-in verification against industry standards; shows violations with references | HIGH | Conditional loading of standards during verify-phase if enabled. Show compliance violations in separate panel. Links to standard sections. Unique to industrial automation domain. |
+| **Phase-specific context isolation** | Prevents AI cross-contamination between parallel sections; shows "what the AI knew" for each section | MEDIUM | Visualize which reference docs/baseline sections were provided to each writer. Debug view for engineers. Builds trust by showing AI's information boundaries. |
+| **Project type classification with roadmap generation** | Guided questionnaire determines Type A/B/C/D and generates custom phase structure | MEDIUM | Wizard flow asking about greenfield/brownfield, single-unit/multi-unit. Auto-generates ROADMAP.md. Removes manual planning overhead. |
+
+### Anti-Features (Commonly Requested, Often Problematic)
+
+Features that seem good but create problems.
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| **Real-time collaborative editing (Google Docs style)** | "Multiple engineers should write simultaneously" | Document generation is single-engineer workflow per v1.0 design; AI writes in parallel sections but human reviews sequentially. Adds massive complexity (OT/CRDT, conflict resolution) for zero value. Review-phase already handles collaboration. | Use review-phase for team collaboration: one engineer drives, others review/comment. Async by design. |
+| **Full auto-generation (zero human input)** | "Just generate the whole document from project name" | Equipment-specific details cannot be inferred (valve specs, safety requirements, client preferences). Results in hallucinated/unsafe content. v1.0 requires discuss-phase input for good reason. | Keep discuss-phase mandatory. Pre-populate with template questions but require engineer confirmation/edits. Trust comes from human-in-loop. |
+| **Inline Markdown editing in GUI** | "Let me tweak the AI output directly" | Creates divergence between GUI and file-backed state. v1.0 files are SSOT; editing in GUI breaks CLI compatibility requirement. Also: engineers editing AI output defeats verification loop. | Show preview-only. If changes needed, use review-phase feedback → AI re-writes. Keeps workflow clean and maintains verification integrity. |
+| **Database-backed document storage** | "SQLite for everything, not files" | v1.0 constraint: STATE.md must be human-readable and git-trackable. Database opaque to version control, breaks CLI compatibility, removes auditability. | SQLite only for metadata (project list, file references). Documents remain file-based. Hybrid approach gives both searchability and transparency. |
+| **Live DOCX preview (Word-perfect rendering)** | "Show exactly what the export will look like" | Requires full Word rendering engine in browser (LibreOffice WASM, Office Online API, or heavy JS library). Export is Pandoc's responsibility; GUI doesn't need pixel-perfect preview. | Markdown preview with Mermaid rendering. DOCX export is download action. Engineers review exported DOCX in Word if pixel-perfection needed. |
+| **AI provider selection in GUI** | "Let user choose GPT-4 vs Claude vs local model per project" | v2.0 uses Claude API exclusively per PROJECT.md. Provider abstraction exists for v3.0 local models but not multi-provider. Adds configuration complexity and prompt incompatibility risks. | Backend hardcoded to Claude API. v3.0 milestone adds local model support with provider swap, but single provider per deployment, not per project. |
+| **Undo/redo for AI operations** | "Let me undo the verify step" | AI operations are forward-only per v1.0 design (SUMMARY.md as completion proof). Undo implies rollback which conflicts with crash recovery. Also: how do you undo a 3-minute LLM call? | Use review-phase feedback for corrections. Gap closure loop already handles "AI got it wrong, try again" scenario. No undo needed if workflow designed for iteration. |
 
 ## Feature Dependencies
 
 ```
-TS-1: Project Classification
-  |
-  +---> TS-6: State Management
-  |       |
-  |       +---> TS-10: Resume/Recovery
-  |
-  +---> TS-2: Discuss-Plan-Write-Verify Workflow
-  |       |
-  |       +---> TS-3: EM Documentation Structure
-  |       |
-  |       +---> TS-7: Fresh Context Per Task
-  |       |       |
-  |       |       +---> D-7: Parallel Wave Writing
-  |       |
-  |       +---> TS-4: Goal-Backward Verification
-  |       |       |
-  |       |       +---> TS-5: Gap Closure Loop
-  |       |       |
-  |       |       +---> D-3: Dynamic ROADMAP Evolution
-  |       |
-  |       +---> D-1: Gray Area Identification
-  |       |
-  |       +---> D-5: Knowledge Transfer (RATIONALE, EDGE-CASES, Fresh Eyes)
-  |       |
-  |       +---> D-8: SUMMARY.md (generated alongside CONTENT.md)
-  |
-  +---> D-6: Standards Opt-In (PackML/ISA-88)
-  |
-  +---> D-10: Modification Support (BASELINE.md)
-  |
-  +---> TS-8: Document Assembly (complete-fds)
-          |
-          +---> D-4: Cross-Reference Validation
-          |
-          +---> D-11: ENGINEER-TODO.md
-          |
-          +---> TS-9: DOCX Export
-          |
-          +---> D-2: FDS-to-SDS Transformation
-          |
-          +---> D-9: Version Management
+Project Wizard
+    └──creates──> Project State (STATE.md, ROADMAP.md)
+                      └──enables──> Phase Timeline View
+                                       ├──enables──> Discuss Phase (Chat Panel)
+                                       ├──enables──> Plan Phase (Section Planning)
+                                       ├──enables──> Write Phase (Progress Feedback)
+                                       ├──enables──> Verify Phase (Gap Visualization)
+                                       └──enables──> Review Phase (Human-in-Loop UI)
+
+Reference Library Management
+    ├──feeds──> Discuss Phase (context for AI)
+    ├──feeds──> Write Phase (content source)
+    └──feeds──> SDS Generation (typicals matching)
+
+Document Preview
+    ├──requires──> Write Phase completion (CONTENT.md exists)
+    └──enhanced-by──> Mermaid Rendering (diagrams in preview)
+
+Export to DOCX
+    ├──requires──> Complete-FDS or Generate-SDS completion
+    └──requires──> Pandoc backend integration
+
+Error Recovery
+    ├──requires──> STATE.md parsing
+    └──enables──> Resume from any phase
+
+Standards Compliance
+    ├──requires──> Verify Phase enabled
+    ├──requires──> Standards files loaded (opt-in)
+    └──conflicts-with──> Projects without standards requirement (Type A/B often skip)
 ```
 
-### Dependency Ordering Rationale
+### Dependency Notes
 
-1. **TS-1 must come first** -- everything depends on project classification
-2. **TS-2 is the core loop** -- discuss/plan/write/verify is the backbone
-3. **TS-3 + TS-7 enable TS-4** -- you need structured content and isolation before verification makes sense
-4. **TS-4 enables TS-5 and D-3** -- gap closure and roadmap evolution trigger from verification
-5. **TS-8 is the assembly gate** -- cross-refs, export, SDS all depend on assembled FDS
-6. **D-2 (SDS) comes last** -- requires complete, verified FDS plus populated CATALOG.json
+- **Project Wizard creates Project State:** Wizard must generate STATE.md and ROADMAP.md before any phase operations. Timeline view is read-only visualization of this state.
+- **Phase Timeline enables phase operations:** Each phase button in timeline triggers corresponding workflow (discuss/plan/write/verify/review). Timeline is navigation hub.
+- **Reference Library feeds AI phases:** Upload must complete before discuss-phase. Files stored in per-project directory, referenced in CONTEXT.md for AI prompt context.
+- **Document Preview requires Write completion:** Cannot preview non-existent content. Preview disabled until at least one section has CONTENT.md.
+- **Export requires completion:** FDS export needs complete-fds completion (STATE.md status check). SDS export needs generate-sds completion.
+- **Error Recovery requires STATE parsing:** Resume functionality depends on parsing STATE.md to detect incomplete phases. Must handle corrupted/partial STATE.md gracefully.
+- **Standards Compliance conflicts with non-standards projects:** PackML/ISA-88 overhead inappropriate for simple projects. Must be opt-in during wizard, disabled by default.
 
----
+## MVP Definition
 
-## MVP Recommendation
+### Launch With (v2.0)
 
-For MVP (first usable version), prioritize in this order:
+Minimum viable GUI — what's needed to replace CLI for single-engineer workflow.
 
-### Must Have for MVP
+- [ ] **Project Wizard** — Guided setup for Type A/B/C/D, language, reference upload. Generates STATE.md + ROADMAP.md. Critical path: no wizard = no projects.
+- [ ] **Project List Dashboard** — Browse existing projects, see status, open project. Engineers need to find their work.
+- [ ] **Phase Timeline View** — Visual representation of ROADMAP phases with completion status. Primary navigation for workflow.
+- [ ] **Embedded Chat Panel** — AI discussion interface for discuss-phase. Core differentiator; enables gray area resolution.
+- [ ] **Basic Document Preview** — Markdown rendering of CONTENT.md with Mermaid diagrams. Engineers need to see output without exporting.
+- [ ] **Progress Feedback for Long Tasks** — SSE/polling for write/verify operations with "Generating Section 3.2..." messages. Prevents "is it frozen?" anxiety.
+- [ ] **Human-in-Loop Review UI** — Approve/reject for verify-phase and review-phase. Non-negotiable for professional use.
+- [ ] **Reference File Upload** — Drag-and-drop for per-project files. Discuss-phase useless without reference context.
+- [ ] **DOCX Export** — Download button wrapping Pandoc export. Final deliverable format.
+- [ ] **Error Recovery** — Resume button when STATE.md shows incomplete phase. Crash resilience required for 3-hour generation runs.
 
-1. **TS-1** -- Project Classification and Scaffolding
-2. **TS-2** -- Discuss-Plan-Write-Verify Workflow (core loop)
-3. **TS-3** -- Equipment Module Documentation Structure (templates)
-4. **TS-6** -- State Management (multi-session survival)
-5. **TS-7** -- Fresh Context Per Task (correctness guarantee)
-6. **TS-4** -- Goal-Backward Verification (quality gate)
-7. **TS-5** -- Gap Closure Loop (self-correction)
-8. **D-1** -- Gray Area Identification (differentiates from "just a template")
+### Add After Validation (v2.x)
 
-### Should Have for MVP
+Features to add once core workflow proven in production.
 
-9. **TS-10** -- Resume/Recovery (professional reliability)
-10. **TS-8** -- Document Assembly (usable output)
-11. **TS-9** -- DOCX Export (deliverable format)
-12. **D-8** -- SUMMARY.md (enables efficient verification)
+- [ ] **Shared Reference Library** — Global library with admin management. Wait for team feedback on per-project file pain points. Trigger: "We're uploading the same standards PDF 50 times."
+- [ ] **Gap Closure Loop Visualization** — Show verify → re-plan → re-write cycles. Nice transparency but not critical for operation. Trigger: Engineers ask "Why did it take 3 verify cycles?"
+- [ ] **Phase-Specific Context Visualization** — Debug view showing which files/baseline sections fed each writer. Builds trust but not MVP. Trigger: "Why didn't the AI include X?"
+- [ ] **Standards Compliance Panel** — PackML/ISA-88 verification overlay. Deferred until standards-requiring projects demand it. Trigger: Client requires PackML compliance report.
+- [ ] **SDS Typicals Confidence Display** — Show matching scores for CATALOG.json hits. Useful but SDS generation itself is post-FDS. Trigger: Engineers question typical selections.
+- [ ] **Document Outline Tree with Jump-to-Section** — Enhanced navigation for large FDS. MVP preview is linear scroll; tree adds polish. Trigger: "FDS too long to scroll."
+- [ ] **Batch Export** — Export multiple versions (draft, final, with/without diagrams). Single export covers MVP. Trigger: Engineers manually exporting 4 variants.
 
-### Defer to Post-MVP
+### Future Consideration (v3.0+)
 
-- **D-2** (FDS-to-SDS): Requires CATALOG.json investment; FDS alone is valuable
-- **D-3** (Dynamic ROADMAP): Start with static roadmaps; add evolution when handling real large projects
-- **D-4** (Cross-Reference Validation): Valuable but complex; manual cross-ref checking is tolerable for v1
-- **D-5** (Knowledge Transfer): Nice-to-have; RATIONALE and EDGE-CASES can be manually maintained initially
-- **D-6** (Standards Opt-In): Start with PackML/ISA-88 content baked in for Type A; make opt-in configurable later
-- **D-7** (Parallel Waves): Sequential writing works; parallelism is an optimization
-- **D-9** (Version Management): Simple file naming works initially; formal versioning adds complexity
-- **D-10** (BASELINE.md): Type C/D support can come after Type A/B is solid
-- **D-11** (ENGINEER-TODO.md): Manual tracking suffices initially
+Features to defer until product-market fit established and architecture ready.
 
-### MVP Rationale
+- [ ] **Local LLM Support** — Provider abstraction ready but requires v3.0 milestone per PROJECT.md. Deferred: API costs manageable, model quality unproven for technical docs.
+- [ ] **Multi-user Team Features** — Role-based access, project sharing, activity logs. v2.0 is single-engineer per project. Deferred: Complexity not justified until team workflow clarifies.
+- [ ] **Client Portal** — Read-only review access for clients outside engineering team. Scope creep risk. Deferred: Email PDF works for now.
+- [ ] **Version Comparison UI** — Diff view between FDS v1.0 and v1.1. Useful but v1.0 /doc:release handles versioning. Deferred: Engineers use Word's compare feature.
+- [ ] **Mobile/Tablet UI** — Responsive design for field access. Engineering work is desktop-based. Deferred: No field use cases identified.
+- [ ] **API for External Integration** — REST API for CI/CD or third-party tools. Over-engineering for MVP. Deferred: No integration requests yet.
+- [ ] **Advanced Search** — Full-text search across all projects. SQLite metadata search sufficient for v2.0. Deferred: Team size doesn't warrant Elasticsearch.
 
-The MVP must demonstrate the full discuss-plan-write-verify loop for a Type A or Type B project, producing a single assembled FDS in DOCX format. This proves the core value proposition: structured AI-assisted FDS authoring that captures decisions, generates quality content, verifies completeness, and delivers a professional document.
+## Feature Prioritization Matrix
 
-Everything else makes it better. Nothing else makes it work.
+| Feature | User Value | Implementation Cost | Priority | Notes |
+|---------|------------|---------------------|----------|-------|
+| Project Wizard | HIGH | MEDIUM | P1 | Blocking: No projects without wizard |
+| Phase Timeline View | HIGH | LOW | P1 | Core navigation; reads STATE.md |
+| Chat Panel (Discuss) | HIGH | MEDIUM | P1 | Differentiator; critical for discuss-phase |
+| Progress Feedback | HIGH | MEDIUM | P1 | UX disaster without it for 3min LLM calls |
+| Human-in-Loop Review | HIGH | HIGH | P1 | Professional requirement; approve/reject workflow |
+| Document Preview | HIGH | MEDIUM | P1 | Must see output; Markdown + Mermaid sufficient |
+| Reference Upload | HIGH | LOW | P1 | Discuss/write phases need context |
+| DOCX Export | HIGH | LOW | P1 | Final deliverable; wraps existing Pandoc |
+| Error Recovery | HIGH | MEDIUM | P1 | 3-hour runs can crash; resume essential |
+| Project List | HIGH | LOW | P1 | Engineers need project access |
+| Shared Library | MEDIUM | MEDIUM | P2 | Nice-to-have; per-project works for MVP |
+| Gap Loop Viz | MEDIUM | LOW | P2 | Transparency; not operational need |
+| Context Viz | MEDIUM | MEDIUM | P2 | Debug/trust feature; defer to v2.x |
+| Standards Panel | MEDIUM | HIGH | P2 | Opt-in; subset of projects need it |
+| SDS Confidence Display | MEDIUM | LOW | P2 | SDS post-FDS; can add after FDS proven |
+| Document Tree Nav | MEDIUM | MEDIUM | P2 | Polish; linear scroll works for MVP |
+| Batch Export | LOW | LOW | P2 | Single export sufficient initially |
+| Local LLM | HIGH | HIGH | P3 | v3.0 milestone; architecture ready but deferred |
+| Multi-User Features | MEDIUM | HIGH | P3 | v2.0 single-engineer; wait for team workflow clarity |
+| Client Portal | LOW | MEDIUM | P3 | Scope creep; email PDF works |
+| Version Comparison | LOW | MEDIUM | P3 | Word handles this; low ROI |
+| Mobile UI | LOW | HIGH | P3 | Desktop-only workflow; no field use |
+| External API | LOW | MEDIUM | P3 | No integrations identified |
+| Advanced Search | LOW | HIGH | P3 | Team size doesn't need it |
 
----
+**Priority key:**
+- P1 (Must have for launch): 10 features — Project Wizard, Timeline, Chat, Progress, Review UI, Preview, Upload, Export, Recovery, Project List
+- P2 (Should have, add when possible): 7 features — Shared Library, Gap Viz, Context Viz, Standards Panel, SDS Confidence, Tree Nav, Batch Export
+- P3 (Nice to have, future consideration): 7 features — Local LLM, Multi-User, Client Portal, Version Diff, Mobile, API, Search
+
+## Existing v1.0 Workflow Integration
+
+The GUI wraps proven v1.0 CLI workflows. Feature dependencies on existing logic:
+
+| v1.0 Command | GUI Feature | Integration Point |
+|--------------|-------------|-------------------|
+| `/doc:new-fds` | Project Wizard | Backend calls v1.0 classification logic, generates STATE.md + ROADMAP.md |
+| `/doc:discuss-phase N` | Chat Panel | Chat messages become discussion prompts; output stored in CONTEXT.md |
+| `/doc:plan-phase N` | Timeline "Plan" button | Backend orchestrates wave planning; GUI shows progress |
+| `/doc:write-phase N` | Timeline "Write" button + Progress | Backend runs parallel writers; SSE streams section completion |
+| `/doc:verify-phase N` | Timeline "Verify" button + Review UI | Backend runs 5-level verification; GUI shows gaps for human review |
+| `/doc:review-phase N` | Review UI with feedback | Human provides approve/reject/feedback; stored in CONTEXT.md |
+| `/doc:complete-fds` | Timeline final step | Backend assembles FDS; enables export |
+| `/doc:generate-sds` | SDS generation button | Backend scaffolds SDS with typicals matching |
+| `/doc:export` | Export to DOCX button | Backend calls Pandoc; GUI streams file download |
+| `/doc:status` | Project List + Timeline | Backend parses STATE.md; GUI visualizes status |
+| `/doc:resume` | Recovery/Resume button | Backend detects incomplete phase; resumes forward-only |
+| `/doc:release` | Version management UI | Backend handles internal/client versioning |
+| `/doc:check-standards` | Standards compliance panel | Backend runs PackML/ISA-88 checks if enabled |
+
+**Key constraint:** GUI does not reimplement v1.0 logic. Backend wraps existing workflows. Frontend provides visual interface and captures human input.
+
+## Competitor Feature Analysis
+
+Web-based document generation tools comparison (as of 2026):
+
+| Feature Category | Generic Doc Gen (Templafy, Docupilot) | AI Writing (Jasper, Copy.ai) | Engineering DMS (eQuorum, OpenText) | Our Approach (GSD-Docs GUI) |
+|------------------|--------------------------------------|------------------------------|--------------------------------------|------------------------------|
+| **Template-based generation** | Heavy template libraries, drag-drop builders | Prompt-based, minimal templates | CAD integration, drawing mgmt | Domain-specific templates (FDS/SDS section structures) |
+| **AI integration** | Limited: autocomplete, suggestions | Core feature: full AI writing | Emerging: AI search, GenAI assist | Core: AI writes with human-in-loop verification |
+| **Workflow automation** | Linear approval flows | No structured workflow | Complex approval chains, revision control | Phase-based with discuss→plan→write→verify→review cycle |
+| **Collaboration** | Real-time editing, comments | Share/export only | Multi-user with locking, markup | Async review-phase, single engineer per project |
+| **Preview/Export** | Live preview, multi-format export | Plain text, basic export | Native CAD viewers, PDF | Markdown preview + DOCX export via Pandoc |
+| **Reference Management** | Central asset library | No reference system | Document vaults, version control | Two-tier: shared library + per-project uploads |
+| **Domain Specificity** | Industry-agnostic | Generic business writing | Engineering-aware but CAD-focused | Industrial automation (FDS/SDS) specialist |
+| **Human-in-Loop** | Manual review steps | No verification | Approval workflows | Structured verify/review phases with gap detection |
+| **Standards Compliance** | Template enforcement only | None | Audit trails, compliance reporting | Opt-in PackML/ISA-88 verification |
+| **Pricing Model** | Per-user SaaS subscription | Usage-based (API calls) | Enterprise licensing | Team server (self-hosted), Claude API costs |
+
+**Competitive positioning:**
+- **vs Generic Doc Gen:** We have AI writing, they have broader template variety. Win: Domain expertise (FDS/SDS structures).
+- **vs AI Writing:** We have structured workflow + verification, they have simplicity. Win: Professional quality gates.
+- **vs Engineering DMS:** We have AI generation, they have mature collaboration. Win: Document creation speed (hours not weeks).
+
+**Feature gaps we accept:**
+- No real-time collaboration (engineering DMS have this) — Our workflow is single-engineer by design
+- No broad template marketplace (generic doc gen have this) — Deep not wide: FDS/SDS only
+- No CAD integration (engineering DMS have this) — Documents only, not drawings per PROJECT.md scope
+
+**Features we uniquely offer:**
+- Confidence-scored SDS typicals matching (prevents hallucination)
+- Gap closure loop with re-verification (quality iteration)
+- Bilingual template system (Dutch/English from same workflow)
+- Phase-specific context isolation (shows "what AI knew")
+- Standards compliance as workflow step not post-hoc audit
 
 ## Sources
 
-- [IACS Engineering - FDS](https://iacsengineering.com/functional-specifications/) -- FDS structure, 50% time savings claim
-- [Positive Engineering - FDS for Industrial Control Systems](https://positiveengineering.com/functional-design-specification-fds-for-industrial-control-system-software/) -- 9-section FDS structure, reusable object libraries
-- [RealPars - What Is an FDS](https://www.realpars.com/blog/fds) -- FDS components and purpose
-- [Malisko - Essential Documentation for Controls Engineers](https://malisko.com/essential-documentation/) -- URS/FDS/HDS/SDS documentation chain
-- [ISA-88 Phases & Equipment Modules](https://sgsystemsglobal.com/glossary/isa-88-phases-equipment-modules/) -- EM interface patterns
-- [PackML Overview](https://www.automationreadypanels.com/automation-and-systems/packml-the-packaging-machine-language-driving-automation/) -- State model, naming conventions
-- [PLCtalk - FDS Discussion](https://www.plctalk.net/forums/threads/functional-design-specification.63433/) -- Practitioner perspectives (access limited)
-- [IDC Online - Design of Industrial Automation Functional Specifications](https://www.idc-online.com/downloads/FC_IDCBookextract.pdf) -- Common mistakes, consistency requirements
-- [Stack Overflow 2025 Developer Survey](https://simonwillison.net/2025/Dec/31/the-year-in-llms/) -- 46% distrust AI accuracy (cited indirectly)
-- SPECIFICATION.md v2.7.0 -- GSD-Docs specification (primary source, local)
+**Web-Based Document Generation Best Practices:**
+- [Best Enterprise Document Assembly Tools: Top 12 Picks for 2026](https://www.edocgen.com/blogs/top12-document-assembly-tools-2026)
+- [What is document generation? (The 5 best tools in 2026)](https://www.templafy.com/what-is-document-generation/)
+- [18 Best Document Generation Software Reviewed in 2026](https://thedigitalprojectmanager.com/tools/best-document-generation-software/)
+
+**AI Document Assistant Interface Patterns:**
+- [13 Best AI Document Generation Tools for 2026](https://venngage.com/blog/best-ai-document-generator/)
+- [31 Chatbot UI Examples from Product Designers](https://www.eleken.co/blog-posts/chatbot-ui-examples)
+- [AI chat interfaces could become the primary user interface to read documentation](https://idratherbewriting.com/blog/ai-chat-interfaces-are-the-new-user-interface-for-docs)
+
+**Project Wizard UX Design:**
+- [The Ultimate Guide to Web Wizard Design](https://lab.interface-design.co.uk/the-ultimate-guide-to-web-wizard-design-5b6fb4201f94)
+- [Wizards: Definition and Design Recommendations - NN/G](https://www.nngroup.com/articles/wizards/)
+- [Wizard Design Pattern by Nick Babich](https://uxplanet.org/wizard-design-pattern-8c86e14f2a38)
+- [Creating a setup wizard (and when you shouldn't) - LogRocket](https://blog.logrocket.com/ux-design/creating-setup-wizard-when-you-shouldnt/)
+
+**Real-Time Progress Feedback:**
+- [Building Progress Bars for the Web with Django and Celery](https://www.saaspegasus.com/guides/django-celery-progress-bars/)
+- [Providing Real-Time Feedback About Long-Running Task with SignalR](https://blog.stevanfreeborn.com/providing-real-time-feedback-about-long-running-task-with-signal-r)
+- [How to create progress indicator UI for better usability?](https://cieden.com/book/atoms/progress-indicator/progress-indicator-ui)
+
+**Document Preview/Rendering:**
+- [How to Preview Document or File in Browser for SaaS](https://ardas-it.com/how-to-preview-document-or-file-in-a-browser-for-saas)
+- [Word Document Online Preview Demo](https://develop365.gitlab.io/word-preview/)
+- [How To Preview Doc And PDF Files In Browser](https://selleo.com/blog/how-to-preview-doc-and-pdf-files-in-browser)
+
+**File Upload/Drag-Drop:**
+- [Dropzone.js](https://www.dropzone.dev/)
+- [File drag and drop - Web APIs | MDN](https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API/File_drag_and_drop)
+- [How to Implement Drag and Drop in Document Upload UI](https://blog.filestack.com/implement-drag-drop-document-upload-ui/)
+
+**Workflow Dashboards:**
+- [What is a Timeline Workflow and How to Manage it? – Businessmap](https://knowledgebase.businessmap.io/hc/en-us/articles/360028419032-What-is-a-Timeline-Workflow-and-How-to-Manage-it)
+- [Tree view - Carbon Design System](https://carbondesignsystem.com/components/tree-view/usage/)
+- [Interaction Design for Trees](https://medium.com/@hagan.rivers/interaction-design-for-trees-5e915b408ed2)
+
+**Team Collaboration Patterns:**
+- [Document Collaboration: Maximize Team Efficiency | Zoom](https://www.zoom.com/en/products/collaborative-docs/features/document-collaboration/)
+- [Enhancing Collaboration and Productivity with Multi-User Document Management](https://www.docmoto.com/blog/enhancing-collaboration-and-productivity-with-multi-user-document-management/)
+
+**Engineering Document Management:**
+- [EDMS Guide: Engineering Document Management Systems | Accruent](https://www.accruent.com/resources/knowledge-hub/what-is-an-engineering-document-management-system)
+- [Understanding an Engineering Workflow | eQuorum](https://www.equorum.com/blog/understanding-an-engineering-workflow/)
+- [Document Approval Workflow: Steps to Create](https://www.cflowapps.com/document-approval-workflow/)
+
+**Technical Documentation Automation:**
+- [12 AI Tools for Technical Writers](https://clickhelp.com/clickhelp-technical-writing-blog/ai-tools-for-technical-writers/)
+- [AI in technical writing: complete guide for 2026](https://instrktiv.com/en/ai-in-technical-writing/)
+
+**Document Tagging/Reference Management:**
+- [Document Tagging for Technical Writing: Best Practices | Docsie](https://www.docsie.io/blog/glossary/document-tagging/)
+- [How content tagging enables better content management | Contentful](https://www.contentful.com/blog/content-tagging/)
+
+**Human-in-the-Loop AI Patterns:**
+- [Human-in-the-loop in AI workflows: Meaning and patterns | Zapier](https://zapier.com/blog/human-in-the-loop/)
+- [Human-in-the-Loop for AI Agents: Best Practices | Permit.io](https://www.permit.io/blog/human-in-the-loop-for-ai-agents-best-practices-frameworks-use-cases-and-demo)
+- [Human-in-the-Loop AI Review Queues: Workflow Patterns That Scale (2025)](https://alldaystech.com/guides/artificial-intelligence/human-in-the-loop-ai-review-queue-workflows)
+- [Human-in-the-Loop AI in Document Workflows - Best Practices | Parseur](https://parseur.com/blog/hitl-best-practices)
+
+**Real-Time Communication Architecture:**
+- [Polling vs. Long Polling vs. SSE vs. WebSockets vs. Webhooks](https://blog.algomaster.io/p/polling-vs-long-polling-vs-sse-vs-websockets-webhooks)
+- [How to set up WebSockets, Server-Sent Events, and Long Polling for Real-Time Features in SaaS Products](https://venturenox.com/blog/websockets-server-sent-events-and-long-polling-for-real-time-features-in-saas-products/)
+- [WebSockets vs Server-Sent Events (SSE) | Ably](https://ably.com/blog/websockets-vs-sse)
+
+---
+*Feature research for: GSD-Docs Industrial v2.0 GUI*
+*Researched: 2026-02-14*
+*Confidence: HIGH — grounded in web UI patterns, AI document tools, engineering workflows, and existing v1.0 constraints*

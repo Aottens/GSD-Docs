@@ -1,935 +1,1703 @@
-# Architecture Patterns: GSD-Docs Industrial
+# Architecture Patterns: Web GUI for FDS/SDS Document Generation
 
-**Domain:** Claude Code documentation plugin (FDS/SDS generation)
-**Researched:** 2026-02-06
-**Confidence:** HIGH (derived from live GSD reference implementation + specification v2.7.0)
+**Domain:** Industrial automation FDS/SDS document generation
+**Researched:** 2026-02-14
+**Confidence:** HIGH
 
----
+## Recommended Architecture
 
-## 1. Recommended Architecture
-
-GSD-Docs Industrial is a **command-driven orchestration system** where Markdown command files define workflows, subagents execute heavy operations with fresh context, and a file-based state machine tracks progress across sessions.
-
-### 1.1 System Topology
+### System Overview
 
 ```
-                    USER
-                     |
-                     v
-          ┌──────────────────────┐
-          |   Claude Code CLI    |
-          |  (command dispatch)  |
-          └──────────┬───────────┘
-                     |
-                     v
-    ┌────────────────────────────────────┐
-    |     COMMAND LAYER                  |
-    |  ~/.claude/commands/doc/*.md       |
-    |                                    |
-    |  new-fds   discuss-phase           |
-    |  plan-phase  write-phase           |
-    |  verify-phase  review-phase        |
-    |  complete-fds  generate-sds        |
-    |  export  status  resume            |
-    └────────────┬───────────────────────┘
-                 |
-       ┌─────────┴──────────┐
-       v                    v
-┌──────────────┐   ┌───────────────────┐
-| ORCHESTRATOR |   | REFERENCE LAYER   |
-| (main ctx)   |   |                   |
-| Reads state, |   | references/       |
-| spawns agents|   |   standards/      |
-|              |   |   typicals/       |
-└──────┬───────┘   |   writing-guide   |
-       |           |   verification    |
-       v           | templates/        |
-┌──────────────┐   |   roadmap/        |
-| SUBAGENTS    |   |   fds/            |
-| (fresh ctx)  |   |   project, plan   |
-|              |   └───────────────────┘
-| doc-writer   |            ^
-| doc-verifier |            |
-| doc-planner  |     (loaded via @-refs
-| doc-reviewer |      per command)
-└──────┬───────┘
-       |
-       v
-┌──────────────────────────────────────┐
-|     PROJECT STATE LAYER              |
-|  [project-dir]/.planning/            |
-|                                      |
-|  PROJECT.md  REQUIREMENTS.md         |
-|  ROADMAP.md  STATE.md                |
-|  CROSS-REFS.md  config.json          |
-|  BASELINE.md (Type C/D)              |
-|                                      |
-|  phases/                             |
-|    01-foundation/                    |
-|      CONTEXT.md                      |
-|      01-01-PLAN.md                   |
-|      01-01-CONTENT.md                |
-|      01-01-SUMMARY.md                |
-|      VERIFICATION.md                 |
-└──────────────────────────────────────┘
-       |
-       v
-┌──────────────────────────────────────┐
-|     OUTPUT LAYER                     |
-|  [project-dir]/                      |
-|                                      |
-|  output/                             |
-|    FDS-[Name]-v[X.Y].md             |
-|    SDS-[Name]-v[X.Y].md             |
-|    RATIONALE.md                      |
-|    EDGE-CASES.md                     |
-|    ENGINEER-TODO.md                  |
-|    TRACEABILITY.md                   |
-|                                      |
-|  diagrams/                           |
-|    mermaid/  rendered/  external/    |
-|                                      |
-|  export/                             |
-|    *.docx                            |
-└──────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                        BROWSER (Engineer)                       │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ React Frontend (TypeScript)                              │   │
+│  │  • Project wizard + phase timeline (Zustand/Jotai)      │   │
+│  │  • Document outline + Markdown preview (react-markdown) │   │
+│  │  • Chat panel (WebSocket connection)                     │   │
+│  │  • Reference library manager (upload/view)              │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+                              ▲ │
+                   HTTPS      │ │ WebSocket
+                   REST API   │ │ /ws
+                              │ ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    FastAPI Backend (Python)                     │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ API Layer                                                │   │
+│  │  • REST endpoints (/api/projects, /api/phases)          │   │
+│  │  • WebSocket manager (/ws/{session_id})                 │   │
+│  │  • File upload handler (/api/files/upload)              │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ Workflow Engine (orchestrator)                           │   │
+│  │  • Workflow loader (translates .md → Python)            │   │
+│  │  • Step executor (wave-based parallelization)           │   │
+│  │  • State manager (STATE.md checkpoint/resume)           │   │
+│  │  • Background task coordinator (ARQ + Redis)            │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ LLM Provider Abstraction                                 │   │
+│  │  • LLMProvider interface (abstract base)                │   │
+│  │  • ClaudeProvider (Anthropic SDK)                       │   │
+│  │  • LocalProvider (stub for v3.0, Ollama/llama.cpp)     │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ Domain Knowledge Loader                                  │   │
+│  │  • Template registry (equipment-module.md, etc.)        │   │
+│  │  • Standards loader (PackML/ISA-88, opt-in)             │   │
+│  │  • Prompt builder (agent context assembly)              │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ Metadata Store (SQLite)                                  │   │
+│  │  • Projects table (id, name, type, created, status)     │   │
+│  │  • Files table (id, project_id, path, type, uploaded)   │   │
+│  │  • Sessions table (id, user, started, last_activity)    │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+                              ▲ │
+                              │ │
+                              │ ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      File System Storage                        │
+│  • /projects/{project-id}/.planning/ (ROADMAP, STATE, etc.)    │
+│  • /projects/{project-id}/.planning/phases/ (PLAN, CONTENT)    │
+│  • /projects/{project-id}/output/ (FDS/SDS final docs)         │
+│  • /references/shared/ (PackML, ISA-88, typicals CATALOG)      │
+│  • /references/projects/{id}/ (per-project overrides)          │
+└─────────────────────────────────────────────────────────────────┘
+                              ▲ │
+                              │ │ API calls
+                              │ ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      External Services                          │
+│  • Anthropic Claude API (LLM provider)                         │
+│  • Pandoc (DOCX export, shell subprocess)                      │
+│  • Mermaid CLI (diagram rendering, mmdc)                       │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### 1.2 How It Maps to GSD
+### Component Boundaries
 
-GSD-Docs follows a 1:1 mapping from GSD's code-producing architecture to a documentation-producing architecture. The structural patterns are identical; only the _payload_ changes.
+| Component | Responsibility | Communicates With |
+|-----------|---------------|-------------------|
+| **React Frontend** | User interface, state management, real-time updates display | FastAPI REST + WebSocket |
+| **API Layer** | HTTP routing, WebSocket connection management, request validation | Workflow Engine, File Storage, SQLite |
+| **Workflow Engine** | Orchestrate .md workflow execution, spawn LLM tasks, manage waves | LLM Provider, Domain Knowledge Loader, State Manager |
+| **LLM Provider** | Abstract LLM API calls (Claude, future local models) | External LLM APIs (Anthropic, Ollama) |
+| **Domain Knowledge Loader** | Load templates, standards, prompts from v1.0 file structure | File System (gsd-docs-industrial/) |
+| **State Manager** | Read/write STATE.md, checkpoint operations, detect crashes | File System (.planning/STATE.md) |
+| **SQLite Metadata** | Project list, file registry, session tracking | API Layer |
+| **File Storage** | Store project files, references, generated documents | API Layer, Workflow Engine |
 
-| GSD Component | GSD-Docs Equivalent | What Changes |
-|---------------|---------------------|--------------|
-| `~/.claude/commands/gsd/*.md` | `~/.claude/commands/doc/*.md` | Namespace only |
-| `~/.claude/get-shit-done/` | `~/.claude/gsd-docs-industrial/` | Content files |
-| `workflows/*.md` | `workflows/*.md` | Execution steps adapted for docs |
-| `templates/phase-prompt.md` | `templates/plan.md` | Output is CONTENT.md, not code |
-| `references/verification-patterns.md` | `references/verification-patterns.md` | Checks content completeness, not code stubs |
-| `gsd-executor` subagent | `doc-writer` subagent | Writes prose sections instead of code |
-| `gsd-verifier` subagent | `doc-verifier` subagent | Checks documentation completeness instead of codebase |
-| `gsd-planner` subagent | `doc-planner` subagent | Plans sections instead of code tasks |
-| Per-task git commits | Per-plan git commits (optional) | Documents have different commit granularity |
-| `SUMMARY.md` (AI-readable) | `SUMMARY.md` (AI-readable, max 150 words) | Same purpose, more constrained |
+### Data Flow
 
----
-
-## 2. Component Boundaries
-
-### 2.1 Component Registry
-
-| Component | Location | Responsibility | Communicates With |
-|-----------|----------|----------------|-------------------|
-| **Command Files** | `~/.claude/commands/doc/*.md` | Entry points; define allowed tools, load execution context | Claude Code CLI, Workflow files |
-| **Workflow Files** | `~/.claude/gsd-docs-industrial/workflows/*.md` | Execution logic; step-by-step process for each command | Subagents, State files, Templates |
-| **Templates** | `~/.claude/gsd-docs-industrial/templates/` | Scaffolding for output files (ROADMAP, PLAN, CONTENT structure) | Workflow files (read at generation time) |
-| **References** | `~/.claude/gsd-docs-industrial/references/` | Domain knowledge (standards, writing guidelines, verification patterns) | Subagents (loaded via @-refs) |
-| **ROADMAP Templates** | `templates/roadmap/type-{a,b,c,d}*.md` | Phase structure per project type | `new-fds` command (read during classification) |
-| **FDS Section Templates** | `templates/fds/section-*.md` | Structured output format for content sections | `doc-writer` subagent (loaded during writing) |
-| **Standards References** | `references/standards/packml/`, `references/standards/isa-88/` | Authoritative standard definitions | Loaded conditionally based on PROJECT.md config |
-| **Typicals Library** | `references/typicals/CATALOG.json` + `library/` | Reusable software block definitions | `generate-sds` command |
-| **PROJECT.md** | `[project]/.planning/PROJECT.md` | Project identity, configuration, constraints | All commands read this |
-| **STATE.md** | `[project]/.planning/STATE.md` | Checkpoint/recovery, progress tracking, decisions | All commands read/write this |
-| **ROADMAP.md** | `[project]/.planning/ROADMAP.md` | Phase structure with goals and requirements mapping | plan-phase, write-phase, verify-phase, status |
-| **CROSS-REFS.md** | `[project]/.planning/CROSS-REFS.md` | Cross-reference registry between sections | write-phase (write), verify-phase (check), complete-fds (validate) |
-
-### 2.2 Boundary Rules
-
-**Rule 1: Commands are thin orchestrators.**
-A command file (.md in commands/doc/) should contain:
-- Frontmatter (name, tools, hints)
-- @-references to workflow and context files
-- Process steps that delegate to subagents for heavy work
-- Routing logic (what to show user, what to spawn next)
-
-The command file itself should NOT contain domain logic, verification patterns, or template content. Those live in workflows/, references/, and templates/.
-
-**Rule 2: Subagents get fresh context with explicit boundaries.**
-Each subagent receives ONLY:
-- The specific workflow file (e.g., `workflows/write-section.md`)
-- The current PLAN.md
-- PROJECT.md (for configuration)
-- CONTEXT.md (for decisions about this phase)
-- Relevant standards (if enabled)
-- Relevant templates (for output format)
-
-A subagent NEVER receives:
-- Other phases' CONTENT.md files
-- Other plans' CONTENT.md files
-- Previous conversation history
-- The full ROADMAP (only the relevant phase goal)
-
-**Rule 3: STATE.md is the system's memory.**
-Every command reads STATE.md first and writes it last. If a session crashes, STATE.md tells the next session exactly where to resume. This is the single most important file for crash recovery.
-
-**Rule 4: Standards are opt-in and isolated.**
-PackML and ISA-88 references live in their own directories. They are loaded ONLY when `PROJECT.md` has `standards.packml.enabled: true` or `standards.isa88.enabled: true`. No command should assume standards are present. The conditional loading pattern from the spec (section 6.2) must be followed.
-
-**Rule 5: CROSS-REFS.md is the integration registry.**
-Cross-references between sections are tracked centrally, not embedded in individual files. `write-phase` logs references as they're created. `verify-phase` checks them. `complete-fds` validates them strictly and blocks on broken refs.
-
----
-
-## 3. Data Flow
-
-### 3.1 Primary Flow: Project Lifecycle
+#### 1. Project Creation Flow
 
 ```
-/doc:new-fds
-     |
-     | Creates: PROJECT.md, REQUIREMENTS.md, ROADMAP.md, STATE.md
-     | Reads: User input, ROADMAP templates, classification logic
-     |
-     v
-/doc:discuss-phase N
-     |
-     | Reads: ROADMAP.md (phase goal), STATE.md
-     | Creates: phases/0N-name/CONTEXT.md
-     | Updates: STATE.md, RATIONALE.md (on decisions)
-     |
-     v
-/doc:plan-phase N
-     |
-     | Reads: CONTEXT.md, ROADMAP.md, REQUIREMENTS.md, STATE.md
-     | Loads: FDS section templates, standards (if enabled)
-     | Spawns: doc-planner subagent
-     | Creates: phases/0N-name/*-PLAN.md (with wave assignments)
-     | Updates: STATE.md
-     |
-     v
-/doc:write-phase N
-     |
-     | Reads: PLAN.md files (discovers and groups by wave)
-     | Per plan (parallel within wave):
-     |   Spawns: doc-writer subagent
-     |   Writer reads: PLAN.md, CONTEXT.md, PROJECT.md, standards
-     |   Writer creates: CONTENT.md, SUMMARY.md
-     |   Writer logs: cross-references to CROSS-REFS.md
-     |   Writer logs: edge cases to EDGE-CASES.md
-     | Updates: STATE.md (after each wave)
-     |
-     v
-/doc:verify-phase N
-     |
-     | Reads: ROADMAP.md (phase goal), all CONTENT.md, SUMMARY.md
-     | Reads: CROSS-REFS.md (for reference checks)
-     | Spawns: doc-verifier subagent
-     | Verifier checks: completeness, consistency, standards compliance
-     | Creates: VERIFICATION.md
-     | Routes: PASS -> next phase | GAPS -> plan-phase --gaps
-     | Optional: Fresh Eyes review
-     |
-     v
-/doc:review-phase N (optional)
-     |
-     | Reads: CONTENT.md files for the phase
-     | Interacts: User presents to client/engineer
-     | Creates: REVIEW.md with feedback
-     | Routes: OK -> next phase | Issues -> plan-phase --gaps
-     |
-     v
-/doc:complete-fds
-     |
-     | Reads: ALL phases' CONTENT.md, CROSS-REFS.md
-     | Validates: Cross-references (strict), orphan sections
-     | Concatenates: All CONTENT.md into single FDS document
-     | Creates: output/FDS-[Name]-v[X.Y].md
-     | Creates: output/RATIONALE.md, EDGE-CASES.md, ENGINEER-TODO.md
-     | Archives: .planning/archive/v[X.Y]/
-     |
-     v
-/doc:generate-sds
-     |
-     | Reads: output/FDS-*.md
-     | Reads: references/typicals/CATALOG.json
-     | Matches: Each equipment to typicals
-     | Creates: output/SDS-[Name]-v[X.Y].md, TRACEABILITY.md
-     |
-     v
-/doc:export
-     |
-     | Reads: output/*.md
-     | Reads: templates/huisstijl.docx
-     | Renders: Mermaid diagrams -> PNG (or flags complex ones)
-     | Creates: export/*.docx
+Engineer fills wizard → React validates → POST /api/projects
+                                             ↓
+                                FastAPI creates project
+                                             ↓
+                        Workflow Engine loads new-fds.md workflow
+                                             ↓
+                        LLM Provider calls Claude (classify Type A/B/C/D)
+                                             ↓
+                        Generate ROADMAP.md, PROJECT.md, STATE.md
+                                             ↓
+                        File Storage writes .planning/ files
+                                             ↓
+                        SQLite stores project metadata
+                                             ↓
+                        WebSocket broadcasts "project_created" event
+                                             ↓
+                        React updates project list + redirects to timeline
 ```
 
-### 3.2 Secondary Flow: State Management
+#### 2. Phase Discussion Flow
 
 ```
-Every command entry:
-     |
-     ├─ Read STATE.md
-     |    ├─ Current position (phase, plan, status)
-     |    ├─ Accumulated decisions
-     |    ├─ Blockers/concerns
-     |    └─ Last operation (for crash detection)
-     |
-     ├─ Update STATE.md before operation
-     |    └─ status: IN_PROGRESS, command, phase, wave
-     |
-     ├─ [Execute operation]
-     |
-     └─ Update STATE.md after operation
-          ├─ status: COMPLETE (or INTERRUPTED on failure)
-          ├─ Current position updated
-          └─ New decisions logged
+Engineer clicks "Discuss Phase 3" → POST /api/phases/3/discuss
+                                             ↓
+                        Workflow Engine loads discuss-phase.md workflow
+                                             ↓
+                        Read ROADMAP.md for phase goals
+                                             ↓
+                        LLM Provider calls Claude (identify gray areas)
+                                             ↓
+                        WebSocket streams questions to chat panel
+                                             ↓
+                        Engineer answers via /ws/send_message
+                                             ↓
+                        Workflow accumulates decisions
+                                             ↓
+                        Generate CONTEXT.md with decisions
+                                             ↓
+                        State Manager updates STATE.md
+                                             ↓
+                        WebSocket broadcasts "phase_discussion_complete"
+                                             ↓
+                        React enables "Plan Phase 3" button
 ```
 
-### 3.3 Secondary Flow: Gap Closure Loop
+#### 3. Phase Writing Flow (Wave-based Parallelization)
 
 ```
-verify-phase N
-     |
-     ├─ PASS → proceed to next phase
-     |
-     └─ GAPS_FOUND
-          |
-          v
-     plan-phase N --gaps
-          |
-          | Reads: VERIFICATION.md (gaps list)
-          | Creates: additional PLAN.md files (e.g., 03-07-fix-PLAN.md)
-          |
-          v
-     write-phase N
-          |
-          | Discovers: only unwritten plans (those without SUMMARY.md)
-          | Writes: fix CONTENT.md files
-          |
-          v
-     verify-phase N (re-verify)
-          |
-          ├─ PASS → proceed
-          └─ GAPS_FOUND → loop again (max 3 iterations)
+Engineer clicks "Write Phase 3" → POST /api/phases/3/write
+                                             ↓
+                        Workflow Engine loads write-phase.md workflow
+                                             ↓
+                        Discover all PLAN.md files in phase-3/
+                                             ↓
+                        Group plans by wave number (frontmatter)
+                                             ↓
+                        State Manager checkpoints STATE.md (wave 1 start)
+                                             ↓
+                        FOR EACH WAVE (sequential):
+                          ↓
+                          Background Task Queue (ARQ + Redis):
+                          - Spawn parallel tasks for all plans in wave
+                          - Each task:
+                              → Domain Knowledge Loader builds isolated context
+                              → Load: PROJECT.md, CONTEXT.md, PLAN.md, standards
+                              → NOT loaded: other plans, other CONTENT.md
+                              → LLM Provider calls Claude (doc-writer agent)
+                              → Write CONTENT.md + SUMMARY.md
+                              → WebSocket streams progress per section
+                          - Await all wave tasks completion
+                          ↓
+                          State Manager checkpoints STATE.md (wave N complete)
+                          ↓
+                        Aggregate CROSS-REFS.md from all writers
+                                             ↓
+                        WebSocket broadcasts "phase_write_complete"
+                                             ↓
+                        React updates phase timeline (Phase 3: Writing → Verifying)
 ```
 
-### 3.4 Secondary Flow: Dynamic ROADMAP Evolution
+#### 4. Document Preview Flow
 
 ```
-verify-phase 2 (System Overview) → PASS
-     |
-     ├─ Analyze CONTENT.md from System Overview
-     |    ├─ Count identified units/equipment
-     |    └─ Group by functional area
-     |
-     ├─ Decision gate:
-     |    ├─ <=5 units → keep static ROADMAP (single "Functional Units" phase)
-     |    └─ >5 units → propose expanded ROADMAP
-     |
-     └─ If expanding:
-          ├─ Present grouping proposal to user
-          ├─ User approves or adjusts
-          ├─ Rewrite ROADMAP.md with new phases (3-5 units per phase)
-          └─ Update STATE.md
+Engineer clicks section in outline → GET /api/phases/3/content/03-02
+                                             ↓
+                        File Storage reads 03-02-CONTENT.md
+                                             ↓
+                        Return raw Markdown to React
+                                             ↓
+                        react-markdown renders with syntax highlighting
+                                             ↓
+                        Mermaid diagrams rendered client-side
 ```
 
-### 3.5 Context Loading Pattern Per Subagent
+#### 5. Reference Upload Flow
 
-This is the most critical architectural pattern. Each subagent must have precisely scoped context.
-
-**doc-writer subagent context (writing a section):**
 ```
-LOADED:
-  PROJECT.md                    (project identity, config)
-  CONTEXT.md                    (phase-level decisions)
-  [current]-PLAN.md             (what to write, verification criteria)
-  templates/fds/section-*.md    (output format templates)
-  references/standards/*        (IF enabled in PROJECT.md)
-  references/writing-guidelines.md
-
-NOT LOADED:
-  Other plans' PLAN.md          (prevents cross-contamination)
-  Other plans' CONTENT.md       (prevents context pollution)
-  ROADMAP.md                    (not needed for writing)
-  Previous conversation         (fresh context)
-```
-
-**doc-verifier subagent context (verifying a phase):**
-```
-LOADED:
-  ROADMAP.md                    (phase goal - the verification target)
-  All CONTENT.md in this phase  (what to verify)
-  All SUMMARY.md in this phase  (quick overview of each section)
-  CONTEXT.md                    (decisions that content should match)
-  CROSS-REFS.md                 (reference validation)
-  references/verification-patterns.md
-  references/standards/*        (IF enabled - for compliance checks)
-
-NOT LOADED:
-  Other phases' content         (only verifying this phase)
-  PLAN.md files                 (verifying outcome, not process)
+Engineer uploads PackML guide PDF → POST /api/files/upload
+                                             ↓
+                        FastAPI UploadFile handler
+                                             ↓
+                        Validate file type + size
+                                             ↓
+                        File Storage writes to /references/projects/{id}/
+                                             ↓
+                        SQLite stores file metadata
+                                             ↓
+                        WebSocket broadcasts "file_uploaded"
+                                             ↓
+                        React updates reference library list
 ```
 
 ---
 
-## 4. Component Details
+## Integration Points: v1.0 → v2.0
 
-### 4.1 Command Files (Entry Points)
+### New Components (Built from Scratch)
 
-Each command file follows the GSD frontmatter pattern:
+| Component | What | Technology |
+|-----------|------|------------|
+| **Frontend UI** | Visual interface for all workflows | React + TypeScript, Zustand/Jotai state, react-markdown |
+| **FastAPI Backend** | Replaces Claude Code as orchestrator | FastAPI 2026, Pydantic v2, async/await |
+| **WebSocket Manager** | Real-time progress streaming | FastAPI WebSockets, Redis pub/sub for multi-instance |
+| **LLM Provider Abstraction** | Model-agnostic interface | Abstract base class, ClaudeProvider (Anthropic SDK) |
+| **Background Task Queue** | Wave-based parallel execution | ARQ (Async Redis Queue) |
+| **SQLite Metadata Store** | Project/file/session registry | SQLite with SQLAlchemy async |
+| **API Routes** | REST endpoints for all operations | FastAPI routers (projects, phases, files, export) |
+
+### Modified Components (Adapted from v1.0)
+
+| Component | v1.0 Implementation | v2.0 Change | Reason |
+|-----------|---------------------|-------------|--------|
+| **Workflow Logic** | .md files with embedded bash/prompts | Python orchestrator reads .md, executes steps | Web backend can't execute bash directly; translate logic to Python |
+| **Context Loading** | Claude Code @file syntax | Python file reader + prompt builder | Explicit context assembly for API calls |
+| **State Management** | STATE.md read/write via bash | Python STATE.md parser/writer | Programmatic checkpoint/resume logic |
+| **File Discovery** | Glob/Grep tools | Python pathlib.glob() + regex | Native Python file operations |
+| **Progress Feedback** | Terminal output (echo, boxes) | WebSocket JSON events | Real-time browser updates |
+
+### Unchanged Components (Reused Exactly)
+
+| Component | What | Why Unchanged |
+|-----------|------|---------------|
+| **Domain Knowledge Files** | Templates (equipment-module.md), standards (PackML, ISA-88), section structures | These ARE the SSOT for document structure; backend loads as prompt context |
+| **Workflow .md Files** | 14 workflow files (new-fds.md, write-phase.md, etc.) | Step descriptions, validation logic, success criteria remain authoritative; Python reads them |
+| **Agent Prompts** | doc-writer.md, doc-verifier.md, fresh-eyes.md | Agent role definitions and instructions reused verbatim as LLM system prompts |
+| **Project File Format** | .planning/, ROADMAP.md, PLAN.md frontmatter, STATE.md structure | CLI compatibility requirement; GUI and CLI produce identical files |
+| **SPECIFICATION.md** | v2.7.0 SSOT for workflow semantics | Reference document for implementing Python orchestration logic |
+
+---
+
+## Pattern 1: Workflow Translation (.md → Python)
+
+### v1.0 Pattern (CLI)
+
+Workflows are .md files with embedded bash and Claude Code directives:
 
 ```markdown
----
-name: doc:write-phase
-description: Write all sections of a phase with wave-based parallelization
-argument-hint: "<phase-number>"
-allowed-tools:
-  - Read
-  - Write
-  - Bash
-  - Task
-  - AskUserQuestion
----
+## Step 3: Discover Plans
 
-<objective>
-[What this command accomplishes]
-</objective>
-
-<execution_context>
-@~/.claude/gsd-docs-industrial/workflows/write-phase.md
-@~/.claude/gsd-docs-industrial/references/ui-brand.md
-</execution_context>
-
-<context>
-Phase: $ARGUMENTS
-@.planning/ROADMAP.md
-@.planning/STATE.md
-</context>
-
-<process>
-[Orchestration steps - validate, discover plans, spawn subagents, collect results]
-</process>
+**Discover plans:**
+```bash
+PHASE_DIR=$(find .planning/phases -type d -name "${PHASE}-*" | head -1)
+PLAN_FILES=$(find ${PHASE_DIR} -name "${PHASE}-[0-9][0-9]-PLAN.md" | sort)
 ```
 
-**Key insight from GSD:** The command file is the ORCHESTRATOR. It stays lean (15% context budget). Heavy work happens in subagents with fresh context.
-
-### 4.2 Workflow Files (Execution Logic)
-
-Workflow files contain the detailed execution logic that subagents follow. They are loaded via `@`-references in the command's `<execution_context>`.
-
-Needed workflows:
-| Workflow | Purpose | Spawned By |
-|----------|---------|------------|
-| `write-section.md` | How to write a single FDS section (the doc-writer agent's instructions) | write-phase orchestrator |
-| `verify-phase.md` | How to verify phase completeness (doc-verifier instructions) | write-phase/verify-phase orchestrator |
-| `plan-phase.md` | How to create section plans (doc-planner instructions) | plan-phase orchestrator |
-| `generate-sds.md` | How to transform FDS into SDS | generate-sds command |
-| `complete-fds.md` | How to merge phases into final document | complete-fds command |
-| `review-phase.md` | How to conduct client review | review-phase command |
-
-### 4.3 Templates (Scaffolding)
-
-Templates provide structure for generated files. They are NOT content -- they are skeletons with placeholders.
-
-| Template Category | Files | Used By |
-|-------------------|-------|---------|
-| **ROADMAP templates** | `type-a-nieuwbouw-standaard.md`, `type-b-nieuwbouw-flex.md`, `type-c-modificatie.md`, `type-d-twn.md` | `/doc:new-fds` |
-| **FDS section templates** | `section-equipment-module.md`, `section-state-machine.md`, `section-interface.md` | doc-writer subagent |
-| **Planning templates** | `project.md`, `requirements.md`, `context.md`, `plan.md` | `/doc:new-fds`, `/doc:discuss-phase`, `/doc:plan-phase` |
-| **Reporting templates** | `verification-report.md`, `summary.md` | doc-verifier, doc-writer |
-| **Export template** | `huisstijl.docx` | `/doc:export` |
-
-### 4.4 References (Domain Knowledge)
-
-References are loaded conditionally and provide authoritative domain information.
-
-| Reference | Loaded When | Purpose |
-|-----------|------------|---------|
-| `standards/packml/STATE-MODEL.md` | `standards.packml.enabled: true` | PackML state definitions, transitions |
-| `standards/packml/UNIT-MODES.md` | `standards.packml.enabled: true` | PackML operating modes |
-| `standards/isa-88/EQUIPMENT-HIERARCHY.md` | `standards.isa88.enabled: true` | ISA-88 hierarchy (Unit > EM > CM) |
-| `standards/isa-88/TERMINOLOGY.md` | `standards.isa88.enabled: true` | ISA-88 standard terms |
-| `writing-guidelines.md` | Always (for doc-writer) | Prose quality, style, terminology |
-| `verification-patterns.md` | Always (for doc-verifier) | How to detect stubs, incomplete sections |
-| `typicals/CATALOG.json` | Only for generate-sds | Typical software blocks for SDS matching |
-
-### 4.5 State Machine (STATE.md)
-
-STATE.md serves three purposes:
-1. **Progress tracking** - Where are we in the workflow?
-2. **Decision memory** - What has been decided across sessions?
-3. **Crash recovery** - What was happening when we stopped?
-
-```markdown
-# STATE.md
-
-## Current Position
-- Phase: 3 (Equipment Modules - Intake)
-- Plan: 03-02 (EM-102 Weigh Station)
-- Status: writing
-
-## Current Operation
-- command: write-phase
-- phase: 3
-- wave: 1
-- wave_total: 2
-- plans_done: [03-01]
-- plans_pending: [03-02, 03-03]
-- started: 2026-02-06T21:45:00Z
-- status: IN_PROGRESS
-
-## Completed
-- Phase 1: PASS (verified)
-- Phase 2: PASS (verified, ROADMAP expanded to 9 phases)
-- Phase 3: 03-01 PASS, 03-02 in progress
-
-## Decisions
-| Phase | Decision | Rationale |
-|-------|----------|-----------|
-| 1 | PackML enabled | Client requirement |
-| 2 | 5 functional areas | System analysis |
-| 3 | Settling time = 3s | Weegcel spec + marge |
-
-## Versions
-- FDS: v0.2 (draft)
-- SDS: - (not started)
-
-## Blockers
-- Wacht op capaciteit info voor EM-400
+**For each plan file, read YAML frontmatter:**
+```bash
+WAVE=$(grep "^wave:" ${PLAN_FILE} | cut -d: -f2 | tr -d ' ')
+```
 ```
 
-### 4.6 Subagent Types
+### v2.0 Pattern (Web Backend)
 
-| Agent Type | Role | Context Budget | Spawned By |
-|------------|------|---------------|------------|
-| **doc-writer** | Write a single FDS section (CONTENT.md + SUMMARY.md) | 100% fresh | write-phase orchestrator |
-| **doc-planner** | Create PLAN.md files for a phase | 100% fresh | plan-phase orchestrator |
-| **doc-verifier** | Verify phase completeness against goals | 100% fresh | write-phase/verify-phase orchestrator |
-| **doc-reviewer** | Conduct structured review with user | Main context | review-phase command |
-| **doc-sds-generator** | Transform FDS section to SDS section | 100% fresh | generate-sds command |
+Python orchestrator reads the .md workflow and executes equivalent logic:
+
+```python
+# backend/workflows/engine.py
+
+class WorkflowEngine:
+    def __init__(self, workflow_path: Path):
+        """Load workflow .md file and parse steps."""
+        self.workflow_md = workflow_path.read_text()
+        self.steps = self._parse_workflow_steps()
+
+    def _parse_workflow_steps(self) -> List[WorkflowStep]:
+        """Extract ## Step N: sections from markdown."""
+        # Parse markdown, extract step headers + content
+        # Each step becomes a callable Python function
+        pass
+
+    async def execute_step(self, step_name: str, context: dict):
+        """Execute a workflow step with given context."""
+        step = self.steps[step_name]
+
+        # Example: "Discover Plans" step
+        if step_name == "discover_plans":
+            return await self._discover_plans(context)
+
+    async def _discover_plans(self, context: dict) -> List[PlanFile]:
+        """Python equivalent of bash plan discovery."""
+        phase_num = context["phase"]
+
+        # Find phase directory
+        phase_dirs = list(Path(".planning/phases").glob(f"{phase_num:02d}-*"))
+        if not phase_dirs:
+            raise WorkflowError(f"Phase {phase_num} directory not found")
+
+        phase_dir = phase_dirs[0]
+
+        # Find all PLAN.md files
+        plan_files = sorted(phase_dir.glob(f"{phase_num:02d}-[0-9][0-9]-PLAN.md"))
+
+        # Parse frontmatter from each plan
+        plans = []
+        for plan_path in plan_files:
+            frontmatter = self._parse_yaml_frontmatter(plan_path)
+            plans.append(PlanFile(
+                path=plan_path,
+                plan_id=frontmatter["plan"],
+                wave=frontmatter["wave"],
+                name=frontmatter["name"],
+                depends_on=frontmatter.get("depends_on", [])
+            ))
+
+        return plans
+```
+
+**Key principle:** The .md file is the SOURCE OF TRUTH for workflow logic. Python code IMPLEMENTS what the .md describes, not vice versa. If workflow changes, update the .md; Python reads and executes it.
 
 ---
 
-## 5. Patterns to Follow
+## Pattern 2: FastAPI Backend Structure
 
-### Pattern 1: Orchestrator + Subagent Delegation
+### Recommended Directory Layout
 
-**What:** Command files orchestrate; subagents execute. The orchestrator uses ~15% of context for coordination; each subagent gets a fresh 200K context window.
-
-**When:** Any operation that involves reading multiple files + producing substantial output (writing sections, verifying phases, planning sections).
-
-**Why:** Documentation writing consumes enormous context. A single FDS section for an equipment module can easily be 2-3K words. Writing multiple sections sequentially in one context would degrade quality. Fresh context per section means consistent quality throughout.
-
-**GSD precedent:** `execute-phase.md` spawns `gsd-executor` subagents per plan. GSD-Docs `write-phase` spawns `doc-writer` subagents per plan.
-
-### Pattern 2: Wave-Based Parallelization
-
-**What:** Group plans into waves based on dependencies. All plans in a wave execute in parallel (multiple `Task` calls in one message). Waves execute sequentially.
-
-**When:** `write-phase` with multiple independent sections. Equipment modules within the same functional area can often be written in parallel.
-
-**Why:** Equipment modules EM-100 and EM-200 don't need each other's CONTENT.md to be written. But EM-200's CONTENT.md might need to reference EM-100's interlock, which is captured at the PLAN level (in CONTEXT.md decisions), not by reading EM-100's output.
-
-**Wave assignment happens at plan-phase time**, not at write-phase time. The planner assigns waves based on:
-- `wave: 1` - Independent sections, no cross-references needed
-- `wave: 2` - Sections that reference wave 1 outputs (via SUMMARY.md, not full CONTENT)
-- `wave: 3` - Integration sections (e.g., "Algemene Interlocks" that references all EMs)
-
-### Pattern 3: Goal-Backward Verification
-
-**What:** Verify that the phase GOAL was achieved, not just that tasks were completed. Start from desired outcome and work backwards to check evidence.
-
-**When:** After all plans in a phase are written.
-
-**Why adapted for docs:** In code, verification checks that functions exist and are wired. In documentation, verification checks that:
-- All required sections exist and have substantive content (not stubs)
-- Parameters have ranges and units (not placeholders)
-- State tables have entry/exit conditions (not just state names)
-- Interlocks have conditions and actions (not just IDs)
-- Cross-references point to real sections
-
-**Verification levels for documents:**
-| Level | Code Equivalent | Doc Equivalent |
-|-------|----------------|----------------|
-| Exists | File exists | Section exists in CONTENT.md |
-| Substantive | Not a stub (real implementation) | Not a placeholder (real technical content) |
-| Complete | All exports/functions present | All required subsections present (states, params, interlocks, I/O) |
-| Consistent | Types match, APIs wired | Matches CONTEXT.md decisions, standards compliance |
-| Wired | Imports work, calls succeed | Cross-references resolve, section numbers correct |
-
-### Pattern 4: Conditional Standards Loading
-
-**What:** PackML and ISA-88 references are only loaded when enabled in PROJECT.md. Commands check configuration before injecting @-references.
-
-**When:** Any command or subagent that might need standards content.
-
-**Implementation:**
-```markdown
-<execution_context>
-@~/.claude/gsd-docs-industrial/workflows/write-section.md
-@~/.claude/gsd-docs-industrial/references/writing-guidelines.md
-
-<!-- Conditional: loaded by orchestrator based on PROJECT.md config -->
-<!-- IF standards.packml.enabled -->
-@~/.claude/gsd-docs-industrial/references/standards/packml/STATE-MODEL.md
-<!-- IF standards.isa88.enabled -->
-@~/.claude/gsd-docs-industrial/references/standards/isa-88/TERMINOLOGY.md
-</execution_context>
+```
+backend/
+├── main.py                      # FastAPI app entry, lifespan, CORS
+├── config.py                    # Settings (Pydantic BaseSettings)
+├── database.py                  # SQLite/SQLAlchemy async session
+│
+├── api/                         # REST API routes
+│   ├── __init__.py
+│   ├── projects.py              # /api/projects CRUD
+│   ├── phases.py                # /api/phases/{phase}/discuss|plan|write|verify
+│   ├── files.py                 # /api/files/upload, /api/files/{file_id}
+│   ├── export.py                # /api/export/fds|sds|docx
+│   └── websocket.py             # /ws/{session_id} WebSocket endpoint
+│
+├── workflows/                   # Workflow orchestration
+│   ├── __init__.py
+│   ├── engine.py                # WorkflowEngine (loads .md, executes steps)
+│   ├── loaders.py               # Load workflow .md files from gsd-docs-industrial/
+│   ├── state_manager.py         # STATE.md read/write, checkpoint/resume
+│   └── steps/                   # Python implementations of workflow steps
+│       ├── new_fds.py           # new-fds.md step implementations
+│       ├── discuss_phase.py
+│       ├── plan_phase.py
+│       ├── write_phase.py
+│       └── verify_phase.py
+│
+├── llm/                         # LLM provider abstraction
+│   ├── __init__.py
+│   ├── provider.py              # LLMProvider abstract base class
+│   ├── claude.py                # ClaudeProvider (Anthropic SDK)
+│   ├── local.py                 # LocalProvider (stub for v3.0)
+│   └── context_builder.py       # Build agent prompts with domain knowledge
+│
+├── domain/                      # Domain knowledge loading
+│   ├── __init__.py
+│   ├── templates.py             # Load templates from gsd-docs-industrial/templates/
+│   ├── standards.py             # Load PackML/ISA-88 if enabled in PROJECT.md
+│   ├── agents.py                # Load agent prompts (doc-writer.md, etc.)
+│   └── prompts.py               # Assemble full prompts for LLM calls
+│
+├── tasks/                       # Background task definitions (ARQ)
+│   ├── __init__.py
+│   ├── write_tasks.py           # Parallel section writing tasks
+│   └── export_tasks.py          # DOCX generation tasks
+│
+├── models/                      # Pydantic models + SQLAlchemy schemas
+│   ├── __init__.py
+│   ├── project.py               # Project SQLAlchemy + Pydantic models
+│   ├── phase.py                 # Phase state models
+│   ├── plan.py                  # PLAN.md frontmatter schema
+│   └── session.py               # WebSocket session tracking
+│
+└── utils/                       # Utilities
+    ├── __init__.py
+    ├── file_ops.py              # File read/write helpers
+    ├── frontmatter.py           # YAML frontmatter parser
+    └── markdown.py              # Markdown utilities
 ```
 
-The orchestrator (command file) reads PROJECT.md, checks the standards config, and constructs the subagent prompt with appropriate @-references included or excluded.
+### Core FastAPI Application
 
-### Pattern 5: Forward-Only Recovery
+```python
+# backend/main.py
 
-**What:** If a session crashes, completed work is preserved. Resume always goes forward -- never rolls back.
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 
-**When:** Any interruption (token limit, network error, user close).
+from api import projects, phases, files, export, websocket
+from database import init_db
+from tasks import setup_arq
 
-**How:** STATE.md tracks `Current Operation` with fine-grained progress. On resume:
-1. Read STATE.md
-2. Identify incomplete operation
-3. Check which plans have CONTENT.md + SUMMARY.md (complete)
-4. Skip completed plans
-5. Continue from first incomplete plan
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan: startup and shutdown."""
+    # Startup
+    await init_db()
+    await setup_arq()
+    yield
+    # Shutdown
+    # Close connections, cleanup
 
-A CONTENT.md is considered "partial" (needs rewrite) if:
-- Missing entirely
-- Less than 200 characters
-- Contains `[TO BE COMPLETED]` marker
-- Ends abruptly (no proper closing)
+app = FastAPI(
+    title="GSD-Docs Industrial API",
+    version="2.0.0",
+    lifespan=lifespan
+)
 
-### Pattern 6: SUMMARY.md as Cross-Phase Bridge
+# CORS for React frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # React dev server
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-**What:** Each written section gets a compact SUMMARY.md (max 150 words, facts only) that other agents can read without loading the full CONTENT.md.
+# Include routers
+app.include_router(projects.router, prefix="/api/projects", tags=["projects"])
+app.include_router(phases.router, prefix="/api/phases", tags=["phases"])
+app.include_router(files.router, prefix="/api/files", tags=["files"])
+app.include_router(export.router, prefix="/api/export", tags=["export"])
+app.include_router(websocket.router, prefix="/ws", tags=["websocket"])
 
-**When:** After each section is written. Used by later phases that need to reference earlier content.
-
-**Why:** A full equipment module CONTENT.md might be 3K words. A verification agent checking 6 modules would consume 18K tokens just on content. With SUMMARY.md, the same check costs ~900 tokens for the summaries.
-
-**SUMMARY.md format:**
-```markdown
-# SUMMARY: 03-02 EM-200 Bovenloopkraan
-
-## Facts
-- Type: Equipment Module
-- States: 6 (PackML compliant)
-- Parameters: 4
-- Interlocks: 3
-- I/O: 8 DI, 4 DO, 2 AI
-
-## Key Decisions
-- No collision detection (client choice)
-- E-stop = controlled stop, position maintained
-
-## Dependencies
-- Interlock with EM-100 (waterbad niveau)
-- Interface to SCADA via Modbus TCP
-
-## Cross-refs
-- Interlock IL-200-01 -> see phase-5
-- HMI screen -> see phase-8/08-02
+@app.get("/")
+async def root():
+    return {"message": "GSD-Docs Industrial API v2.0"}
 ```
 
 ---
 
-## 6. Anti-Patterns to Avoid
-
-### Anti-Pattern 1: Cross-Context Content Loading
-
-**What:** Loading another section's CONTENT.md into a writer's context to "maintain consistency."
-
-**Why bad:** Consumes context budget, creates false dependencies, and actually reduces quality by diluting focus. A writer working on EM-200 does not need to read EM-100's full content.
-
-**Instead:** Use SUMMARY.md for cross-references. If EM-200 needs to know about EM-100's interlock, the PLAN.md for EM-200 should state the interlock ID and behavior (sourced from CONTEXT.md decisions). The writer doesn't need EM-100's prose.
-
-### Anti-Pattern 2: Monolithic Phase Writing
-
-**What:** Writing all sections of a phase in a single context window sequentially.
-
-**Why bad:** Context degrades with each section. Section 6 of a 6-section phase will be noticeably lower quality than section 1. For a Type A project with 18 equipment modules, this would be catastrophic.
-
-**Instead:** Each section gets its own doc-writer subagent with fresh context. Quality is uniform across all sections.
-
-### Anti-Pattern 3: Hardcoded Standards
-
-**What:** Embedding PackML state names or ISA-88 terminology directly in templates or workflow logic.
-
-**Why bad:** Type B projects (Nieuwbouw Flex) explicitly do NOT use PackML/ISA-88. Hardcoding standards would produce incorrect output for half the project types.
-
-**Instead:** Standards are reference files loaded conditionally. Templates use generic placeholders (`{STATES_TABLE}`) that are filled differently based on whether standards are enabled.
-
-### Anti-Pattern 4: Stateless Commands
-
-**What:** Commands that don't read STATE.md first or don't update it after.
-
-**Why bad:** Without STATE.md as the ground truth, crash recovery is impossible. The system loses track of where it is, what's been decided, and what's pending.
-
-**Instead:** Every command reads STATE.md as its FIRST action and updates it as its LAST action. Long operations (write-phase with multiple waves) update STATE.md between waves.
-
-### Anti-Pattern 5: Premature Cross-Reference Resolution
-
-**What:** Trying to resolve all cross-references during section writing (e.g., exact section numbers for future sections).
-
-**Why bad:** During phase 3 writing, phases 4-8 don't exist yet. Section numbers aren't assigned. Cross-references to future content will be wrong.
-
-**Instead:** Use phase-relative references during writing (`see phase-5/HMI`). Exact section numbers (`see par 8.2.4`) are resolved during `/doc:complete-fds` when all content exists. CROSS-REFS.md tracks these for final resolution.
-
-### Anti-Pattern 6: Over-Specifying Language in Framework
-
-**What:** Hardcoding Dutch or English text in templates, workflow instructions, or reference content.
-
-**Why bad:** The framework must support both Dutch and English output. Hardcoded language makes the framework single-language.
-
-**Instead:** Framework files (commands, workflows) are in English (operational language). FDS templates have language-neutral structure with language-specific content loaded from the `output.language` config. Section headers, field labels, and standard terminology come from language-specific reference files.
-
----
-
-## 7. Suggested Build Order
-
-Build order follows dependency chains. Each phase produces artifacts that later phases consume.
-
-### Phase 1: Skeleton + new-fds
-
-**What to build:**
-- Command registration pattern (`~/.claude/commands/doc/new-fds.md`)
-- Framework directory structure (`~/.claude/gsd-docs-industrial/`)
-- ROADMAP templates for all 4 project types
-- PROJECT.md, REQUIREMENTS.md, STATE.md, config.json generation
-- Classification flow (Type A/B/C/D)
-- CLAUDE-CONTEXT.md (condensed spec for quick loading)
-
-**Why first:** Every subsequent command depends on the `.planning/` structure that new-fds creates. Without valid PROJECT.md and ROADMAP.md, nothing else can run.
-
-**Depends on:** Nothing (foundation)
-
-**Produces:** Working `/doc:new-fds` that creates a valid project skeleton
-
-### Phase 2: discuss-phase + plan-phase
-
-**What to build:**
-- `/doc:discuss-phase` command + workflow
-- CONTEXT.md template
-- Gray area identification per domain (equipment, interfaces, HMI, safety)
-- `/doc:plan-phase` command + workflow (orchestrator)
-- PLAN.md template adapted for documentation (sections instead of code tasks)
-- Wave assignment logic
-- doc-planner subagent prompt/workflow
-- FDS section templates (equipment-module, state-machine, interface)
-
-**Why second:** Planning depends on ROADMAP + PROJECT from phase 1. Writing (phase 3) depends on PLANs from this phase.
-
-**Depends on:** Phase 1 (project skeleton must exist)
-
-**Produces:** Working discuss + plan flow that creates CONTEXT.md and PLAN.md files
-
-### Phase 3: write-phase + Core Verification
-
-**What to build:**
-- `/doc:write-phase` command (orchestrator with wave execution)
-- doc-writer subagent prompt/workflow (`write-section.md`)
-- CONTENT.md generation from PLAN + CONTEXT + templates
-- SUMMARY.md generation (max 150 words)
-- CROSS-REFS.md logging during writing
-- EDGE-CASES.md logging during writing
-- `/doc:verify-phase` command
-- doc-verifier subagent prompt/workflow
-- Documentation-specific verification patterns
-- Gap closure flow (verify -> plan --gaps -> write -> re-verify)
-
-**Why third:** This is the core value delivery -- actually producing FDS content. Verification is bundled here because write + verify is an inseparable cycle (gap closure loop).
-
-**Depends on:** Phase 2 (PLAN.md files must exist to write from)
-
-**Produces:** Working write + verify cycle that produces verified FDS sections
-
-### Phase 4: State Management + Recovery
-
-**What to build:**
-- `/doc:status` command
-- `/doc:resume` command
-- Interrupt detection (STATE.md status: INTERRUPTED)
-- Partial write detection
-- Forward-only recovery logic
-- Dynamic ROADMAP evolution (post-System Overview expansion)
-- `/doc:review-phase` command (client review)
-- REVIEW.md template
-
-**Why fourth:** Once the core write/verify cycle works, robustness features (crash recovery, status) and user-facing review make the system production-ready for the core workflow. Dynamic ROADMAP evolution is here because it triggers after phase 2 verification (System Overview), so the verify-phase infrastructure must exist first.
-
-**Depends on:** Phase 3 (write/verify must work before recovery can be meaningful)
-
-**Produces:** Robust core workflow with recovery and status tracking
-
-### Phase 5: Standards Integration
-
-**What to build:**
-- PackML reference files (STATE-MODEL.md, UNIT-MODES.md)
-- ISA-88 reference files (EQUIPMENT-HIERARCHY.md, TERMINOLOGY.md)
-- Conditional loading mechanism in orchestrators
-- Standards compliance verification in doc-verifier
-- Standards-aware FDS section templates (equipment module with PackML states)
-
-**Why fifth:** Standards are opt-in enhancements to the core workflow. The core must work without them first (Type B and D projects never use them). Building them as an overlay ensures the conditional loading pattern is correct.
-
-**Depends on:** Phase 3 (write/verify working) -- standards plug into the writer and verifier
-
-**Produces:** Full Type A project support with PackML/ISA-88
-
-### Phase 6: complete-fds + Knowledge Transfer
-
-**What to build:**
-- `/doc:complete-fds` command
-- Cross-phase content merging
-- Cross-reference strict validation
-- Orphan section detection
-- RATIONALE.md aggregation (from per-phase entries)
-- EDGE-CASES.md aggregation
-- ENGINEER-TODO.md generation
-- Fresh Eyes review feature
-- Versioning (`/doc:release`)
-- Archive workflow
-
-**Why sixth:** complete-fds is the "end of the line" for FDS. It needs all upstream content to exist. Knowledge transfer (RATIONALE, EDGE-CASES) has been accumulated during phases 2-4 and is aggregated here.
-
-**Depends on:** Phases 1-5 (all phases complete to have content to merge)
-
-**Produces:** Complete FDS document output
-
-### Phase 7: SDS Generation + Export
-
-**What to build:**
-- `/doc:generate-sds` command
-- CATALOG.json schema and initial typicals
-- FDS-to-SDS transformation logic
-- Typicals matching algorithm
-- TRACEABILITY.md generation
-- `/doc:export` command
-- Pandoc + huisstijl.docx integration
-- Mermaid diagram rendering (with fallback to ENGINEER-TODO)
-
-**Why last:** SDS depends on a complete FDS. Export depends on final documents. These are downstream transformations, not core authoring.
-
-**Depends on:** Phase 6 (complete FDS must exist)
-
-**Produces:** Full pipeline: FDS -> SDS -> DOCX
-
-### Build Order Summary
-
-```
-Phase 1: Skeleton + new-fds
-    |
-    v
-Phase 2: discuss-phase + plan-phase
-    |
-    v
-Phase 3: write-phase + Verification (CORE VALUE)
-    |
-    v
-Phase 4: State Management + Recovery + Review
-    |
-    v
-Phase 5: Standards Integration (PackML, ISA-88)
-    |
-    v
-Phase 6: complete-fds + Knowledge Transfer
-    |
-    v
-Phase 7: SDS Generation + Export
+## Pattern 3: LLM Provider Abstraction
+
+### Interface Design (Model-Agnostic)
+
+```python
+# backend/llm/provider.py
+
+from abc import ABC, abstractmethod
+from typing import AsyncGenerator, Optional
+from pydantic import BaseModel
+
+class LLMMessage(BaseModel):
+    """Single message in conversation."""
+    role: str  # "system" | "user" | "assistant"
+    content: str
+
+class LLMResponse(BaseModel):
+    """Response from LLM."""
+    content: str
+    model: str
+    usage: dict  # tokens, cost, etc.
+    finish_reason: str
+
+class LLMProvider(ABC):
+    """Abstract LLM provider interface."""
+
+    @abstractmethod
+    async def complete(
+        self,
+        messages: list[LLMMessage],
+        model: str,
+        max_tokens: int = 4000,
+        temperature: float = 1.0,
+        **kwargs
+    ) -> LLMResponse:
+        """Single completion (non-streaming)."""
+        pass
+
+    @abstractmethod
+    async def stream(
+        self,
+        messages: list[LLMMessage],
+        model: str,
+        max_tokens: int = 4000,
+        temperature: float = 1.0,
+        **kwargs
+    ) -> AsyncGenerator[str, None]:
+        """Streaming completion (yields text chunks)."""
+        pass
+
+    @abstractmethod
+    async def count_tokens(self, text: str, model: str) -> int:
+        """Estimate token count for text."""
+        pass
 ```
 
-**Critical path:** Phases 1-3 are the minimum viable pipeline. After phase 3, you can manually run the discuss -> plan -> write -> verify cycle for any project type and produce verified FDS sections.
+### Claude Implementation (v2.0)
+
+```python
+# backend/llm/claude.py
+
+from anthropic import AsyncAnthropic
+from llm.provider import LLMProvider, LLMMessage, LLMResponse
+
+class ClaudeProvider(LLMProvider):
+    """Anthropic Claude API provider."""
+
+    def __init__(self, api_key: str):
+        self.client = AsyncAnthropic(api_key=api_key)
+        self.default_model = "claude-opus-4-6"
+
+    async def complete(
+        self,
+        messages: list[LLMMessage],
+        model: str = None,
+        max_tokens: int = 4000,
+        temperature: float = 1.0,
+        **kwargs
+    ) -> LLMResponse:
+        """Call Claude API (non-streaming)."""
+        model = model or self.default_model
+
+        # Convert LLMMessage to Anthropic format
+        anthropic_messages = [
+            {"role": msg.role, "content": msg.content}
+            for msg in messages
+            if msg.role != "system"  # system goes in separate param
+        ]
+
+        system_msg = next((m.content for m in messages if m.role == "system"), None)
+
+        response = await self.client.messages.create(
+            model=model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            system=system_msg,
+            messages=anthropic_messages,
+            **kwargs
+        )
+
+        return LLMResponse(
+            content=response.content[0].text,
+            model=response.model,
+            usage={
+                "input_tokens": response.usage.input_tokens,
+                "output_tokens": response.usage.output_tokens,
+            },
+            finish_reason=response.stop_reason
+        )
+
+    async def stream(
+        self,
+        messages: list[LLMMessage],
+        model: str = None,
+        max_tokens: int = 4000,
+        temperature: float = 1.0,
+        **kwargs
+    ) -> AsyncGenerator[str, None]:
+        """Call Claude API (streaming)."""
+        model = model or self.default_model
+
+        # Same message conversion as above
+        anthropic_messages = [...]
+        system_msg = ...
+
+        async with self.client.messages.stream(
+            model=model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            system=system_msg,
+            messages=anthropic_messages,
+            **kwargs
+        ) as stream:
+            async for text in stream.text_stream:
+                yield text
+
+    async def count_tokens(self, text: str, model: str) -> int:
+        """Estimate tokens (Anthropic SDK provides count_tokens)."""
+        return await self.client.count_tokens(text)
+```
+
+### Local Model Stub (v3.0 Preparation)
+
+```python
+# backend/llm/local.py
+
+from llm.provider import LLMProvider, LLMMessage, LLMResponse
+
+class LocalProvider(LLMProvider):
+    """Local model provider (Ollama, llama.cpp, etc.)."""
+
+    def __init__(self, endpoint: str, model: str):
+        self.endpoint = endpoint  # e.g., "http://localhost:11434" for Ollama
+        self.model = model        # e.g., "llama3.3-405b"
+
+    async def complete(
+        self,
+        messages: list[LLMMessage],
+        model: str = None,
+        max_tokens: int = 4000,
+        temperature: float = 1.0,
+        **kwargs
+    ) -> LLMResponse:
+        """Call local model endpoint (stub for v3.0)."""
+        # TODO v3.0: Implement Ollama/llama.cpp API call
+        raise NotImplementedError("Local model support coming in v3.0")
+
+    async def stream(self, messages, model, max_tokens, temperature, **kwargs):
+        raise NotImplementedError("Local model support coming in v3.0")
+
+    async def count_tokens(self, text: str, model: str) -> int:
+        # TODO v3.0: Implement local tokenizer
+        return len(text) // 4  # Rough estimate
+```
+
+### Provider Factory
+
+```python
+# backend/llm/__init__.py
+
+from llm.provider import LLMProvider
+from llm.claude import ClaudeProvider
+from llm.local import LocalProvider
+from config import settings
+
+def get_llm_provider() -> LLMProvider:
+    """Factory: return configured LLM provider."""
+    if settings.LLM_PROVIDER == "claude":
+        return ClaudeProvider(api_key=settings.ANTHROPIC_API_KEY)
+    elif settings.LLM_PROVIDER == "local":
+        return LocalProvider(
+            endpoint=settings.LOCAL_LLM_ENDPOINT,
+            model=settings.LOCAL_LLM_MODEL
+        )
+    else:
+        raise ValueError(f"Unknown LLM provider: {settings.LLM_PROVIDER}")
+```
+
+**Key benefit:** Entire codebase calls `get_llm_provider().complete()`. Swapping Claude → local model is a config change, not a code rewrite.
 
 ---
 
-## 8. File Inventory: What to Create
+## Pattern 4: React Frontend Structure
 
-### 8.1 Command Files (in `~/.claude/commands/doc/`)
+### Recommended Directory Layout
 
-| File | Maps to GSD | Priority |
-|------|-------------|----------|
-| `new-fds.md` | `new-project.md` | Phase 1 |
-| `discuss-phase.md` | `discuss-phase.md` | Phase 2 |
-| `plan-phase.md` | `plan-phase.md` | Phase 2 |
-| `write-phase.md` | `execute-phase.md` | Phase 3 |
-| `verify-phase.md` | (part of execute-phase) | Phase 3 |
-| `review-phase.md` | `verify-work.md` | Phase 4 |
-| `status.md` | `progress.md` | Phase 4 |
-| `resume.md` | `resume-work.md` | Phase 4 |
-| `complete-fds.md` | `complete-milestone.md` | Phase 6 |
-| `generate-sds.md` | (new, no GSD equivalent) | Phase 7 |
-| `export.md` | (new, no GSD equivalent) | Phase 7 |
-| `release.md` | (new, no GSD equivalent) | Phase 6 |
+```
+frontend/
+├── src/
+│   ├── main.tsx                 # React entry point
+│   ├── App.tsx                  # Root component, routing
+│   │
+│   ├── components/              # Reusable UI components
+│   │   ├── ProjectWizard.tsx    # Multi-step project creation
+│   │   ├── PhaseTimeline.tsx    # Phase progress visualization
+│   │   ├── DocumentOutline.tsx  # Collapsible phase/section tree
+│   │   ├── ChatPanel.tsx        # WebSocket-connected chat
+│   │   ├── MarkdownPreview.tsx  # react-markdown + Mermaid
+│   │   ├── ReferenceLibrary.tsx # File upload + listing
+│   │   └── ProgressIndicator.tsx # Wave/section progress bars
+│   │
+│   ├── pages/                   # Route pages
+│   │   ├── Home.tsx             # Project list dashboard
+│   │   ├── ProjectView.tsx      # Main working view (timeline + outline + preview)
+│   │   ├── PhaseDiscuss.tsx     # Discussion UI for gray areas
+│   │   ├── PhaseVerify.tsx      # Verification results display
+│   │   └── Export.tsx           # DOCX export options
+│   │
+│   ├── state/                   # State management
+│   │   ├── projectStore.ts      # Zustand store for projects
+│   │   ├── phaseStore.ts        # Zustand store for current phase state
+│   │   ├── chatStore.ts         # WebSocket message history
+│   │   └── referenceStore.ts    # Reference library state
+│   │
+│   ├── api/                     # API client
+│   │   ├── client.ts            # Axios instance with auth
+│   │   ├── projects.ts          # Project CRUD endpoints
+│   │   ├── phases.ts            # Phase operation endpoints
+│   │   ├── files.ts             # File upload endpoints
+│   │   └── websocket.ts         # WebSocket connection manager
+│   │
+│   ├── hooks/                   # Custom React hooks
+│   │   ├── useWebSocket.ts      # WebSocket connection hook
+│   │   ├── useProject.ts        # Load project data
+│   │   ├── usePhaseState.ts     # Track phase progress
+│   │   └── useFileUpload.ts     # File upload with progress
+│   │
+│   └── types/                   # TypeScript types
+│       ├── project.ts           # Project, ROADMAP types
+│       ├── phase.ts             # Phase, Plan types
+│       ├── message.ts           # WebSocket message types
+│       └── api.ts               # API request/response types
+│
+├── public/
+│   └── index.html
+├── package.json
+├── tsconfig.json
+└── vite.config.ts               # Vite bundler config
+```
 
-### 8.2 Workflow Files (in `~/.claude/gsd-docs-industrial/workflows/`)
+### State Management: Zustand (Lightweight, Recommended)
 
-| File | Purpose | Priority |
-|------|---------|----------|
-| `new-fds.md` | Classification, project setup | Phase 1 |
-| `discuss-phase.md` | Gray area identification, CONTEXT creation | Phase 2 |
-| `plan-phase.md` | Section planning, wave assignment | Phase 2 |
-| `write-section.md` | Single section writing (doc-writer agent) | Phase 3 |
-| `write-phase.md` | Wave orchestration for multiple sections | Phase 3 |
-| `verify-phase.md` | Goal-backward documentation verification | Phase 3 |
-| `review-phase.md` | Client/engineer review process | Phase 4 |
-| `complete-fds.md` | Merging, cross-ref validation | Phase 6 |
-| `generate-sds.md` | FDS-to-SDS transformation | Phase 7 |
-| `export.md` | DOCX export pipeline | Phase 7 |
+```typescript
+// frontend/src/state/projectStore.ts
 
-### 8.3 Templates (in `~/.claude/gsd-docs-industrial/templates/`)
+import create from 'zustand';
 
-| File | Purpose | Priority |
-|------|---------|----------|
-| `roadmap/type-a-nieuwbouw-standaard.md` | Type A ROADMAP skeleton | Phase 1 |
-| `roadmap/type-b-nieuwbouw-flex.md` | Type B ROADMAP skeleton | Phase 1 |
-| `roadmap/type-c-modificatie.md` | Type C ROADMAP skeleton | Phase 1 |
-| `roadmap/type-d-twn.md` | Type D ROADMAP skeleton | Phase 1 |
-| `project.md` | PROJECT.md skeleton | Phase 1 |
-| `requirements.md` | REQUIREMENTS.md skeleton | Phase 1 |
-| `state.md` | STATE.md skeleton | Phase 1 |
-| `context.md` | CONTEXT.md skeleton | Phase 2 |
-| `plan.md` | PLAN.md skeleton (adapted from GSD phase-prompt) | Phase 2 |
-| `fds/section-equipment-module.md` | EM section structure | Phase 2 |
-| `fds/section-state-machine.md` | State diagram section | Phase 2 |
-| `fds/section-interface.md` | Interface section structure | Phase 2 |
-| `summary.md` | SUMMARY.md skeleton (max 150 words) | Phase 3 |
-| `verification-report.md` | VERIFICATION.md skeleton | Phase 3 |
-| `review.md` | REVIEW.md skeleton | Phase 4 |
-| `huisstijl.docx` | Corporate styling template | Phase 7 |
+interface Project {
+  id: string;
+  name: string;
+  type: 'A' | 'B' | 'C' | 'D';
+  status: 'planning' | 'writing' | 'verifying' | 'complete';
+  currentPhase: number;
+  createdAt: string;
+}
 
-### 8.4 References (in `~/.claude/gsd-docs-industrial/references/`)
+interface ProjectState {
+  projects: Project[];
+  currentProject: Project | null;
 
-| File | Purpose | Priority |
-|------|---------|----------|
-| `writing-guidelines.md` | Prose quality, terminology, style rules | Phase 3 |
-| `verification-patterns.md` | Doc-specific completeness checks | Phase 3 |
-| `standards/packml/STATE-MODEL.md` | PackML state definitions | Phase 5 |
-| `standards/packml/UNIT-MODES.md` | PackML operating modes | Phase 5 |
-| `standards/isa-88/EQUIPMENT-HIERARCHY.md` | ISA-88 hierarchy | Phase 5 |
-| `standards/isa-88/TERMINOLOGY.md` | ISA-88 terminology | Phase 5 |
-| `typicals/CATALOG.json` | Typicals library catalog | Phase 7 |
-| `typicals/library/` | Individual typical files | Phase 7 |
-| `ui-brand.md` | UI formatting guidelines (from GSD) | Phase 1 |
+  // Actions
+  loadProjects: () => Promise<void>;
+  selectProject: (id: string) => void;
+  createProject: (data: CreateProjectRequest) => Promise<string>;
+  updateProjectStatus: (id: string, status: Project['status']) => void;
+}
 
-### 8.5 Root File
+export const useProjectStore = create<ProjectState>((set, get) => ({
+  projects: [],
+  currentProject: null,
 
-| File | Purpose | Priority |
-|------|---------|----------|
-| `CLAUDE-CONTEXT.md` | Condensed spec for quick Claude context loading | Phase 1 |
+  loadProjects: async () => {
+    const response = await fetch('/api/projects');
+    const projects = await response.json();
+    set({ projects });
+  },
+
+  selectProject: (id: string) => {
+    const project = get().projects.find(p => p.id === id);
+    set({ currentProject: project || null });
+  },
+
+  createProject: async (data) => {
+    const response = await fetch('/api/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const newProject = await response.json();
+    set(state => ({
+      projects: [...state.projects, newProject],
+      currentProject: newProject,
+    }));
+    return newProject.id;
+  },
+
+  updateProjectStatus: (id, status) => {
+    set(state => ({
+      projects: state.projects.map(p =>
+        p.id === id ? { ...p, status } : p
+      ),
+    }));
+  },
+}));
+```
+
+### WebSocket Hook (Real-Time Updates)
+
+```typescript
+// frontend/src/hooks/useWebSocket.ts
+
+import { useEffect, useRef, useState } from 'react';
+import { useChatStore } from '../state/chatStore';
+
+export interface WebSocketMessage {
+  type: string;
+  data: any;
+}
+
+export function useWebSocket(sessionId: string) {
+  const [connected, setConnected] = useState(false);
+  const ws = useRef<WebSocket | null>(null);
+  const addMessage = useChatStore(state => state.addMessage);
+
+  useEffect(() => {
+    // Connect to WebSocket
+    const socket = new WebSocket(`ws://localhost:8000/ws/${sessionId}`);
+    ws.current = socket;
+
+    socket.onopen = () => {
+      console.log('WebSocket connected');
+      setConnected(true);
+    };
+
+    socket.onmessage = (event) => {
+      const message: WebSocketMessage = JSON.parse(event.data);
+
+      // Route message based on type
+      switch (message.type) {
+        case 'chat_message':
+          addMessage(message.data);
+          break;
+        case 'progress_update':
+          // Handle progress update (e.g., wave completion)
+          break;
+        case 'phase_complete':
+          // Handle phase completion
+          break;
+        default:
+          console.warn('Unknown message type:', message.type);
+      }
+    };
+
+    socket.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    socket.onclose = () => {
+      console.log('WebSocket disconnected');
+      setConnected(false);
+    };
+
+    return () => {
+      socket.close();
+    };
+  }, [sessionId]);
+
+  const sendMessage = (type: string, data: any) => {
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      ws.current.send(JSON.stringify({ type, data }));
+    }
+  };
+
+  return { connected, sendMessage };
+}
+```
+
+### Markdown Preview Component
+
+```typescript
+// frontend/src/components/MarkdownPreview.tsx
+
+import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import mermaid from 'mermaid';
+
+interface MarkdownPreviewProps {
+  content: string;
+}
+
+export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ content }) => {
+  // Initialize Mermaid
+  React.useEffect(() => {
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+    mermaid.contentLoaded();
+  }, [content]);
+
+  return (
+    <div className="markdown-preview">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          code({ node, inline, className, children, ...props }) {
+            const match = /language-(\w+)/.exec(className || '');
+            const language = match ? match[1] : '';
+
+            // Mermaid diagrams
+            if (language === 'mermaid') {
+              return (
+                <div className="mermaid">
+                  {String(children).replace(/\n$/, '')}
+                </div>
+              );
+            }
+
+            // Code blocks with syntax highlighting
+            if (!inline && match) {
+              return (
+                <SyntaxHighlighter
+                  style={vscDarkPlus}
+                  language={language}
+                  PreTag="div"
+                  {...props}
+                >
+                  {String(children).replace(/\n$/, '')}
+                </SyntaxHighlighter>
+              );
+            }
+
+            // Inline code
+            return <code className={className} {...props}>{children}</code>;
+          },
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+};
+```
 
 ---
 
-## 9. Scalability Considerations
+## Pattern 5: File Storage Architecture
 
-| Concern | Type D (2 phases) | Type B (5-9 phases) | Type A (9-20+ phases) |
-|---------|-------------------|---------------------|----------------------|
-| **Context per section** | ~50% per section (small) | ~70% per section (medium) | ~80%+ per section (large EMs) |
-| **Parallel writers** | 1-2 (sequential OK) | 3-4 per wave | 3-5 per wave (memory-bound) |
-| **ROADMAP management** | Static (2 phases) | May expand (>5 units) | Will expand (dynamic) |
-| **Cross-references** | Minimal | Moderate (20-40 refs) | Heavy (100+ refs) |
-| **Verification time** | Quick (check 2-3 sections) | Moderate (check 10-15 sections) | Long (check 20+ sections) |
-| **Session management** | Single session possible | 3-5 sessions | 10-20+ sessions |
+### Storage Layout
 
-**Scaling strategy:** The wave-based parallelization and per-section fresh context patterns scale linearly. The only bottleneck is cross-reference management at `complete-fds` time, which requires reading all SUMMARY.md files at once. For a 20-section FDS with 150-word summaries, that's ~3000 words -- well within context budget.
+```
+/opt/gsd-docs-data/              # Base data directory (VM deployment)
+│
+├── references/                  # Reference library
+│   ├── shared/                  # Global references (all projects)
+│   │   ├── standards/
+│   │   │   ├── packml/
+│   │   │   │   ├── STATE-MODEL.md
+│   │   │   │   └── UNIT-MODES.md
+│   │   │   └── isa-88/
+│   │   │       ├── EQUIPMENT-HIERARCHY.md
+│   │   │       └── TERMINOLOGY.md
+│   │   ├── typicals/
+│   │   │   ├── CATALOG.json
+│   │   │   └── library/
+│   │   │       ├── FB_AnalogIn.scl
+│   │   │       └── FB_DosingStation.scl
+│   │   └── vendor-docs/
+│   │       ├── siemens-packml-guide.pdf
+│   │       └── rockwell-isa88-overview.pdf
+│   │
+│   └── projects/                # Per-project reference overrides
+│       ├── {project-id}/
+│       │   ├── client-standards/
+│       │   ├── baseline-fds/   # For modification projects (Type C/D)
+│       │   └── vendor-docs/
+│       └── ...
+│
+├── projects/                    # Project working directories
+│   ├── {project-id}/
+│   │   ├── .planning/           # Planning artifacts
+│   │   │   ├── PROJECT.md
+│   │   │   ├── REQUIREMENTS.md
+│   │   │   ├── ROADMAP.md
+│   │   │   ├── STATE.md
+│   │   │   ├── BASELINE.md      # Type C/D only
+│   │   │   ├── config.json
+│   │   │   │
+│   │   │   ├── phases/
+│   │   │   │   ├── 01-foundation/
+│   │   │   │   │   ├── CONTEXT.md
+│   │   │   │   │   ├── 01-01-PLAN.md
+│   │   │   │   │   ├── 01-01-CONTENT.md
+│   │   │   │   │   ├── 01-01-SUMMARY.md
+│   │   │   │   │   └── VERIFICATION.md
+│   │   │   │   ├── 02-architecture/
+│   │   │   │   │   └── ...
+│   │   │   │   └── 03-equipment/
+│   │   │   │       ├── CONTEXT.md
+│   │   │   │       ├── CROSS-REFS.md
+│   │   │   │       ├── 03-01-PLAN.md
+│   │   │   │       ├── 03-01-CONTENT.md
+│   │   │   │       ├── 03-01-SUMMARY.md
+│   │   │   │       ├── 03-02-PLAN.md
+│   │   │   │       └── ...
+│   │   │   │
+│   │   │   └── archive/
+│   │   │       └── v1.0/
+│   │   │
+│   │   ├── output/              # Final documents
+│   │   │   ├── FDS-{Project}-v1.0.md
+│   │   │   ├── SDS-{Project}-v1.0.md
+│   │   │   ├── RATIONALE.md
+│   │   │   ├── EDGE-CASES.md
+│   │   │   └── TRACEABILITY.md
+│   │   │
+│   │   ├── diagrams/            # Generated diagrams
+│   │   │   ├── mermaid/
+│   │   │   │   ├── phase-3-state-em-200.mmd
+│   │   │   │   └── ...
+│   │   │   └── rendered/
+│   │   │       ├── phase-3-state-em-200.png
+│   │   │       └── ...
+│   │   │
+│   │   └── export/              # DOCX exports
+│   │       ├── FDS-{Project}-v1.0.docx
+│   │       └── SDS-{Project}-v1.0.docx
+│   │
+│   └── ...
+│
+└── metadata/                    # SQLite database
+    └── gsd-docs.db
+```
+
+### File Upload Endpoint
+
+```python
+# backend/api/files.py
+
+from fastapi import APIRouter, UploadFile, File, HTTPException
+from pathlib import Path
+from typing import List
+import aiofiles
+import mimetypes
+
+router = APIRouter()
+
+UPLOAD_DIR = Path("/opt/gsd-docs-data/references/projects")
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+
+ALLOWED_TYPES = {
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # .docx
+    "text/markdown",
+    "text/plain",
+}
+
+@router.post("/upload")
+async def upload_file(
+    project_id: str,
+    category: str,  # "client-standards" | "baseline-fds" | "vendor-docs"
+    file: UploadFile = File(...)
+):
+    """Upload reference file for a project."""
+
+    # Validate file type
+    content_type = file.content_type
+    if content_type not in ALLOWED_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File type {content_type} not allowed"
+        )
+
+    # Check file size
+    file.file.seek(0, 2)  # Seek to end
+    size = file.file.tell()
+    file.file.seek(0)     # Reset to start
+
+    if size > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large (max {MAX_FILE_SIZE // 1024 // 1024}MB)"
+        )
+
+    # Save file
+    project_dir = UPLOAD_DIR / project_id / category
+    project_dir.mkdir(parents=True, exist_ok=True)
+
+    file_path = project_dir / file.filename
+
+    async with aiofiles.open(file_path, 'wb') as f:
+        content = await file.read()
+        await f.write(content)
+
+    # Store metadata in SQLite
+    file_metadata = {
+        "project_id": project_id,
+        "filename": file.filename,
+        "category": category,
+        "path": str(file_path),
+        "size": size,
+        "mime_type": content_type,
+        "uploaded_at": datetime.now().isoformat(),
+    }
+    # ... save to database
+
+    return {
+        "success": True,
+        "file_id": file_metadata["id"],
+        "path": str(file_path)
+    }
+```
+
+---
+
+## Pattern 6: Real-Time Communication Layer
+
+### WebSocket Message Protocol
+
+```python
+# backend/api/websocket.py
+
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from typing import Dict
+import json
+import asyncio
+
+router = APIRouter()
+
+# Active connections registry
+connections: Dict[str, WebSocket] = {}
+
+@router.websocket("/{session_id}")
+async def websocket_endpoint(websocket: WebSocket, session_id: str):
+    """WebSocket connection for real-time updates."""
+
+    await websocket.accept()
+    connections[session_id] = websocket
+
+    try:
+        # Send initial connection confirmation
+        await websocket.send_json({
+            "type": "connection_established",
+            "data": {"session_id": session_id}
+        })
+
+        # Listen for client messages
+        while True:
+            data = await websocket.receive_text()
+            message = json.loads(data)
+
+            # Route message based on type
+            await handle_client_message(session_id, message)
+
+    except WebSocketDisconnect:
+        del connections[session_id]
+        print(f"Client {session_id} disconnected")
+
+async def handle_client_message(session_id: str, message: dict):
+    """Handle incoming message from client."""
+    msg_type = message.get("type")
+
+    if msg_type == "chat_message":
+        # User answered a discussion question
+        # ... process answer
+        pass
+
+    elif msg_type == "ping":
+        # Heartbeat
+        await send_to_client(session_id, {
+            "type": "pong",
+            "data": {}
+        })
+
+async def send_to_client(session_id: str, message: dict):
+    """Send message to specific client."""
+    ws = connections.get(session_id)
+    if ws:
+        await ws.send_json(message)
+
+async def broadcast_progress(session_id: str, event: str, data: dict):
+    """Broadcast progress update to client."""
+    await send_to_client(session_id, {
+        "type": "progress_update",
+        "data": {
+            "event": event,
+            "timestamp": datetime.now().isoformat(),
+            **data
+        }
+    })
+```
+
+### Progress Broadcasting (from Background Tasks)
+
+```python
+# backend/tasks/write_tasks.py
+
+from arq import create_pool
+from arq.connections import RedisSettings
+from api.websocket import broadcast_progress
+
+async def write_section_task(
+    ctx: dict,
+    session_id: str,
+    project_id: str,
+    phase: int,
+    plan_id: str
+):
+    """Background task: write single section (runs in wave)."""
+
+    # Load context
+    context = await load_section_context(project_id, phase, plan_id)
+
+    # Broadcast start
+    await broadcast_progress(session_id, "section_write_start", {
+        "plan_id": plan_id,
+        "plan_name": context["plan"]["name"]
+    })
+
+    # Call LLM provider
+    llm = get_llm_provider()
+    messages = build_writer_prompt(context)
+
+    # Stream response and broadcast chunks
+    content_chunks = []
+    async for chunk in llm.stream(messages, model="claude-opus-4-6"):
+        content_chunks.append(chunk)
+
+        # Broadcast progress every N chunks
+        if len(content_chunks) % 10 == 0:
+            await broadcast_progress(session_id, "section_write_progress", {
+                "plan_id": plan_id,
+                "chars_written": len("".join(content_chunks))
+            })
+
+    # Write files
+    content = "".join(content_chunks)
+    await write_content_file(project_id, phase, plan_id, content)
+
+    # Generate SUMMARY.md
+    summary = await generate_summary(llm, content)
+    await write_summary_file(project_id, phase, plan_id, summary)
+
+    # Broadcast completion
+    await broadcast_progress(session_id, "section_write_complete", {
+        "plan_id": plan_id,
+        "content_length": len(content),
+        "summary_length": len(summary)
+    })
+
+    return {"success": True, "plan_id": plan_id}
+```
+
+### React Component (Receiving Updates)
+
+```typescript
+// frontend/src/components/ProgressIndicator.tsx
+
+import React, { useEffect, useState } from 'react';
+import { useWebSocket } from '../hooks/useWebSocket';
+
+interface SectionProgress {
+  plan_id: string;
+  plan_name: string;
+  status: 'pending' | 'writing' | 'complete';
+  chars_written: number;
+}
+
+export const ProgressIndicator: React.FC<{ sessionId: string }> = ({ sessionId }) => {
+  const { connected } = useWebSocket(sessionId);
+  const [sections, setSections] = useState<Record<string, SectionProgress>>({});
+
+  useEffect(() => {
+    // Listen for progress updates
+    const handleMessage = (event: MessageEvent) => {
+      const message = JSON.parse(event.data);
+
+      if (message.type === 'progress_update') {
+        const { event: eventName, data } = message.data;
+
+        if (eventName === 'section_write_start') {
+          setSections(prev => ({
+            ...prev,
+            [data.plan_id]: {
+              plan_id: data.plan_id,
+              plan_name: data.plan_name,
+              status: 'writing',
+              chars_written: 0,
+            }
+          }));
+        }
+
+        if (eventName === 'section_write_progress') {
+          setSections(prev => ({
+            ...prev,
+            [data.plan_id]: {
+              ...prev[data.plan_id],
+              chars_written: data.chars_written,
+            }
+          }));
+        }
+
+        if (eventName === 'section_write_complete') {
+          setSections(prev => ({
+            ...prev,
+            [data.plan_id]: {
+              ...prev[data.plan_id],
+              status: 'complete',
+            }
+          }));
+        }
+      }
+    };
+
+    // ... attach listener
+  }, []);
+
+  return (
+    <div className="progress-indicator">
+      <h3>Writing Progress</h3>
+      {Object.values(sections).map(section => (
+        <div key={section.plan_id} className="section-progress">
+          <span>{section.plan_name}</span>
+          <span className={`status ${section.status}`}>
+            {section.status === 'writing'
+              ? `${section.chars_written} chars...`
+              : section.status
+            }
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};
+```
+
+---
+
+## Anti-Patterns to Avoid
+
+### Anti-Pattern 1: Hardcoding Workflow Logic in API Routes
+
+**What:** Embedding workflow steps directly in FastAPI route handlers.
+
+```python
+# BAD: Workflow logic in route
+@router.post("/phases/{phase}/write")
+async def write_phase(phase: int):
+    # Find plans
+    plans = glob(f".planning/phases/{phase:02d}-*/*-PLAN.md")
+    # Group by wave
+    waves = {}
+    for plan in plans:
+        wave = parse_frontmatter(plan)["wave"]
+        waves.setdefault(wave, []).append(plan)
+    # Execute waves
+    for wave_num, wave_plans in waves.items():
+        # ... spawn tasks
+    # This is fragile and doesn't follow v1.0 workflow definitions
+```
+
+**Why bad:** Duplicates workflow logic from .md files. Changes to workflows require code edits, not .md edits. Violates SSOT principle.
+
+**Instead:** Route handlers trigger WorkflowEngine, which reads .md and executes steps.
+
+```python
+# GOOD: Workflow engine reads .md
+@router.post("/phases/{phase}/write")
+async def write_phase(phase: int, session_id: str):
+    engine = WorkflowEngine.load("write-phase.md")
+    await engine.execute(context={"phase": phase, "session_id": session_id})
+```
+
+---
+
+### Anti-Pattern 2: Tight Coupling to Claude API
+
+**What:** Calling Anthropic SDK directly throughout codebase.
+
+```python
+# BAD: Direct Claude calls everywhere
+from anthropic import AsyncAnthropic
+
+async def write_section(plan):
+    client = AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+    response = await client.messages.create(
+        model="claude-opus-4-6",
+        messages=[...]
+    )
+    return response.content[0].text
+```
+
+**Why bad:** Cannot swap LLM providers without rewriting all LLM calls. Vendor lock-in.
+
+**Instead:** Use LLMProvider abstraction.
+
+```python
+# GOOD: Provider-agnostic
+async def write_section(plan):
+    llm = get_llm_provider()  # Returns ClaudeProvider or LocalProvider
+    response = await llm.complete(messages=[...])
+    return response.content
+```
+
+---
+
+### Anti-Pattern 3: Storing Generated Content in Database
+
+**What:** Saving CONTENT.md, SUMMARY.md in SQLite/Postgres BLOBs.
+
+**Why bad:**
+- Breaks CLI compatibility (CLI expects .md files on disk)
+- Loses human-readable git-trackable project structure
+- Complicates debugging (can't inspect files directly)
+
+**Instead:** Store files on disk exactly as v1.0 does. SQLite stores only METADATA (project ID, file path, upload time).
+
+---
+
+### Anti-Pattern 4: Frontend Calling LLM APIs Directly
+
+**What:** React components making direct API calls to Anthropic.
+
+**Why bad:**
+- Exposes API keys in browser
+- No orchestration control (can't checkpoint, resume)
+- Can't implement wave-based parallelization
+
+**Instead:** Frontend calls FastAPI endpoints. Backend orchestrates LLM calls.
+
+---
+
+## Scalability Considerations
+
+| Concern | At 1 Engineer | At 5 Engineers | At 20 Engineers |
+|---------|---------------|----------------|-----------------|
+| **Concurrent Projects** | Single VM handles easily | Same VM, separate project dirs | Consider load balancer + multiple VM instances |
+| **WebSocket Connections** | Direct connection to FastAPI | Redis pub/sub for multi-instance | Dedicated WebSocket gateway (e.g., Socket.IO cluster) |
+| **Background Tasks** | ARQ worker on same VM | Dedicated worker VM with Redis | Worker pool with autoscaling |
+| **File Storage** | Local disk (/opt/gsd-docs-data) | NFS mount for shared access | Object storage (S3-compatible, MinIO) |
+| **LLM API Rate Limits** | Anthropic tier sufficient | Monitor usage, upgrade tier | Queue requests, implement retry + backoff |
+| **Database** | SQLite on disk | Migrate to PostgreSQL for concurrent writes | PostgreSQL with connection pooling |
+
+---
+
+## Build Order (Dependency-Aware)
+
+### Phase 1: Foundation (Week 1)
+
+**Backend:**
+1. FastAPI skeleton (main.py, config, CORS)
+2. SQLite setup (database.py, models)
+3. File storage structure (/opt/gsd-docs-data/)
+4. Basic project CRUD API (/api/projects)
+
+**Frontend:**
+1. React + Vite setup
+2. Routing (React Router)
+3. Zustand stores (projectStore)
+4. Project list page (Home.tsx)
+
+**Integration:**
+- Frontend can create/list projects
+- Backend writes PROJECT.md, ROADMAP.md to disk
+
+---
+
+### Phase 2: Workflow Engine Core (Week 2)
+
+**Backend:**
+1. WorkflowEngine (load .md, parse steps)
+2. State Manager (STATE.md read/write, checkpoint)
+3. Domain Knowledge Loader (templates, standards)
+4. LLM Provider abstraction + ClaudeProvider
+
+**Testing:**
+- Implement /doc:new-fds workflow in Python
+- Verify PROJECT.md, ROADMAP.md generation matches v1.0
+
+---
+
+### Phase 3: Discussion + Planning Workflows (Week 3)
+
+**Backend:**
+1. /api/phases/{phase}/discuss endpoint
+2. discuss-phase.md workflow implementation
+3. /api/phases/{phase}/plan endpoint
+4. plan-phase.md workflow implementation
+
+**Frontend:**
+1. PhaseTimeline component
+2. ChatPanel component (WebSocket connection)
+3. PhaseDiscuss page
+
+**Integration:**
+- Engineer can discuss phase, see questions in chat
+- Engineer answers, backend generates CONTEXT.md
+- Engineer plans phase, backend generates PLAN.md files
+
+---
+
+### Phase 4: Writing Workflow + Real-Time (Week 4)
+
+**Backend:**
+1. ARQ + Redis setup
+2. Background task queue (write_tasks.py)
+3. /api/phases/{phase}/write endpoint
+4. write-phase.md workflow (wave-based parallel)
+5. WebSocket broadcasting (progress updates)
+
+**Frontend:**
+1. ProgressIndicator component
+2. DocumentOutline component
+3. MarkdownPreview component
+
+**Integration:**
+- Engineer clicks "Write Phase 3"
+- Backend spawns parallel writers per wave
+- Frontend shows real-time progress
+- Engineer sees CONTENT.md in preview panel
+
+---
+
+### Phase 5: Verification + Review (Week 5)
+
+**Backend:**
+1. /api/phases/{phase}/verify endpoint
+2. verify-phase.md workflow (goal-backward checks)
+3. /api/phases/{phase}/review endpoint
+4. review-phase.md workflow
+
+**Frontend:**
+1. PhaseVerify page (gap display, fix trigger)
+2. Review UI (client feedback capture)
+
+**Integration:**
+- Engineer verifies phase, sees gaps
+- Engineer triggers gap closure (re-plan, re-write)
+- Engineer reviews with client, logs feedback
+
+---
+
+### Phase 6: FDS Assembly + Export (Week 6)
+
+**Backend:**
+1. /api/export/fds endpoint
+2. complete-fds.md workflow (cross-ref resolution)
+3. /api/export/docx endpoint
+4. Pandoc subprocess integration
+5. Mermaid CLI integration (mmdc)
+
+**Frontend:**
+1. Export page (format options, download)
+
+**Integration:**
+- Engineer completes all phases
+- Backend assembles FDS.md
+- Engineer exports DOCX with diagrams
+
+---
+
+### Phase 7: Reference Library + SDS (Week 7)
+
+**Backend:**
+1. /api/files/upload endpoint
+2. Reference library API
+3. /api/export/sds endpoint
+4. generate-sds.md workflow (typicals matching)
+
+**Frontend:**
+1. ReferenceLibrary component
+2. File upload UI
+
+**Integration:**
+- Engineer uploads client standards
+- Backend makes them available to workflows
+- Engineer generates SDS from FDS
+
+---
+
+### Phase 8: VM Deployment + Production Hardening (Week 8)
+
+**Infrastructure:**
+1. Nginx reverse proxy config
+2. systemd service files (FastAPI, ARQ worker)
+3. Redis setup
+4. SSL certificate (Let's Encrypt)
+5. Backup scripts (project files, SQLite)
+
+**Testing:**
+- Full end-to-end workflow (new-fds → export)
+- Multi-user concurrent access
+- Crash recovery (STATE.md resume)
+
+---
+
+## Deployment Architecture (VM, No Docker)
+
+### System Services
+
+```ini
+# /etc/systemd/system/gsd-docs-api.service
+
+[Unit]
+Description=GSD-Docs FastAPI Backend
+After=network.target
+
+[Service]
+Type=notify
+User=gsd-docs
+Group=gsd-docs
+WorkingDirectory=/opt/gsd-docs-backend
+Environment="PATH=/opt/gsd-docs-backend/venv/bin"
+ExecStart=/opt/gsd-docs-backend/venv/bin/uvicorn main:app \
+  --host 127.0.0.1 --port 8000 --workers 4
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```ini
+# /etc/systemd/system/gsd-docs-worker.service
+
+[Unit]
+Description=GSD-Docs ARQ Background Worker
+After=network.target redis.service
+
+[Service]
+Type=simple
+User=gsd-docs
+Group=gsd-docs
+WorkingDirectory=/opt/gsd-docs-backend
+Environment="PATH=/opt/gsd-docs-backend/venv/bin"
+ExecStart=/opt/gsd-docs-backend/venv/bin/arq tasks.WorkerSettings
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+### Nginx Configuration
+
+```nginx
+# /etc/nginx/sites-available/gsd-docs
+
+upstream fastapi_backend {
+    server 127.0.0.1:8000;
+}
+
+server {
+    listen 80;
+    server_name docs.company.local;
+
+    # Redirect to HTTPS
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name docs.company.local;
+
+    ssl_certificate /etc/letsencrypt/live/docs.company.local/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/docs.company.local/privkey.pem;
+
+    # React frontend (static files)
+    root /opt/gsd-docs-frontend/dist;
+    index index.html;
+
+    # API requests to FastAPI
+    location /api/ {
+        proxy_pass http://fastapi_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    # WebSocket connections
+    location /ws/ {
+        proxy_pass http://fastapi_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_read_timeout 86400;  # 24h for long-running operations
+    }
+
+    # React routing (SPA)
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
 
 ---
 
 ## Sources
 
-- GSD reference implementation: `~/.claude/get-shit-done/` (v1.6.4) -- read directly
-- GSD command files: `~/.claude/commands/gsd/` -- read directly (new-project, plan-phase, execute-phase, progress, discuss-phase)
-- GSD workflow files: `~/.claude/get-shit-done/workflows/` -- read directly (execute-phase, execute-plan, verify-phase, discuss-phase)
-- GSD templates: `~/.claude/get-shit-done/templates/phase-prompt.md` -- read directly
-- SPECIFICATION.md v2.7.0: `C:\Users\Aotte\Documents\Projects\GSD-Docs\SPECIFICATION.md` -- read directly
-- PROJECT.md: `C:\Users\Aotte\Documents\Projects\GSD-Docs\.planning\PROJECT.md` -- read directly
+### Architecture Patterns
+- [Elevating LLM Deployment with FastAPI and React: A Step-By-Step Guide](https://medium.com/@georgewen7/elevating-llm-deployment-with-fastapi-and-react-a-step-by-step-guide-885d8f08f4f1)
+- [Architecting Scalable FastAPI Systems for Large Language Model (LLM) Applications](https://medium.com/@moradikor296/architecting-scalable-fastapi-systems-for-large-language-model-llm-applications-and-external-cf72f76ad849)
+- [How to build production-ready AI agents with RAG and FastAPI](https://thenewstack.io/how-to-build-production-ready-ai-agents-with-rag-and-fastapi/)
+- [Building LLM apps with FastAPI — best practices](https://agentsarcade.com/blog/building-llm-apps-with-fastapi-best-practices)
 
-All findings are HIGH confidence -- derived from reading actual source files, not from web search or training data.
+### WebSocket Real-Time Communication
+- [WebSockets - FastAPI](https://fastapi.tiangolo.com/advanced/websockets/)
+- [How to Implement WebSockets in FastAPI](https://oneuptime.com/blog/post/2026-02-02-fastapi-websockets/view)
+- [FastAPI + WebSockets + React: Real-Time Features for Your Modern Apps](https://medium.com/@suganthi2496/fastapi-websockets-react-real-time-features-for-your-modern-apps-b8042a10fd90)
+- [Real-Time Features in FastAPI: WebSockets, Event Streaming, and Push Notifications](https://python.plainenglish.io/real-time-features-in-fastapi-websockets-event-streaming-and-push-notifications-fec79a0a6812)
+
+### LLM Provider Abstraction
+- [Implementing an LLM Agnostic Architecture](https://www.entrio.io/blog/implementing-llm-agnostic-architecture-generative-ai-module)
+- [LLM & AI Agent Applications with LangChain and LangGraph — Part 29: Model Agnostic Pattern and LLM API Gateway](https://towardsai.net/p/machine-learning/llm-ai-agent-applications-with-langchain-and-langgraph-part-29-model-agnostic-pattern-and-llm-api-gateway)
+- [Introducing Any-Agent: An abstraction layer between your code and the many agentic frameworks](https://blog.mozilla.ai/introducing-any-agent-an-abstraction-layer-between-your-code-and-the-many-agentic-frameworks/)
+
+### React State Management
+- [18 Best React State Management Libraries in 2026](https://fe-tool.com/awesome-react-state-management)
+- [Top 5 React State Management Tools Developers Actually Use in 2026 and Why](https://www.syncfusion.com/blogs/post/react-state-management-libraries)
+- [React State Management in 2025: What You Actually Need](https://www.developerway.com/posts/react-state-management-2025)
+- [Editor State Management | docmost/docmost](https://deepwiki.com/docmost/docmost/3.4-editor-state-management)
+
+### FastAPI File Upload
+- [How to Implement File Uploads in FastAPI](https://oneuptime.com/blog/post/2026-01-26-fastapi-file-uploads/view)
+- [Uploading Files Using FastAPI: A Complete Guide to Secure File Handling](https://betterstack.com/community/guides/scaling-python/uploading-files-using-fastapi/)
+- [Static File & Upload Management | fastapi-practices/fastapi_best_architecture](https://deepwiki.com/fastapi-practices/fastapi_best_architecture/11.5-static-file-and-upload-management)
+
+### Background Tasks
+- [How to Implement Background Tasks in FastAPI](https://oneuptime.com/blog/post/2026-02-02-fastapi-background-tasks/view)
+- [Managing Background Tasks in FastAPI: BackgroundTasks vs ARQ + Redis](https://davidmuraya.com/blog/fastapi-background-tasks-arq-vs-built-in/)
+- [How I Handled 100K Daily Jobs in FastAPI Using Task Queues and Async Retries](https://medium.com/@connect.hashblock/how-i-handled-100k-daily-jobs-in-fastapi-using-task-queues-and-async-retries-62bbcdd8240d)
+
+### React Markdown Rendering
+- [react-markdown - npm](https://www.npmjs.com/package/react-markdown)
+- [How to render and edit Markdown in React with react-markdown](https://www.contentful.com/blog/react-markdown/)
+- [Creating Polished Content with React Markdown](https://refine.dev/blog/react-markdown/)
+- [5 Best Markdown Editors for React Compared](https://strapi.io/blog/top-5-markdown-editors-for-react)

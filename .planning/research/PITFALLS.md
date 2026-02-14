@@ -1,496 +1,628 @@
-# Domain Pitfalls
+# Pitfalls Research
 
-**Domain:** Claude Code documentation generation plugin (FDS/SDS for industrial automation)
-**Researched:** 2026-02-06
-**Confidence:** HIGH (derived from GSD reference implementation analysis + SPECIFICATION.md + domain research)
-
----
+**Domain:** Web GUI for AI-Powered CLI Document Generation Tool
+**Researched:** 2026-02-14
+**Confidence:** HIGH
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites, data loss, or fundamental architecture failure.
+### Pitfall 1: WebSocket Connection Drops During Long-Running LLM Tasks
+
+**What goes wrong:**
+Engineers start a document generation task that triggers multiple Claude API calls taking 2-5 minutes total. The WebSocket connection drops mid-stream due to network hiccup, laptop closure, or browser refresh. The frontend loses connection, but the backend continues processing and burning API tokens. The user sees a frozen UI, refreshes, and starts the same task again, creating duplicate processing and wasted Claude API costs. The original results are lost even though processing completed.
+
+**Why it happens:**
+Developers treat WebSocket connections as reliable channels and tightly couple task execution to the connection lifecycle. The natural inclination is to stream LLM responses directly through the WebSocket, which works perfectly in development (stable laptop, same network) but fails in production (changing networks, browser refreshes, laptops closing). Platform limitations exacerbate this: Heroku enforces a 30-second initial response timeout, Vercel's hobby tier allows only 10 seconds for serverless functions, and even paid plans max out at 5-13 minutes.
+
+**How to avoid:**
+Implement the separation of concerns pattern: decouple task execution from client connections. Use Redis Streams for persistent storage of each LLM response chunk as it's generated, Redis Pub/Sub for notifying connected clients of new chunks, and automatic reconnection logic on the client side that fetches all chunks from the last received position. This ensures generation always continues uninterrupted, clients can reconnect and receive all content without duplicates or missing chunks, and multiple clients can follow the same generation task.
+
+Add heartbeat keepalive signals every 15 seconds to detect disconnects early and implement client-side reconnection with exponential backoff (starting at 1 second, max 30 seconds). Store task state server-side with a unique task ID so clients can resume by ID after reconnection.
+
+**Warning signs:**
+- "It works on my laptop but not for remote team members"
+- Users report seeing "Connection lost" then restarting tasks
+- CloudWatch/monitoring shows duplicate Claude API calls within minutes
+- WebSocket connections in logs show frequent disconnects/reconnects
+- Users ask "Can I close my laptop while this runs?"
+
+**Phase to address:**
+Phase 1 (Core Infrastructure). This is an architectural decision that must be made upfront. Retrofitting persistent task storage after building direct WebSocket streaming requires significant rework. The phase must deliver WebSocket manager with Redis-backed persistence and reconnection logic as a foundational service.
 
 ---
 
-### Pitfall 1: Context Cross-Contamination Between Sections
+### Pitfall 2: Blocking FastAPI Event Loop with Synchronous File Operations
 
-**What goes wrong:** A subagent writing section 03-04 (EM-400 Losunit) inadvertently loads or inherits context from section 03-02 (EM-200 Bovenloopkraan). Parameters, interlocks, or operating states from one equipment module bleed into another. The resulting FDS contains factually wrong information that passes superficial review because the content *looks* plausible -- it is real technical content, just from the wrong module.
-
-**Why it happens:**
-- The GSD execute-phase orchestrator passes too much context to writer subagents (e.g., loading all CONTENT.md files instead of only the current PLAN.md)
-- STATE.md accumulates decisions from previous sections that leak into new section context
-- Parallel writers in the same wave share an orchestrator that has read multiple plans
-- Template variable substitution fails silently: `{EM_ID}` resolves to a cached value from a previous run
-
-**Consequences:**
-- FDS sections describe wrong equipment behavior (safety risk in industrial automation)
-- Cross-references point to correct section numbers but contain incorrect interlock descriptions
-- Verification pass looks clean because content is substantive (not stubs) -- it is just wrong
-- Client review catches errors late, destroying confidence in the entire document
-
-**Warning signs:**
-- Two equipment modules share suspiciously similar parameter tables
-- Interlock references mention equipment IDs not in the current section
-- SUMMARY.md "Dependencies" section lists items not in the current PLAN.md
-- Parameter names follow conventions from a different module
-
-**Prevention:**
-1. Each writer subagent loads ONLY: PROJECT.md + phase CONTEXT.md + its own PLAN.md + standards references (if enabled). Nothing else.
-2. The orchestrator NEVER reads CONTENT.md files from other plans before spawning a writer
-3. PLAN.md must contain ALL information the writer needs (extracted from CONTEXT.md during planning). Writers should not need to read CONTEXT.md sections for other plans.
-4. Verification explicitly cross-checks: "Does section X reference any equipment IDs that do not belong to section X?"
-5. Template rendering must use fresh variable scopes per subagent -- no shared state between parallel writers
-
-**Detection (automated):**
-```
-For each CONTENT.md in a phase:
-  Extract all EM-XXX, IL-XXX, TAG-XXX identifiers
-  Compare against PLAN.md expected identifiers
-  Flag any identifier not in the plan's scope
-```
-
-**Milestone mapping:** Must be addressed in Phase 1 (Framework Basis) and validated in Phase 3 (Write & Verify). This is a foundational architecture constraint.
-
-**GSD lesson learned:** The GSD reference implementation explicitly documents "Context budget: ~15% orchestrator, 100% fresh per subagent" in execute-phase.md. GSD-Docs must enforce this even more strictly because documentation cross-contamination is harder to detect than code cross-contamination (no compiler to catch mismatched types).
-
----
-
-### Pitfall 2: Infinite Verification-Fix Loops
-
-**What goes wrong:** The verify-phase command finds gaps. Plan-phase --gaps creates fix plans. Execute-phase runs fixes. Verify-phase runs again and finds *new* gaps introduced by the fixes, or finds that the fixes didn't actually resolve the original gaps. The system enters an unbounded cycle.
+**What goes wrong:**
+During file upload (reference documents) or document generation output (saving PDFs), developers use synchronous operations like `file.write()`, `shutil.copyfileobj()`, or `open().read()`. When an engineer uploads a 50MB reference document or the system generates a large technical document, the FastAPI worker thread blocks for several seconds. All other requests queue up. The entire application becomes unresponsive. Other team members trying to use the system see timeout errors. Under concurrent load (3-4 engineers working simultaneously), response times spike from 200ms to 20+ seconds.
 
 **Why it happens:**
-- Fix plans are too narrow: they address the symptom (missing parameter range) but not the root cause (PLAN.md lacked parameter specifications)
-- Fix writers have insufficient context about *why* the gap existed, so they introduce content that creates new inconsistencies
-- Verification criteria are too strict relative to the fix scope -- fixing parameter ranges triggers new checks on parameter dependencies
-- No termination condition: the system has no concept of "good enough" or maximum retry count
+Most FastAPI tutorials and file upload examples use synchronous file I/O because it's simpler to understand and works fine for small files in demos. Developers don't realize that FastAPI runs on an async event loop, and any synchronous blocking operation blocks the entire worker. The "it works on my machine" effect happens because testing is typically done with small files and no concurrent load.
 
-**Consequences:**
-- User observes the system spinning: plan-fix-verify-plan-fix-verify without converging
-- Token costs escalate rapidly (each cycle consumes full context windows)
-- Accumulated fix plans create a messy phase directory (03-01-fix-PLAN.md, 03-01-fix2-PLAN.md, etc.)
-- User loses trust in the verification system and starts bypassing it
+**How to avoid:**
+Use `aiofiles` for all file operations. Replace `open()` with `aiofiles.open()`, use async context managers (`async with`), and await all read/write operations. For large file uploads, implement streaming with chunked processing rather than loading entire files into memory.
 
-**Warning signs:**
-- Phase has more than 2 fix plan iterations
-- VERIFICATION.md gap count is not decreasing between iterations
-- Fix plans reference the same sections repeatedly
-- New gaps appear in sections that previously passed
+Specifically:
+```python
+# BAD - Blocks event loop
+with open(filepath, 'wb') as f:
+    shutil.copyfileobj(upload_file.file, f)
 
-**Prevention:**
-1. Maximum retry limit: 2 gap-closure cycles per phase. After that, status escalates to `human_needed`
-2. Fix plans must include a "Root Cause" field linking back to the original verification gap
-3. Re-verification after fixes checks ONLY the gaps that were targeted, not the entire phase (scoped re-verification)
-4. VERIFICATION.md tracks gap history: "Gap X: found in cycle 1, fix attempted in cycle 2, status in cycle 3"
-5. The `--force` flag on complete-fds exists for a reason: some gaps are acceptable with documented warnings
-
-**Detection:**
-- Count fix plan files per phase: >2 iterations = warning
-- Compare gap counts across VERIFICATION.md versions: non-decreasing = problem
-- Check if fix plans target same sections as previous fixes
-
-**Milestone mapping:** Phase 3 (Write & Verify) must implement the retry limit. Phase 5 (Complete & Export) must handle graceful degradation with `--force`.
-
-**GSD lesson learned:** GSD's execute-phase.md has the gap closure loop but relies on user intervention to break cycles ("offer `/gsd:plan-phase {X} --gaps`"). GSD-Docs should add automatic termination because documentation verification loops are more prone to subjectivity than code verification.
-
----
-
-### Pitfall 3: Section Numbering Collapse During Document Assembly
-
-**What goes wrong:** The complete-fds command merges all CONTENT.md files into a single document. Section numbers that were correct within each phase (e.g., "3.2.1" for the second equipment module in phase 3) collide or become incorrect in the final assembled document because the assembly logic does not properly renumber sections based on the full document structure.
-
-**Why it happens:**
-- Each phase writer assigns section numbers relative to its own phase, not the full FDS
-- Dynamic ROADMAP evolution (section 3.5 of SPECIFICATION) changes the phase count mid-project, invalidating earlier section number assumptions
-- Cross-references written as "see 5.3" become wrong when phase insertion shifts section 5 to section 7
-- CONTENT.md files use hardcoded section numbers instead of symbolic references
-
-**Consequences:**
-- Final FDS has duplicate section numbers (two "5.1" sections)
-- Cross-references point to wrong sections (every reference after the insertion point is off)
-- Table of contents does not match actual section locations
-- Client receives a document that looks unprofessional and untrustable
-
-**Warning signs:**
-- ROADMAP evolution (section 3.5) was triggered mid-project, changing phase count
-- CROSS-REFS.md has entries with section numbers that don't match the current ROADMAP
-- Multiple CONTENT.md files start with the same heading level and number
-
-**Prevention:**
-1. Use symbolic section references during writing, not hardcoded numbers. Write "see {EM-200-interlocks}" not "see 5.3"
-2. Section numbering is a FINAL step in complete-fds, applied during assembly -- never embedded in CONTENT.md
-3. CROSS-REFS.md stores references as symbolic IDs (plan-id + section-id), resolved to numbers only at assembly time
-4. After ROADMAP evolution, run a cross-reference audit that flags any hardcoded section numbers in existing CONTENT.md files
-5. Assembly algorithm: walk phases in ROADMAP order, assign numbers sequentially, then resolve all symbolic references
-
-**Detection:**
-```
-Scan all CONTENT.md for patterns like:
-  "zie $X.Y"  or  "see $X.Y"  where X.Y is a digit pattern
-  Flag as WARNING: hardcoded section reference
-  Suggest: replace with symbolic reference
+# GOOD - Non-blocking async I/O
+async with aiofiles.open(filepath, 'wb') as f:
+    while chunk := await upload_file.read(8192):
+        await f.write(chunk)
 ```
 
-**Milestone mapping:** Phase 1 (Framework Basis) must establish the symbolic reference convention. Phase 5 (Complete & Export) implements the numbering algorithm. Phase 3 (Write & Verify) should validate that writers produce symbolic references.
-
-**GSD lesson learned:** GSD does not have this problem because code does not have sequential section numbers. This is a documentation-specific pitfall that has no GSD precedent to copy from. The specification (section 9.6) defines the cross-reference format but does not address the numbering-at-assembly-time pattern. This must be designed from scratch.
-
----
-
-### Pitfall 4: STATE.md Corruption During Parallel Writer Crashes
-
-**What goes wrong:** Two parallel writer subagents are executing in wave 2. Writer A crashes (token limit, network error). Writer B completes successfully and updates STATE.md. When the user resumes, STATE.md shows wave 2 as complete, but plan A's CONTENT.md is partial or missing. The resume logic skips plan A because STATE.md says it is done.
-
-**Why it happens:**
-- STATE.md is a shared mutable resource that multiple agents write to
-- The specification (section 9.7) defines forward-only recovery, but the detection of "partial" writes relies on content heuristics (length < 200, "[TO BE COMPLETED]" marker, abrupt ending) that may miss sophisticated partial content
-- The orchestrator updates STATE.md based on which wave completed, not which individual plans completed
-- If the orchestrator itself crashes between spawning agents and collecting results, STATE.md may reflect the start state but not the actual outcome
-
-**Consequences:**
-- Lost work: a partially written section is silently accepted as complete
-- Final FDS has a section that ends mid-sentence or contains incomplete tables
-- Verification may still pass if the partial content is long enough and lacks obvious stub markers
-- Data integrity is compromised silently -- the worst kind of failure
+Set file size limits (e.g., 100MB max) and validate them before processing. Implement upload progress tracking through separate endpoint polling rather than holding connections open. Real-world measurements show 40% throughput gain and 28% latency reduction (215ms P95) with async file operations.
 
 **Warning signs:**
-- STATE.md shows a plan as done but no SUMMARY.md exists for that plan
-- CONTENT.md file size is unusually small compared to its siblings
-- CONTENT.md ends without a proper closing section (no final table, no summary paragraph)
-- Git log shows no commit for a plan that STATE.md marks as complete
+- API response times spike during file uploads
+- Concurrent user requests queue behind file operations
+- Single large file upload makes entire app unresponsive
+- Logs show worker timeout warnings
+- Team members report "the app freezes when someone uploads files"
 
-**Prevention:**
-1. SUMMARY.md existence is the ONLY indicator of plan completion. Not STATE.md entries, not file existence alone.
-2. STATE.md tracks `plans_done` as a list of plan IDs, updated ONLY when SUMMARY.md is confirmed to exist
-3. The partial write detection from section 9.7.4 must also check: does SUMMARY.md exist? If CONTENT.md exists but SUMMARY.md does not, the plan is INCOMPLETE regardless of content quality
-4. Resume logic: scan for PLAN.md files without matching SUMMARY.md files. This is already the GSD pattern (discover_plans step checks for SUMMARY existence). GSD-Docs must not deviate.
-5. STATE.md writes should be atomic: read-modify-write with a temp file, not append-in-place
-
-**Detection:**
-```
-For each phase directory:
-  List all *-PLAN.md files
-  List all *-SUMMARY.md files
-  If PLAN exists without SUMMARY: flag as INCOMPLETE
-  If STATE.md says plan is done but SUMMARY missing: flag as CORRUPTION
-```
-
-**Milestone mapping:** Phase 1 (Framework Basis) must implement the SUMMARY-as-completion-proof pattern. Phase 3 (Write & Verify) must test crash recovery scenarios.
-
-**GSD lesson learned:** GSD's discover_plans step already uses SUMMARY.md existence as the completion check. This is a proven pattern. The risk for GSD-Docs is that someone shortcuts this during implementation and uses STATE.md status instead, because it seems simpler. The framework MUST enforce the SUMMARY check.
+**Phase to address:**
+Phase 1 (Core Infrastructure). File handling patterns must be established from the start. Include in API endpoint implementation guidelines and enforce through code review. Create reusable utility functions for async file operations that all phases use.
 
 ---
 
-### Pitfall 5: Template Explosion Across 4 Project Types
+### Pitfall 3: Claude API Rate Limits Without Retry-After Header Handling
 
-**What goes wrong:** The framework has 4 project types (A/B/C/D) with different ROADMAP templates, different phase structures, and different section templates. Each type also has optional standards (PackML, ISA-88) and configurable language. The template matrix explodes: 4 types x 2 standards combinations x N languages = dozens of template variations. Maintaining consistency across all combinations becomes impossible.
+**What goes wrong:**
+The system makes multiple concurrent Claude API calls during document generation (analyzing requirements, generating content sections, reviewing outputs). When the team hits the API rate limit (50 requests/minute on Tier 1, 30,000 input tokens/minute), the API returns 429 errors. The naive implementation retries immediately or with simple exponential backoff, ignoring the `retry-after` header. This creates a thundering herd where all queued requests retry simultaneously, making the congestion worse. Engineers see "Rate limit exceeded" errors, document generation fails mid-process, and the system burns through retry attempts without recovering.
 
 **Why it happens:**
-- Each project type was initially implemented as a separate template file with copy-pasted structure
-- Standards integration was added as conditional blocks inside templates, creating nested if-else logic
-- Language support was added as parallel template trees (nl/, en/) instead of a localization layer
-- Bug fixes are applied to one template but forgotten in others
+Developers implement retry logic based on generic best practices (exponential backoff) without reading Claude API's specific error responses. The Claude API returns a `retry-after` header that specifies exactly how many seconds to wait, but this is ignored. When multiple concurrent tasks hit rate limits simultaneously, they all retry at the same time (synchronized by the same backoff algorithm), creating waves of retries that perpetuate the problem.
 
-**Consequences:**
-- Type B projects silently skip a verification check that Type A has
-- ISA-88 terminology correction works for Type A but not Type C
-- Dutch language templates have a feature that English templates lack
-- The framework "works" for the first project type tested but breaks on others
+**How to avoid:**
+Implement Claude-specific error handling that reads and respects the `retry-after` header as the primary recovery signal. Combine this with exponential backoff as a fallback when the header is missing. Add jitter (random variation) to prevent synchronized retries.
 
-**Warning signs:**
-- Templates contain copy-pasted blocks with minor variations
-- A bug fix requires changes in more than 2 files
-- New feature works for one project type but not others
-- Template files exceed 200 lines
+Production pattern:
+```python
+import httpx
+from tenacity import retry, stop_after_attempt, wait_exponential
 
-**Prevention:**
-1. Template inheritance: base template with type-specific overrides, not copy-paste
-2. Standards as composable modules, not conditional blocks. PackML module adds state machine sections. ISA-88 module adds hierarchy terminology. Modules compose, they don't interleave.
-3. Language as a late-binding concern: templates use language-neutral keys, localization resolves at render time
-4. Template testing: each command is tested against ALL 4 project types before release. A simple matrix test: `for type in A B C D; do /doc:new-fds --type $type --dry-run; done`
-5. Maximum 1 level of template nesting. If a template includes another template that includes another template, the design is too complex.
-
-**Detection:**
-- Count lines of duplicated content across template files (>30% duplication = red flag)
-- Run each command against all 4 types in test mode
-- Check that every conditional block (standards, language) has test coverage
-
-**Milestone mapping:** Phase 1 (Framework Basis) must establish the template architecture. Phase 4 (Standards & Typicals) adds composable modules. Template testing should be part of Phase 7 (Pilot).
-
-**GSD lesson learned:** GSD has one workflow per command with no type variants. GSD-Docs introduces a new dimension (project type) that GSD never had to handle. The temptation to "just copy the template and modify it" is strong but leads to maintenance hell. Invest in template composition early.
-
----
-
-## Moderate Pitfalls
-
-Mistakes that cause delays, technical debt, or degraded quality.
-
----
-
-### Pitfall 6: Dynamic ROADMAP Evolution Breaks In-Progress State
-
-**What goes wrong:** After completing System Overview (Phase 2), the system identifies 18 units and proposes expanding the ROADMAP from 5 phases to 9 phases. The user approves. But STATE.md, REQUIREMENTS.md, and any existing PLAN.md files still reference the old phase numbering. Phase 3 plans created before the expansion now conflict with the new Phase 3 definition.
-
-**Why it happens:**
-- ROADMAP evolution (specification section 3.5) changes the semantic meaning of phase numbers
-- Previously planned phases (3, 4, 5) shift to new numbers (8, 9) but existing artifacts reference old numbers
-- Requirements mapped to "Phase 3: Functional Units" are now split across Phases 3-7
-- STATE.md progress tracking uses phase numbers as keys
-
-**Prevention:**
-1. ROADMAP evolution is ONLY allowed when no plans exist for future phases. If plans already exist, migration is required.
-2. When evolution occurs: automatically update REQUIREMENTS.md phase mappings, STATE.md references, and any existing PLAN.md phase numbers
-3. Use phase directory names (not numbers) as primary identifiers: "03-intake/" not just "03-/"
-4. Commit the old ROADMAP.md before evolution as a reference point
-5. Evolution trigger should check: "Are there any artifacts referencing phases that will be renumbered?" If yes, run migration before confirming.
-
-**Warning signs:**
-- Phase directory names don't match ROADMAP phase names after evolution
-- REQUIREMENTS.md has orphaned phase mappings
-- STATE.md references a phase number that no longer exists in ROADMAP.md
-
-**Milestone mapping:** Phase 1 (Framework Basis) must implement evolution-safe phase identification. The evolution trigger itself is Phase 3 territory.
-
----
-
-### Pitfall 7: CONTEXT.md Over-Loading in Discuss Phase
-
-**What goes wrong:** The discuss-phase command identifies gray areas and asks the user questions. For a phase with 6 equipment modules, this generates 40-60 questions. The resulting CONTEXT.md becomes 3000+ words. When writer subagents load CONTEXT.md, it consumes significant context window, leaving less room for actual writing. Quality of generated content degrades as the context grows.
-
-**Why it happens:**
-- The specification (section 3.5) acknowledges this: "Een discuss-phase met 60+ gray area vragen is onbeheersbaar"
-- Even with dynamic ROADMAP evolution splitting into smaller phases, individual phases can still accumulate extensive context
-- Engineers provide detailed answers (as they should), and every answer is captured verbatim
-- CONTEXT.md lacks a priority hierarchy: all decisions are stored at the same level of importance
-
-**Prevention:**
-1. CONTEXT.md has a hard limit: 1500 words. If it exceeds this, the discuss-phase command must summarize lower-priority items.
-2. Structure CONTEXT.md with priority tiers: "Critical Decisions" (loaded by all writers), "Module-Specific" (loaded only by relevant writer), "Nice-to-Have" (omitted from writer context)
-3. Each PLAN.md should embed its relevant CONTEXT.md subset in the "Context" section, pre-extracted during planning. Writers load the PLAN.md context section, not the full CONTEXT.md.
-4. Dynamic ROADMAP evolution (3-5 units per phase) is the primary mitigation: smaller phases = smaller CONTEXT.md
-
-**Warning signs:**
-- CONTEXT.md exceeds 2000 words
-- Writer agents produce shorter/lower-quality content for phases with larger CONTEXT.md
-- Users report the discuss-phase taking too long (>30 minutes for one phase)
-
-**Milestone mapping:** Phase 2 (Discuss & Plan) must implement the CONTEXT.md size constraint. The PLAN.md context extraction happens in the planning step.
-
----
-
-### Pitfall 8: Standards Terminology Drift
-
-**What goes wrong:** PackML defines specific state names (IDLE, STARTING, EXECUTE, COMPLETING, etc.) and ISA-88 defines specific hierarchy terminology (Unit, Equipment Module, Control Module). Over the course of a large document, writers subtly drift from these standards: using "Running" instead of "EXECUTE", "device" instead of "Equipment Module", "mode" inconsistently.
-
-**Why it happens:**
-- Standards reference files are loaded into context but compete with the model's training data, which contains many non-standard automation documents
-- Context window pressure causes later sections to lose standards context (the "lost in the middle" phenomenon documented by Chroma's Context Rot research)
-- Different writer subagents have slightly different context window states, leading to inconsistent terminology across sections
-- User answers in discuss-phase use colloquial terms ("de motor draait" / "the motor runs") which writers may echo instead of standardizing
-
-**Prevention:**
-1. Standards terminology is enforced by a post-processing step, not just context loading. After writing, a terminology check scans for non-standard terms.
-2. PLAN.md should include a "Standards Reminder" section with the exact terms to use for this section (not the entire standard, just the relevant subset)
-3. Verification explicitly checks PackML state names and ISA-88 terminology against a reference list
-4. Templates embed standards terminology directly: the section-equipment-module.md template uses "Operating States" with PackML state names pre-filled, not free-text
-
-**Detection:**
-```
-Scan CONTENT.md for:
-  PackML: grep for non-standard state names (Running, Stopped, Waiting vs EXECUTE, STOPPED, IDLE)
-  ISA-88: grep for non-standard hierarchy terms (device, subsystem, component vs Unit, EM, CM)
-  Flag each occurrence with line number and suggested correction
+async def call_claude_with_retry(prompt):
+    for attempt in range(5):
+        try:
+            response = await client.post("https://api.anthropic.com/v1/messages", ...)
+            return response
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 429:
+                retry_after = int(e.response.headers.get('retry-after', 0))
+                if retry_after:
+                    await asyncio.sleep(retry_after)
+                else:
+                    # Fallback: exponential backoff with jitter
+                    wait_time = (2 ** attempt) + random.uniform(0, 1)
+                    await asyncio.sleep(wait_time)
+            else:
+                raise
 ```
 
-**Warning signs:**
-- Different CONTENT.md files use different terms for the same concept
-- verify-phase reports ISA-88 or PackML gaps that are purely terminology issues
-- User review feedback consistently notes "this doesn't match our standard"
+Implement request queuing with rate limit tracking to prevent hitting limits in the first place. Monitor token usage across all team members and implement per-user or per-project quotas. Use circuit breakers to stop retrying when the system is clearly overloaded.
 
-**Milestone mapping:** Phase 4 (Standards & Typicals) must implement terminology enforcement. Phase 3 (Write & Verify) adds the terminology check to verification.
+**Warning signs:**
+- Repeated 429 errors in logs despite retry logic
+- Document generation tasks fail with "rate limit" errors
+- Multiple retry attempts happen within seconds of each other
+- API costs spike due to failed requests counting toward quota
+- Team reports "randomly fails during generation"
+
+**Phase to address:**
+Phase 1 (Core Infrastructure). The LLM provider abstraction layer must implement this correctly from the start. Create a shared `LLMClient` service that all phases use, with built-in rate limit handling, retry logic, and circuit breakers.
 
 ---
 
-### Pitfall 9: SUMMARY.md Quality Degradation Enables Hidden Failures
+### Pitfall 4: Shared State Divergence Between CLI and Web Application
 
-**What goes wrong:** SUMMARY.md files are supposed to be "compact summaries for AI agents" (specification section 4.4) enabling other agents to understand section content without loading full CONTENT.md. But writers produce superficial summaries that omit critical details: dependencies, cross-references, and key decisions. Downstream agents (verifiers, assemblers) make incorrect decisions because they trust SUMMARY.md claims.
+**What goes wrong:**
+The CLI tool maintains project state in `.fds/project.yaml` using a synchronous Python data model. The web application needs concurrent access from multiple users, real-time updates, and WebSocket broadcasting. Developers duplicate the state management logic with subtle differences: the CLI uses file-based locking and immediate writes, the web app uses in-memory state with periodic saves, they handle validation differently, they parse YAML differently. A project created via CLI doesn't appear correctly in the web UI. Changes made in the web UI corrupt the CLI project structure. Two team members editing the same project simultaneously via web UI create race conditions. The CLI and web app drift into incompatible implementations.
 
 **Why it happens:**
-- Summary generation happens at the END of writing, when context is fullest and the model is most likely to produce abbreviated output
-- The specification mandates "max 150 words" which is aggressive for complex equipment modules
-- Writers treat SUMMARY.md as a completion formality, not as a critical handoff document
-- No validation checks whether SUMMARY.md actually reflects CONTENT.md content
+The temptation is to "quickly add a web layer" by creating new state management code rather than refactoring the existing CLI code to work in both contexts. The CLI was designed for single-user, single-process, synchronous file operations. The web app needs multi-user, multi-process, async operations. These seem incompatible, so developers create parallel implementations. The differences start small (async vs sync) but grow over time (different validation, different defaults, different error handling).
 
-**Prevention:**
-1. SUMMARY.md has a required structure (enforced by template): Feiten, Key Decisions, Dependencies, Cross-refs. All sections mandatory.
-2. Verification checks SUMMARY.md against CONTENT.md: are the claimed facts consistent?
-3. Cross-reference entries in SUMMARY.md are validated: if SUMMARY says "interlock with EM-100", does CONTENT.md actually describe that interlock?
-4. Consider increasing the word limit to 250 words for equipment module summaries -- 150 words is insufficient for complex modules
+**How to avoid:**
+Create a shared state management layer that both CLI and web use as a library. This layer provides:
+
+1. **Abstract storage interface**: Implementations for file-based (CLI) and Redis/database (web)
+2. **Unified validation**: Single source of truth for project schema
+3. **Transactional updates**: Atomic operations that work across storage backends
+4. **Event emission**: State changes emit events that web UI can subscribe to
+
+The CLI imports this library and uses the file-based storage. The web app imports the same library and uses Redis storage. Both use identical validation and business logic.
+
+```python
+# Shared library (used by both CLI and web)
+class ProjectState:
+    def __init__(self, storage: StorageBackend):
+        self.storage = storage
+
+    async def update_phase(self, project_id: str, phase_data: PhaseData):
+        # Validation (same for CLI and web)
+        validated = PhaseSchema.validate(phase_data)
+        # Atomic update (backend-agnostic)
+        await self.storage.atomic_update(project_id, "phase", validated)
+        # Event emission (CLI ignores, web broadcasts)
+        await self.emit_event("phase_updated", project_id, validated)
+```
+
+Implement migration tools to convert existing CLI projects to web-compatible storage. Add integration tests that verify CLI and web operations produce identical results.
 
 **Warning signs:**
-- SUMMARY.md is under 50 words (too superficial)
-- Dependencies section is empty for a section that clearly depends on other equipment
-- Cross-refs section omits references that exist in CONTENT.md
-- Verifier or assembler makes incorrect decisions based on SUMMARY.md data
+- "Works in CLI but not in web" bug reports
+- Data corruption when switching between CLI and web
+- Duplicate validation logic in two places
+- Different error messages for the same validation failure
+- "Which version is right?" questions about state format
 
-**Milestone mapping:** Phase 3 (Write & Verify) must implement SUMMARY validation. Template design happens in Phase 1.
+**Phase to address:**
+Phase 1 (Core Infrastructure). This is foundational architecture. Attempting to retrofit shared state management after building separate implementations is extremely costly. The phase must deliver the shared state library and storage abstraction before building CLI compatibility features or web UI features.
 
 ---
 
-### Pitfall 10: Export Pipeline Fragility (Mermaid + Pandoc)
+### Pitfall 5: Unvalidated File Uploads with Content-Type Spoofing
 
-**What goes wrong:** The export pipeline (Markdown -> Mermaid rendering -> Pandoc -> DOCX) has multiple failure points. Complex Mermaid diagrams fail to render. Pandoc does not correctly format all table styles. The huisstijl.docx template produces different results across Pandoc versions. Diagrams render at wrong resolution for print.
+**What goes wrong:**
+Engineers upload reference documents (PDFs, Word docs, markdown) for the document generation system to reference. The validation checks only the `Content-Type` header from the HTTP request. A malicious or compromised file has `Content-Type: application/pdf` but contains executable code. The system accepts it, stores it, and potentially processes it with document parsing libraries. This creates security vulnerabilities: remote code execution through malicious PDFs, server-side request forgery through crafted documents, denial of service through ZIP bombs or billion laughs XML attacks. Reference files stored on the team server become attack vectors.
 
 **Why it happens:**
-- Mermaid has limits on diagram complexity (specification section 8.2.3: >15 nodes, >10 states, >4 participants)
-- Pandoc markdown interpretation differs from GitHub-flavored markdown in subtle ways
-- The huisstijl.docx template uses Word features that Pandoc does not fully support
-- Export is tested last and gets the least attention during development
+The `Content-Type` header is sent by the client and trivially spoofed. Beginner tutorials validate file uploads by checking this header because it's simple and works for honest users. Developers don't realize that accepting user-supplied files is a severe security risk. The "it's just our team" mindset creates a false sense of security—one compromised laptop or malicious engineer can exploit the entire system.
 
-**Prevention:**
-1. ENGINEER-TODO.md pattern (specification section 8.2.3) is correct: detect complexity limits and flag for manual diagram creation instead of silent failure
-2. Pandoc version should be pinned in project dependencies, not "whatever is installed"
-3. Export testing should use a standard reference document with all element types (tables, diagrams, cross-references, appendices)
-4. Export should produce TWO outputs: the rendered DOCX and a validation report listing any rendering issues
-5. Consider maintaining a Mermaid complexity budget per diagram: warn during writing, not during export
+**How to avoid:**
+Implement defense-in-depth file validation:
+
+1. **Magic number validation**: Read the first 8-16 bytes and verify they match expected file signatures using `python-magic`
+2. **File extension whitelist**: Only accept `.pdf`, `.docx`, `.md`, `.txt` extensions
+3. **Size limits**: Enforce maximum file size (e.g., 100MB) before reading content
+4. **Filename sanitization**: Generate UUIDs for storage, never use client-provided filenames
+5. **Sandboxed parsing**: Process uploaded files in isolated processes with resource limits
+6. **Virus scanning**: Integrate ClamAV or similar for malware detection
+
+```python
+import magic
+import uuid
+from pathlib import Path
+
+async def validate_and_store_upload(upload_file: UploadFile):
+    # Size check first (before reading)
+    upload_file.file.seek(0, 2)  # Seek to end
+    size = upload_file.file.tell()
+    upload_file.file.seek(0)  # Reset
+    if size > 100 * 1024 * 1024:  # 100MB
+        raise HTTPException(413, "File too large")
+
+    # Read first chunk for magic number validation
+    header = await upload_file.read(8192)
+    mime = magic.from_buffer(header, mime=True)
+
+    # Whitelist validation
+    allowed_types = {
+        'application/pdf': ['.pdf'],
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+        'text/markdown': ['.md'],
+        'text/plain': ['.txt']
+    }
+
+    if mime not in allowed_types:
+        raise HTTPException(400, f"File type {mime} not allowed")
+
+    # Generate safe storage path
+    storage_id = uuid.uuid4()
+    extension = allowed_types[mime][0]
+    storage_path = UPLOAD_DIR / f"{storage_id}{extension}"
+
+    # Stream to disk (async, with size limit enforced)
+    upload_file.file.seek(0)
+    async with aiofiles.open(storage_path, 'wb') as f:
+        await f.write(header)  # Write header we already read
+        while chunk := await upload_file.read(8192):
+            await f.write(chunk)
+
+    return storage_id, mime
+```
+
+Store uploads in a directory outside the web server document root. Never serve uploaded files directly—always proxy through an endpoint that sets proper `Content-Disposition` headers.
 
 **Warning signs:**
-- Mermaid CLI errors during export (usually visible in console but not in output)
-- DOCX formatting looks different from expected (missing headers, wrong fonts, broken tables)
-- Diagram images are blurry or misaligned in final document
-- Export works on developer machine but fails in CI or on client machine
+- File validation only checks `Content-Type` header
+- Uploaded files stored with original filenames
+- Upload directory is within static file serving path
+- No file size limits enforced
+- "What could go wrong?" attitude about team-only access
 
-**Milestone mapping:** Phase 5 (Complete & Export) implements the pipeline. Phase 7 (Pilot) validates with real documents.
-
----
-
-## Minor Pitfalls
-
-Mistakes that cause annoyance but are fixable without major rework.
+**Phase to address:**
+Phase 2 (File Management). Must be implemented before allowing any file uploads. This is a security gate—the phase cannot be considered complete without proper upload validation. Include security review and penetration testing in phase verification.
 
 ---
 
-### Pitfall 11: Git Commit Noise from Documentation Workflows
+### Pitfall 6: Missing Resumption Points for Interrupted AI Workflows
 
-**What goes wrong:** The GSD pattern commits after every task. For documentation generation, this creates many small commits: "docs(03-01): write EM-100 beschrijving", "docs(03-01): write EM-100 parameters", "docs(03-01): write EM-100 interlocks". The git history becomes noisy and hard to navigate for documentation projects where individual section changes are less meaningful than phase-level changes.
+**What goes wrong:**
+Document generation follows a multi-step workflow: analyze requirements → generate outline → generate sections → review/polish → compile PDF. Each step involves Claude API calls taking 30-120 seconds. An engineer starts generation, the process fails at step 3 (generate sections) due to rate limit, network error, or server restart. The system restarts the entire workflow from step 1, re-doing analysis and outline generation, wasting time and API tokens. There's no way to manually intervene mid-workflow to fix issues. If the engineer disagrees with the AI's analysis, they must complete the entire workflow before providing feedback.
 
-**Prevention:**
-1. GSD-Docs should commit per-plan (after all tasks in a plan), not per-task. Documentation writing tasks within a single plan are not independently useful.
-2. The specification already hints at this: "Git commit per plan (optioneel)" in section 4.4. Make per-plan the default.
-3. Phase-level squash option: `complete-fds` could offer to squash all phase commits into single phase commits for clean history.
+**Why it happens:**
+Developers design AI workflows as linear pipelines without checkpointing. The pattern is: `step1().then(step2).then(step3).then(step4)`. This works perfectly when everything succeeds but fails catastrophically on any error. Adding checkpointing later requires redesigning the workflow engine, migrating existing projects, and handling partial state. The effort seems excessive for "occasional failures," so it gets deferred until failure rates increase and user frustration peaks.
 
-**Milestone mapping:** Phase 1 decision: commit granularity policy.
+**How to avoid:**
+Design workflows with explicit state machines and persistent checkpoints from the start. Each workflow step:
 
----
+1. **Saves output to persistent storage** (database/Redis) before proceeding
+2. **Records completion status** with timestamp and responsible agent
+3. **Emits events** that web UI can display for progress tracking
+4. **Supports manual override** allowing users to edit intermediate results
+5. **Allows resumption** from any completed checkpoint
 
-### Pitfall 12: Language Mixing in Bilingual Projects
+Implement workflow state as a table/document:
 
-**What goes wrong:** PROJECT.md and CONTEXT.md are in the user's language (Dutch in most cases). PLAN.md and workflow commands are in English (following GSD convention). Standards references are in English. The FDS output should be in the configured language. Writers sometimes produce content in the wrong language or mix languages within a section.
+```python
+WorkflowState = {
+    "project_id": "uuid",
+    "phase": "generation",
+    "current_step": "generate_sections",
+    "checkpoints": {
+        "analyze_requirements": {
+            "status": "completed",
+            "completed_at": "2026-02-14T10:30:00Z",
+            "output": {...},
+            "tokens_used": 1250
+        },
+        "generate_outline": {
+            "status": "completed",
+            "completed_at": "2026-02-14T10:32:15Z",
+            "output": {...},
+            "tokens_used": 2100
+        },
+        "generate_sections": {
+            "status": "in_progress",
+            "started_at": "2026-02-14T10:33:00Z",
+            "partial_output": {...}
+        }
+    },
+    "can_resume_from": ["generate_outline", "analyze_requirements"]
+}
+```
 
-**Prevention:**
-1. PLAN.md explicitly states the output language: "Output language: nl" or "Output language: en"
-2. Standards terminology has a language mapping: "EXECUTE" (standard) -> "EXECUTE" (output, terms are not translated)
-3. Workflow metadata (PLAN.md frontmatter, SUMMARY.md structure) is always English. Only CONTENT.md body text follows the configured language.
-4. Verification includes a language check: content should be predominantly in the configured language
+Provide UI controls for: viewing checkpoint outputs, editing checkpoint results before continuing, manually retrying failed steps, and resuming from specific checkpoints.
 
-**Milestone mapping:** Phase 1 should establish the language convention. Phase 3 adds language verification.
+Modern agentic workflow systems implement this via checkpointing that enables recovery and resumption of long-running processes by saving workflow states, with workflows that can start, pause, and resume statefully on demand. Some systems support human-in-the-loop controls where operators can trigger interrupt commands, take over browser control, and pass control back to the agent to continue from the current state.
 
----
+**Warning signs:**
+- "Failed at 90% complete, had to restart from scratch" complaints
+- No way to see what the AI did at intermediate steps
+- Total workflow time appears in single log entry (no step-by-step tracking)
+- Users can't provide feedback until entire workflow completes
+- Workflow code is single async function with no state persistence
 
-### Pitfall 13: Typicals Catalog Staleness
-
-**What goes wrong:** The CATALOG.json used for SDS generation contains typical function blocks. Over time, typicals are updated (new versions, parameters change) but CATALOG.json is not kept in sync. The SDS references outdated typical versions, or worse, typical interfaces have changed but the SDS still maps to old interface definitions.
-
-**Prevention:**
-1. CATALOG.json includes version numbers per typical (already in specification section 7.1)
-2. SDS generation should warn when typical version is older than a configurable threshold
-3. CATALOG.json should have a "last_verified" date per typical
-4. The "NEW TYPICAL NEEDED" flag (specification section 7.2) should also trigger when a typical exists but its version is too old
-
-**Milestone mapping:** Phase 4 (Standards & Typicals) implements the catalog. Phase 7 (Pilot) validates with real typicals.
-
----
-
-### Pitfall 14: Orphan Content After Phase Restructuring
-
-**What goes wrong:** After dynamic ROADMAP evolution, some CONTENT.md files may become orphaned: they were written for the old phase structure but are no longer referenced by any plan in the new structure. These files waste disk space and confuse the assembly process.
-
-**Prevention:**
-1. ROADMAP evolution should produce a migration report: "Moved: plan X -> phase Y. Orphaned: [list]"
-2. Assembly (complete-fds) scans for CONTENT.md files not referenced by any current PLAN.md
-3. Orphan detection is part of the verify-phase step, not just complete-fds
-
-**Milestone mapping:** Phase 5 (Complete & Export) implements orphan detection.
-
----
-
-## Phase-Specific Warnings
-
-| Phase Topic | Likely Pitfall | Severity | Mitigation |
-|-------------|---------------|----------|------------|
-| Phase 1: Framework Basis | Pitfall 5 (Template explosion) | Critical | Invest in template composition architecture before writing first template |
-| Phase 1: Framework Basis | Pitfall 4 (STATE.md corruption) | Critical | SUMMARY.md = completion proof from day one |
-| Phase 2: Discuss & Plan | Pitfall 7 (CONTEXT.md overload) | Moderate | Hard word limit + priority tiers |
-| Phase 2: Discuss & Plan | Pitfall 6 (ROADMAP evolution breaks state) | Moderate | Phase identifiers, not just numbers |
-| Phase 3: Write & Verify | Pitfall 1 (Context contamination) | Critical | Fresh context per writer, strict context loading rules |
-| Phase 3: Write & Verify | Pitfall 2 (Infinite verification loops) | Critical | Max 2 retry cycles + scoped re-verification |
-| Phase 3: Write & Verify | Pitfall 8 (Standards drift) | Moderate | Terminology enforcement post-processing |
-| Phase 4: Standards & Typicals | Pitfall 8 (Standards drift) | Moderate | Composable modules, not conditional blocks |
-| Phase 4: Standards & Typicals | Pitfall 13 (Catalog staleness) | Minor | Version tracking + freshness warnings |
-| Phase 5: Complete & Export | Pitfall 3 (Section numbering collapse) | Critical | Symbolic references, numbering at assembly only |
-| Phase 5: Complete & Export | Pitfall 10 (Export fragility) | Moderate | Pinned dependencies + reference document testing |
-| Phase 6: Kennisoverdracht | Pitfall 9 (SUMMARY quality) | Moderate | Mandatory structure + validation |
-| Phase 7: Pilot | Pitfall 5 (Template explosion) | Critical | Test ALL 4 project types, not just Type A |
+**Phase to address:**
+Phase 3 (Phase Orchestration). The workflow engine is the heart of phase execution. This must support checkpointing before implementing complex multi-step phase workflows. Include checkpoint recovery testing and manual intervention testing in phase verification.
 
 ---
 
-## Cross-Cutting Concerns
+### Pitfall 7: Server-Sent Events vs WebSockets Mismatch for One-Way Streaming
 
-These pitfalls span multiple phases and require architectural decisions early:
+**What goes wrong:**
+Developers implement real-time progress updates for LLM streaming using WebSockets because "WebSockets are for real-time communication." This creates unnecessary complexity: WebSocket connection management, bidirectional protocol overhead, connection state synchronization, binary framing overhead. The application only needs server-to-client streaming (LLM tokens, progress updates). The extra complexity of WebSockets creates more failure modes without providing value. More code to debug, more edge cases (client sends unexpected messages), higher resource usage per connection.
 
-### Concern A: Context Budget Discipline
+**Why it happens:**
+WebSockets are the well-known "real-time web" technology. Developers reach for them instinctively when they see "real-time" in requirements. Server-Sent Events (SSE) are less well-known despite being simpler and more appropriate for one-way streaming. The React ecosystem has more WebSocket examples and libraries than SSE examples. Once the initial WebSocket implementation is built, the sunk cost fallacy prevents reconsidering.
 
-Every command in GSD-Docs must have a documented context budget:
-- What files does the orchestrator load? (should be <15% of 200K)
-- What files does each subagent load? (list explicitly)
-- What files are explicitly NOT loaded? (document the exclusions)
+**How to avoid:**
+Use Server-Sent Events for one-way server-to-client streaming. SSE provides:
 
-Without this discipline, context contamination (Pitfall 1) and context overload (Pitfall 7) are inevitable. Research shows context quality degrades with length -- Chroma's 2025 study found "models do not use their context uniformly; performance grows increasingly unreliable as input length grows."
+- Simpler HTTP-based protocol (no upgrade handshake)
+- Automatic reconnection built into browser EventSource API
+- Lower overhead than WebSocket framing
+- Better compatibility with proxies and load balancers
+- Text-based format (easier debugging)
 
-### Concern B: Symbolic Over Literal References
+Reserve WebSockets for scenarios requiring bidirectional communication (collaborative editing, chat with replies).
 
-Every reference between sections must be symbolic until the final assembly step:
-- Write "see {EM-200-interlocks}" not "see 5.3"
-- Store cross-refs as plan-ID + section-ID not section numbers
-- Resolve to numbers only in complete-fds
+For LLM streaming, document generation progress, and phase timeline updates, SSE is superior:
 
-This prevents Pitfall 3 (section numbering collapse) and makes Pitfall 6 (ROADMAP evolution) less dangerous.
+```python
+# FastAPI SSE endpoint
+from sse_starlette.sse import EventSourceResponse
 
-### Concern C: Completion Proof Hierarchy
+@app.get("/stream/generation/{task_id}")
+async def stream_generation(task_id: str):
+    async def event_generator():
+        # Subscribe to Redis pub/sub for this task
+        async for message in subscribe_to_task(task_id):
+            yield {
+                "event": "token",
+                "data": message["content"],
+                "id": message["sequence"]
+            }
 
-The system needs an explicit hierarchy of "what proves something is done":
-1. PLAN.md exists -> planning happened
-2. CONTENT.md exists + SUMMARY.md exists -> writing completed
-3. VERIFICATION.md exists with status "passed" -> phase verified
-4. REVIEW.md exists (optional) -> client reviewed
+    return EventSourceResponse(event_generator())
+```
 
-STATE.md reflects this hierarchy but is never the primary source of truth. Artifacts on disk are the source of truth. This prevents Pitfall 4 (STATE.md corruption from silently hiding incomplete work).
+```javascript
+// React client
+const eventSource = new EventSource(`/stream/generation/${taskId}`);
+
+eventSource.onmessage = (event) => {
+    setContent(prev => prev + event.data);
+};
+
+eventSource.onerror = (error) => {
+    // Browser automatically reconnects with Last-Event-ID header
+    console.log("Connection lost, reconnecting...");
+};
+```
+
+The browser's EventSource API handles reconnection automatically, sending the `Last-Event-ID` header so the server can resume from the last received event. This eliminates custom reconnection logic.
+
+Use WebSockets only when you genuinely need client-to-server messages during streaming (like pause/resume controls, user interruptions of AI workflows). For most document generation scenarios, SSE is simpler and more reliable.
+
+**Warning signs:**
+- WebSocket implementation but server never receives messages from client
+- Complex WebSocket state management code
+- Difficulty debugging connection issues
+- Connection drops more frequently than expected
+- "Why are we using WebSockets for this?" questions during code review
+
+**Phase to address:**
+Phase 1 (Core Infrastructure). Choose the streaming protocol early and build the real-time communication abstraction around it. If starting with WebSockets, plan migration path to SSE for one-way scenarios. Document which scenarios use which protocol.
 
 ---
+
+### Pitfall 8: Ignoring Context Window Limits in Multi-Step Document Generation
+
+**What goes wrong:**
+Document generation accumulates context across multiple steps: requirements → outline → section 1 → section 2 → section 3 → review. Each step's output becomes input for the next step. By step 5, the prompt includes requirements + outline + all previous sections + current instructions, totaling 180K tokens. This exceeds Claude's context window (200K for Sonnet 4.5). The API call fails with "context_length_exceeded" error. The workflow crashes. Even when it fits, the massive context inflates costs: each generation step pays for all previous content as input tokens.
+
+Developers either didn't track cumulative token usage or assumed "200K is plenty." Real documents with extensive requirements and reference materials exceed limits quickly. FDS/SDS documents include technical specifications, equipment lists, safety procedures—all context-heavy.
+
+**Why it happens:**
+The "conversation" mental model encourages appending everything to context. It works in ChatGPT UI where history is automatic. Developers replicate this pattern in programmatic workflows. Token counting seems tedious, so it's skipped until production failures. The nonlinear relationship between content length and token count makes estimation difficult (code/technical content has higher token density than natural language).
+
+**How to avoid:**
+Implement explicit context management with token budgeting:
+
+1. **Token counting before API calls**: Use `anthropic.count_tokens()` to measure before sending
+2. **Context windowing**: Keep only essential context from previous steps
+3. **Summarization**: Compress previous outputs into summaries for subsequent steps
+4. **Reference storage**: Store full content in database, pass only IDs and summaries to API
+5. **Prompt engineering**: Use structured output formats that reduce token usage
+
+```python
+class ContextBudget:
+    def __init__(self, max_tokens=190000):  # Leave 10K buffer
+        self.max_tokens = max_tokens
+        self.system_prompt_tokens = 0
+        self.context_tokens = 0
+        self.reserved_output_tokens = 4000
+
+    def add_context(self, text: str, priority: int = 1):
+        tokens = anthropic.count_tokens(text)
+        if self.available_input_tokens() < tokens:
+            if priority > 5:
+                # High priority: summarize existing context
+                self.context_tokens = self._summarize_context()
+            else:
+                raise ContextBudgetExceeded()
+        self.context_tokens += tokens
+
+    def available_input_tokens(self):
+        return self.max_tokens - self.system_prompt_tokens - self.context_tokens - self.reserved_output_tokens
+```
+
+For document generation workflows:
+
+- Step 1 (Requirements analysis): Input=requirements (15K), Output=structured analysis (3K)
+- Step 2 (Outline): Input=requirements summary (2K) + analysis (3K), Output=outline (2K)
+- Step 3 (Section 1): Input=outline (2K) + relevant requirements (5K), Output=section (4K)
+- Step 4 (Section 2): Input=outline (2K) + section 1 summary (500), Output=section (4K)
+
+Each step's context budget stays under 30K input tokens despite the document growing to 200K+ tokens total. Use prompt caching for repeated content (requirements, outlines) to reduce costs by 60-90%.
+
+**Warning signs:**
+- "context_length_exceeded" errors in production
+- Token costs scaling quadratically with document length
+- No token counting in code
+- Each workflow step includes full conversation history
+- Developers surprised by token counts on real documents
+
+**Phase to address:**
+Phase 3 (Phase Orchestration). Context management is critical for phase execution workflows. The phase orchestrator must implement context budgeting before running multi-step generation workflows. Include token usage monitoring and context budget enforcement.
+
+---
+
+## Technical Debt Patterns
+
+Shortcuts that seem reasonable but create long-term problems.
+
+| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
+|----------|-------------------|----------------|-----------------|
+| Store files on local filesystem instead of S3/object storage | Simple implementation, no cloud dependencies | Difficult to scale horizontally, no disaster recovery, manual backups | Acceptable for MVP if team server has reliable backup and single-instance deployment is sufficient |
+| Use polling instead of SSE/WebSocket for progress updates | Simpler implementation, easier debugging | Higher server load, 3-10 second latency, feels unresponsive | Never acceptable—SSE is only marginally more complex and drastically better UX |
+| Skip file validation beyond extension check | Fast upload processing | Security vulnerability, potential RCE | Never acceptable—validation is non-negotiable |
+| Use in-memory state instead of Redis for session management | No Redis dependency, faster development | Lose state on server restart, can't scale horizontally | Acceptable for single-server prototype, must migrate before multi-user production |
+| Hard-code Claude API client instead of LLM abstraction | Fewer abstractions, direct API usage | Locked to single provider, difficult to add local models | Never acceptable—abstraction is explicit requirement |
+| Store task results only in memory, not persistent storage | Faster processing, simpler code | Loss of data on restart, no resumption capability | Never acceptable—resumption is core reliability requirement |
+| Skip retry logic and rely on user to refresh | Faster initial implementation | Poor UX, wasted API calls, frustrated users | Never acceptable for production |
+| Synchronous database queries with SQLAlchemy ORM | Familiar ORM patterns, more examples | Blocks event loop, poor performance | Acceptable only if using async SQLAlchemy properly from start |
+
+## Integration Gotchas
+
+Common mistakes when connecting to external services.
+
+| Integration | Common Mistake | Correct Approach |
+|-------------|----------------|------------------|
+| Claude API | Ignoring `retry-after` header in 429 responses | Parse header, sleep for specified duration before retry |
+| Claude API | Not implementing prompt caching for repeated content | Enable caching on system prompts and reference documents, save 60-90% |
+| Claude API | Assuming streaming always works | Handle streaming failures, fallback to non-streaming, store partial results |
+| Redis Pub/Sub | Treating it as persistent message queue | Use Redis Streams for persistence, Pub/Sub only for notifications |
+| Redis | Using string operations for complex state | Use Redis JSON or hash operations for structured data |
+| File uploads | Trusting `Content-Type` header | Validate magic numbers with `python-magic` library |
+| File uploads | Loading entire file into memory | Stream uploads in chunks with `aiofiles` |
+| WebSockets | Not implementing heartbeat/keepalive | Send ping/pong every 15-30 seconds to detect dead connections |
+| WebSockets | Coupling task execution to connection lifecycle | Store task state server-side, allow reconnection with task ID |
+| SSE | Not setting `Last-Event-ID` for resumption | Include event IDs, track client position, allow resumption |
+| Nginx reverse proxy | Default timeout too short for LLM streaming | Set `proxy_read_timeout 300s` and `proxy_send_timeout 300s` |
+| systemd service | Not setting proper working directory | Set `WorkingDirectory` in service file to project root |
+| systemd service | Not handling graceful shutdown | Implement `SIGTERM` handler to finish in-flight requests |
+
+## Performance Traps
+
+Patterns that work at small scale but fail as usage grows.
+
+| Trap | Symptoms | Prevention | When It Breaks |
+|------|----------|------------|----------------|
+| Synchronous file I/O in async endpoints | Slow response times, queued requests | Use `aiofiles` for all file operations | 2-3 concurrent users with file uploads |
+| Loading full document history into memory | High memory usage, OOM crashes | Paginate history, lazy load content | Documents over 50-100 pages |
+| Storing all reference files in single directory | Slow directory listings, filesystem limits | Use hashed subdirectories (e.g., `uploads/{first_2_chars}/{uuid}`) | 10K+ uploaded files |
+| Separate API calls for each document section | High latency, rate limit issues | Batch operations where possible | Documents with 20+ sections |
+| No connection pooling for database | Connection exhaustion, high latency | Configure SQLAlchemy pool: `pool_size=20, max_overflow=40` | 10+ concurrent users |
+| Unbounded WebSocket connections | Memory exhaustion | Limit concurrent connections per user, implement timeouts | 50+ simultaneous connections |
+| Storing large context in Redis strings | High memory usage, serialization overhead | Use Redis JSON or compress with gzip | Context over 100KB per session |
+| No rate limiting per user | Single user can exhaust API quota | Implement per-user rate limits and quotas | Team of 5+ users |
+
+## Security Mistakes
+
+Domain-specific security issues beyond general web security.
+
+| Mistake | Risk | Prevention |
+|---------|------|------------|
+| Serving uploaded files directly from upload directory | Path traversal, RCE if executable files uploaded | Store outside web root, proxy through endpoint with UUID lookup |
+| Not sanitizing filenames before storage | Directory traversal via `../` in filename | Generate UUID-based filenames, ignore client-provided names |
+| Trusting client-provided `Content-Type` | Malicious files bypass validation | Validate magic numbers with `python-magic` |
+| No file size limits | DoS via massive uploads | Enforce limits before reading (check `Content-Length`), streaming validation |
+| Storing API keys in project files | Keys leaked in version control | Use environment variables, separate secrets management |
+| Logging full API requests/responses | API keys, sensitive data in logs | Redact sensitive fields, log only metadata |
+| No authentication on internal endpoints | Unauthorized access from team network | Require authentication even on "internal" network |
+| Sharing single Claude API key across all users | No usage attribution, quota issues | Implement per-user API keys or internal usage tracking |
+| Storing documents without access control | Users can access other users' documents | Implement document ownership and access control |
+| No input sanitization on document content | XSS in document preview, template injection | Sanitize markdown/HTML before rendering, use CSP headers |
+
+## UX Pitfalls
+
+Common user experience mistakes in this domain.
+
+| Pitfall | User Impact | Better Approach |
+|---------|-------------|-----------------|
+| No progress indication during long LLM calls | Users think app is frozen, refresh and retry | Stream tokens as they arrive, show "Generating..." with current step |
+| Losing work on connection drop | Frustration, distrust of system | Auto-save drafts, persist task state, allow resumption |
+| No way to cancel long-running generation | Users forced to wait or kill browser | Provide cancel button, implement graceful cancellation |
+| Generic "Error occurred" messages | Users don't know what to do | Specific messages: "Rate limit reached, retrying in 30s..." |
+| No indication of API cost for operations | Bill shock, inefficient usage | Show estimated token usage before generation |
+| Requiring full workflow restart after failure | Wasted time, repeated work | Allow resumption from checkpoints |
+| No preview before final document generation | Surprises in output, wasted generations | Show outline and section previews, allow editing before full generation |
+| Document preview doesn't match final output | Trust issues, confusion | Use same rendering pipeline for preview and final output |
+| No diff view for document iterations | Hard to see what changed | Show diff between versions, highlight AI suggestions |
+| Unclear which operations use CLI vs must use web | Confusion, workflow friction | Clear documentation, consider making CLI call web API |
+
+## "Looks Done But Isn't" Checklist
+
+Things that appear complete but are missing critical pieces.
+
+- [ ] **WebSocket streaming**: Often missing reconnection logic—verify connection drop recovery and state resumption
+- [ ] **File uploads**: Often missing magic number validation—verify `python-magic` validation, not just extension/Content-Type
+- [ ] **Claude API integration**: Often missing retry-after header handling—verify 429 error response parsing
+- [ ] **Long-running tasks**: Often missing checkpoint persistence—verify tasks survive server restart
+- [ ] **Document generation**: Often missing token budget tracking—verify context window management
+- [ ] **Error handling**: Often missing user-friendly messages—verify specific, actionable error text
+- [ ] **Session management**: Often missing cleanup on logout—verify session expiration and Redis cleanup
+- [ ] **File storage**: Often missing access control—verify user can't access other users' files
+- [ ] **API cost tracking**: Often missing per-user attribution—verify usage monitoring and quota enforcement
+- [ ] **Graceful shutdown**: Often missing in-flight request handling—verify systemd service handles SIGTERM properly
+- [ ] **Context sharing**: Often missing CLI/web compatibility layer—verify projects work in both interfaces
+- [ ] **Background tasks**: Often missing failure notifications—verify users are notified when background tasks fail
+- [ ] **State synchronization**: Often missing conflict resolution—verify concurrent edits don't corrupt state
+
+## Recovery Strategies
+
+When pitfalls occur despite prevention, how to recover.
+
+| Pitfall | Recovery Cost | Recovery Steps |
+|---------|---------------|----------------|
+| WebSocket connection loss | LOW | Client auto-reconnects with task ID, fetches missed chunks from Redis, resumes streaming |
+| Blocking file I/O degrading performance | MEDIUM | Migrate to `aiofiles` incrementally, prioritize upload endpoints first, test under load |
+| Rate limit exceeded | LOW | Wait for `retry-after` period, queued requests auto-retry, consider tier upgrade |
+| Shared state divergence CLI/web | HIGH | Rebuild shared library, migrate existing projects, comprehensive integration testing |
+| File upload security vulnerability | HIGH | Audit existing uploads, quarantine suspicious files, patch validation immediately |
+| Lost task state on server restart | MEDIUM | Implement Redis persistence, replay partial results to user, offer manual retry |
+| Context window exceeded | LOW | Implement summarization for next step, reduce context budget, cache summaries |
+| Duplicate task execution on reconnect | MEDIUM | Add task deduplication by ID, check existing task before starting new one |
+| Cost overrun from inefficient prompts | LOW | Enable prompt caching, optimize prompts, implement token budgets per user |
+| State corruption from concurrent edits | MEDIUM | Implement optimistic locking, detect conflicts, prompt user to merge or retry |
+
+## Pitfall-to-Phase Mapping
+
+How roadmap phases should address these pitfalls.
+
+| Pitfall | Prevention Phase | Verification |
+|---------|------------------|--------------|
+| WebSocket connection drops | Phase 1: Core Infrastructure | Drop connection mid-task, verify resumption without data loss |
+| Blocking file I/O | Phase 1: Core Infrastructure | Upload 50MB file while making concurrent API requests, verify no latency spike |
+| Claude API rate limits | Phase 1: Core Infrastructure | Trigger 429 error, verify retry-after header respected |
+| Shared state CLI/web divergence | Phase 1: Core Infrastructure | Create project in CLI, verify appears correctly in web UI |
+| File upload security | Phase 2: File Management | Upload file with spoofed Content-Type, verify rejection based on magic number |
+| Missing resumption points | Phase 3: Phase Orchestration | Kill server mid-workflow, restart, verify resumption from checkpoint |
+| SSE vs WebSocket mismatch | Phase 1: Core Infrastructure | Implement streaming with SSE for one-way, verify auto-reconnection |
+| Context window limits | Phase 3: Phase Orchestration | Generate document with 200K+ total tokens, verify context budgeting |
+| Synchronous DB queries | Phase 1: Core Infrastructure | Run DB query under load, verify no event loop blocking |
+| No graceful shutdown | Phase 7: Deployment | Send SIGTERM during task execution, verify in-flight requests complete |
+| Missing error messages | All phases | Trigger each error condition, verify user-friendly message displayed |
+| No cost tracking | Phase 4: Document Preview | Run generation task, verify token usage displayed to user |
 
 ## Sources
 
-**Primary (HIGH confidence -- direct analysis):**
-- GSD reference implementation: `~/.claude/get-shit-done/workflows/` (all workflow files)
-- GSD-Docs SPECIFICATION.md v2.7.0 (sections 3.5, 4.4, 9.6, 9.7)
-- GSD execute-phase.md context budget documentation
-- GSD verification-patterns.md stub detection patterns
+### WebSocket & Real-Time Communication
+- [FastAPI WebSockets Documentation](https://fastapi.tiangolo.com/advanced/websockets/)
+- [How to Handle Large Scale WebSocket Traffic with FastAPI | Medium](https://hexshift.medium.com/how-to-handle-large-scale-websocket-traffic-with-fastapi-9c841f937f39)
+- [FastAPI + WebSockets + React: Real-Time Features | Medium](https://medium.com/@suganthi2496/fastapi-websockets-react-real-time-features-for-your-modern-apps-b8042a10fd90)
+- [WebSockets vs Server-Sent Events | Ably](https://ably.com/blog/websockets-vs-sse)
+- [SSE vs WebSockets: Comparing Real-Time Protocols | SoftwareMill](https://softwaremill.com/sse-vs-websockets-comparing-real-time-communication-protocols/)
+- [Building Real-Time AI Chat Infrastructure | Render](https://render.com/articles/real-time-ai-chat-websockets-infrastructure)
+- [How to Build LLM Streams That Survive Reconnects | Upstash](https://upstash.com/blog/resumable-llm-streams)
 
-**Secondary (MEDIUM confidence -- web research):**
-- [Multi-Agent LLM System Failures (arXiv 2025)](https://arxiv.org/html/2503.13657v1) -- inter-agent misalignment patterns
-- [Context Rot research by Chroma (2025)](https://tilburg.ai/2025/03/context-window-management/) -- performance degradation with input length
-- [Context Window Management Strategies](https://www.getmaxim.ai/articles/context-window-management-strategies-for-long-context-ai-agents-and-chatbots/) -- pruning and offloading techniques
-- [Cross-Document Referencing Problems](https://www.yomu.ai/blog/5-common-problems-in-cross-document-referencing) -- broken links and version control
-- [FDS for Industrial Automation (RealPars)](https://www.realpars.com/blog/fds) -- FDS/SDS scope boundary issues
-- [Claude Code Plugin Architecture](https://code.claude.com/docs/en/plugins) -- official plugin documentation
-- [Multi-Agent Orchestration (Towards Data Science)](https://towardsdatascience.com/why-your-multi-agent-system-is-failing-escaping-the-17x-error-trap-of-the-bag-of-agents/) -- coordination overhead vs task complexity tradeoffs
+### FastAPI Background Tasks & Performance
+- [Background Tasks - FastAPI](https://fastapi.tiangolo.com/tutorial/background-tasks/)
+- [Handling Long-Running Tasks in FastAPI | DataScienceTribe](https://www.datasciencebyexample.com/2023/08/26/handling-long-running-tasks-in-fastapi-python/)
+- [Managing Background Tasks in FastAPI | Leapcell](https://leapcell.io/blog/managing-background-tasks-and-long-running-operations-in-fastapi)
+- [FastAPI Background Tasks | Sentry](https://sentry.io/answers/fastapi-background-tasks-and-middleware/)
+
+### File Upload Security
+- [Uploading Files Using FastAPI: A Complete Guide | Better Stack](https://betterstack.com/community/guides/scaling-python/uploading-files-using-fastapi/)
+- [Building a Secure File Upload API in FastAPI | Mahdi Abu Tafish](https://noone-m.github.io/2025-12-10-fastapi-file-upload/)
+- [Upload files in FastAPI with file validation | Medium](https://medium.com/@jayhawk24/upload-files-in-fastapi-with-file-validation-787bd1a57658)
+
+### Claude API Integration & Cost Optimization
+- [Claude API Rate Limits Documentation](https://docs.claude.com/en/api/rate-limits)
+- [How to Fix Claude API 429 Rate Limit Error | AI Free API](https://www.aifreeapi.com/en/posts/fix-claude-api-429-rate-limit-error)
+- [Claude API Rate Limits: Production Scaling Guide | HashBuilds](https://www.hashbuilds.com/articles/claude-api-rate-limits-production-scaling-guide-for-saas)
+- [Prompt Caching: 60% Cost Reduction in LLM Applications | Medium](https://medium.com/tr-labs-ml-engineering-blog/prompt-caching-the-secret-to-60-cost-reduction-in-llm-applications-6c792a0ac29b)
+- [LLM Cost Optimization: 80% Reduction Guide | Koombea](https://ai.koombea.com/blog/llm-cost-optimization)
+- [Anthropic Claude API Pricing 2026 | MetaCTO](https://www.metacto.com/blogs/anthropic-api-pricing-a-full-breakdown-of-costs-and-integration)
+
+### State Management & Architecture
+- [State Management in 2026 | Nucamp](https://www.nucamp.co/blog/state-management-in-2026-redux-context-api-and-modern-patterns)
+- [FastAPI State Variables Explained | Medium](https://medium.com/algomart/fastapi-state-variables-explained-the-right-way-to-share-global-data-across-your-app-6de4d1435b22)
+- [FastAPI Sessions Documentation](https://jordanisaacs.github.io/fastapi-sessions/)
+- [Command Line Interface Guidelines](https://clig.dev/)
+
+### AI Workflow & Resumption
+- [The 2026 Guide to Agentic Workflow Architectures | Stack AI](https://www.stack-ai.com/blog/the-2026-guide-to-agentic-workflow-architectures)
+- [Agent-User Interaction Protocol | Via](https://ridewithvia.com/resources/agent-user-interaction-protocol-when-the-frontend-got-an-ai-protocol)
+- [AgentWorkflow Guide | LlamaIndex](https://www.llamaindex.ai/blog/introducing-agentworkflow-a-powerful-system-for-building-ai-agent-systems)
+
+### Production Deployment
+- [Deploy FastAPI with Gunicorn and Nginx | Vultr](https://docs.vultr.com/how-to-deploy-a-fastapi-application-with-gunicorn-and-nginx-on-ubuntu-2404)
+- [FastAPI Hosting: Deploy on Ubuntu Server | PloyCloud](https://ploy.cloud/blog/fastapi-hosting-deployment-guide-2025/)
+- [FastAPI Best Practices for Production 2026 | FastLaunchAPI](https://fastlaunchapi.dev/blog/fastapi-best-practices-production-2026)
+- [Preparing FastAPI for Production | Medium](https://medium.com/@ramanbazhanau/preparing-fastapi-for-production-a-comprehensive-guide-d167e693aa2b)
+
+### Monitoring & Logging
+- [Logging + LLM + FastAPI | Medium](https://medium.com/@alejandro7899871776/logging-llm-fastapi-69fe88e01a4d)
+- [FastAPI Middleware Patterns: Logging, Metrics, Error Handling 2026 | Johal.in](https://johal.in/fastapi-middleware-patterns-custom-logging-metrics-and-error-handling-2026-2/)
+- [Building Observable LLM Agents with OpenTelemetry | Medium](https://engineering.teknasyon.com/from-prompts-to-metrics-building-observable-llm-agents-using-fastapi-opentelemetry-prometheus-359d3132d92b)
+
+---
+*Pitfalls research for: Web GUI for AI-Powered CLI FDS/SDS Document Generation*
+*Researched: 2026-02-14*
+*Confidence: HIGH - Based on official documentation, production guides, and 2026 best practices*
