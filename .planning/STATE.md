@@ -5,15 +5,15 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** Engineers can go from project brief to complete, verified FDS document through a structured, AI-assisted workflow
-**Current focus:** Phase 4 verified complete. State management, crash recovery, and dynamic ROADMAP operational.
+**Current focus:** Phase 5 in progress. Complete-FDS assembly command and workflow implemented with cross-reference resolution, orphan detection, and standards integration.
 
 ## Current Position
 
 - Phase: 5 of 7 (Complete-FDS + Standards)
-- Plan: 4 of 5 in phase (Plan 05-04 complete)
+- Plan: 3 of 5 in phase (Plan 05-03 complete)
 - Status: In progress
-- Last activity: 2026-02-14 - Completed 05-04-PLAN.md (Release and Version Management)
-- Next: Continue Phase 5 planning/execution
+- Last activity: 2026-02-14 - Completed 05-03-PLAN.md (Complete-FDS Assembly Command + Workflow)
+- Next: Continue Phase 5 execution (Plans 04-05 remain)
 
 ## Progress
 
@@ -25,7 +25,7 @@ Progress: ██████████████░░░░░░░░░�
 | 2 | Discuss + Plan Commands | 4/4 | ✓ Verified |
 | 3 | Write + Verify (Core Value) | 5/5 | ✓ Verified |
 | 4 | State Management + Recovery | 5/5 | ✓ Verified |
-| 5 | Complete-FDS + Standards | 4/5 | In Progress |
+| 5 | Complete-FDS + Standards | 3/5 | In Progress |
 | 6 | Knowledge Transfer + Review | -/- | Pending |
 | 7 | SDS Generation + Export | -/- | Pending |
 
@@ -111,6 +111,11 @@ Progress: ██████████████░░░░░░░░░�
 - [Phase 05]: Client release gate: all phases must pass verification, but --force allows release with warnings (2026-02-14)
 - [Phase 05]: Previous version files archived to .planning/archive/vX.Y/ on new release (2026-02-14)
 - [Phase 05]: FDS and SDS versioned independently, SDS references source FDS version (2026-02-14)
+- [Phase 05]: Section ordering happens BEFORE numbering to avoid reorder-after-number pitfall (2026-02-14)
+- [Phase 05]: Symbol table built AFTER numbering finalized for cross-reference resolution (2026-02-14)
+- [Phase 05]: Orphan severity: equipment modules HIGH, intro/safety MEDIUM, appendices LOW (Claude's discretion) (2026-02-14)
+- [Phase 05]: --force flag allows DRAFT assembly with broken references, DRAFT suffix prevents accidental client delivery (2026-02-14)
+- [Phase 05]: Archive is COPY not MOVE - original phase files remain for continued work (2026-02-14)
 
 ## Blockers
 
@@ -130,7 +135,7 @@ Browser-based UI so non-technical colleagues can run GSD-Docs from a server with
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 05-04-PLAN.md - Release and version management workflow complete
+Stopped at: Completed 05-03-PLAN.md - Complete-FDS assembly command and workflow complete
 Resume file: .planning/phases/05-complete-fds-standards/.continue-here.md
 
 ---
