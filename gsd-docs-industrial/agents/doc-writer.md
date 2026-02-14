@@ -166,9 +166,58 @@ Example row:
 - **related-to:** Complementary information (helps understanding)
 - **see-also:** Additional context (optional reading)
 
+### Step 5.5: Document Edge Cases
+
+Edge cases discovered during writing are captured for orchestrator aggregation. This is a NON-BLOCKING step -- if you identify zero edge cases, that is perfectly fine. Not all sections surface edge cases.
+
+#### 5.5.1 Recognize Edge Cases During Writing
+
+While writing CONTENT.md (Step 3), identify edge cases as you encounter them:
+- **Failure modes:** Sensor failure, power loss, communication timeout, emergency conditions
+- **Unusual sequences:** Double start command, stop during transition, rapid mode changes
+- **Boundary conditions:** Overweight, overtemperature, timeout exceeded, buffer overflow
+- **Recovery procedures:** Manual intervention required, system reset requirements, partial recovery
+- **Minor quirks:** Ignoring duplicate commands, automatic retry behavior, watchdog patterns
+
+#### 5.5.2 Include Edge Cases in CONTENT.md
+
+Edge cases should appear in the appropriate section of CONTENT.md as part of the section content (e.g., under Failure Modes or Interlocks subsection). This is the primary documentation -- the temporary file is for aggregation only.
+
+#### 5.5.3 Create Temporary Edge Case File
+
+After writing CONTENT.md, extract identified edge cases to a temporary file for orchestrator aggregation:
+
+```bash
+EDGE_CASE_TMP="${PHASE_DIR}/${PLAN_ID}-edge-cases.tmp"
+```
+
+For each edge case, append one line in pipe-delimited format:
+```
+| {SEVERITY} | {Situation} | {System Behavior} | {Recovery Steps} | {Design Reason} | {Section Ref} |
+```
+
+**Severity classification (decision tree):**
+- Does it risk safety or equipment damage? → CRITICAL
+- Does it require manual intervention to resolve? → WARNING
+- Otherwise (notable but no intervention needed) → INFO
+
+**Design Reason is REQUIRED.** Every edge case must explain WHY the system behaves this way. Examples:
+- "Immediate brake = mechanical stress; controlled stop balances safety + equipment protection"
+- "Vibration from adjacent equipment can prevent settling; human judgment needed"
+- "Prevents state confusion; operator might press twice by habit"
+
+#### 5.5.4 Cross-Phase Edge Case References
+
+If an edge case references equipment from another phase (detected by section reference outside current phase scope), add a cross-reference entry to CROSS-REFS.md:
+```
+| {current-section} | {referenced-section} | related-to | Edge case references {target} behavior | pending |
+```
+
+This ensures edge case dependencies are tracked for assembly-time validation.
+
 ### Step 6: Self-Verify Before Completing
 
-Run these 7 checks. If any fail, fix before returning:
+Run these 8 checks. If any fail, fix before returning:
 
 - [ ] CONTENT.md has all required sections from PLAN.md template
 - [ ] Technical content is substantive (>500 words for Equipment Modules, >200 for others)
@@ -177,6 +226,7 @@ Run these 7 checks. If any fail, fix before returning:
 - [ ] SUMMARY.md is 100-150 words
 - [ ] SUMMARY.md has all 4 sections (Facts, Key Decisions, Dependencies, Cross-refs)
 - [ ] Cross-references logged in CROSS-REFS.md
+- [ ] Edge cases extracted to {plan-id}-edge-cases.tmp (if any identified)
 
 If verification fails, fix the issue and re-check. Do not return until all 7 checks pass.
 
@@ -190,13 +240,19 @@ Provide this information:
 **CONTENT.md:** {file-size} ({word-count} words)
 **SUMMARY.md:** {word-count} words
 **Cross-references:** {count} logged to CROSS-REFS.md
+**Edge cases:** {count} captured ({CRITICAL} CRITICAL, {WARNING} WARNING, {INFO} INFO)
 
 **[VERIFY] markers:** {count}
 Locations:
 - Line {N}: {context snippet}
 - Line {N}: {context snippet}
 
-**Self-verification:** ✓ All 7 checks passed
+**Self-verification:** ✓ All 8 checks passed
+```
+
+If no edge cases identified, display:
+```
+**Edge cases:** 0 (none identified for this section)
 ```
 
 ## Quality Rules (Locked User Decisions)
