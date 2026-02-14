@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 - Phase: 7 of 7 (SDS Generation + Export)
-- Plan: 2 of 5 in phase (DOCX export complete)
+- Plan: 2 of 5 in phase (Plans 01 and 02 complete)
 - Status: In Progress
-- Last activity: 2026-02-14 - Plan 07-02 complete (DOCX export command and workflow - Pandoc conversion with Mermaid rendering)
+- Last activity: 2026-02-14 - Plan 07-01 complete (SDS document infrastructure - structure template, typicals catalog schema, section templates, traceability report)
 - Next: Continue Phase 7 Plan 3 (SDS generation scaffolding)
 
 ## Progress
@@ -140,6 +140,12 @@ Progress: ███████████████████████�
 - [Phase 07]: Deferred diagrams routed to ENGINEER-TODO.md (not blocking errors) with timeout (60s per diagram) (2026-02-14)
 - [Phase 07]: huisstijl.docx optional reference document (warning if missing, Pandoc defaults as fallback) (2026-02-14)
 - [Phase 07]: --draft and --skip-diagrams flags for graceful degradation during export (2026-02-14)
+- [Phase 07]: SDS structure follows equipment-first preset (matches FDS for cross-reference), software-first alternative deferred (2026-02-14)
+- [Phase 07]: SDS equipment modules have 6 required subsections (vs 5 required + 4 optional in FDS) (2026-02-14)
+- [Phase 07]: Typical matching uses confidence levels (HIGH/MEDIUM/LOW) and NEW TYPICAL NEEDED status for unmatched equipment (2026-02-14)
+- [Phase 07]: Typicals documented via summary + reference pattern (no internal documentation in SDS) (2026-02-14)
+- [Phase 07]: CATALOG-SCHEMA.json is validation schema, not actual catalog (project-specific CATALOG.json files match schema) (2026-02-14)
+- [Phase 07]: TRACEABILITY.md is internal quality check (not client deliverable) with 100% coverage requirement (2026-02-14)
 
 ## Blockers
 
@@ -159,7 +165,7 @@ Browser-based UI so non-technical colleagues can run GSD-Docs from a server with
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 07-02-PLAN.md — DOCX export command and workflow (Pandoc conversion with Mermaid rendering)
+Stopped at: Completed 07-01-PLAN.md — SDS document infrastructure (structure template, typicals catalog schema, section templates, traceability report)
 Resume file: N/A
 
 ---
