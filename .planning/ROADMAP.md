@@ -203,6 +203,15 @@ Plans:
 
 **Requirements:** SDS-01, SDS-02, SDS-03, SDS-04, SDS-05, EXPT-01, EXPT-02, EXPT-03, EXPT-04, EXPT-05, EXPT-06
 
+**Plans:** 5 plans
+
+Plans:
+- [ ] 07-01-PLAN.md -- SDS templates + typicals catalog schema + SDS structure template
+- [ ] 07-02-PLAN.md -- /doc:export command + DOCX export workflow (Pandoc + Mermaid rendering)
+- [ ] 07-03-PLAN.md -- /doc:generate-sds command + SDS generation workflow (typicals matching + scaffolding)
+- [ ] 07-04-PLAN.md -- Pilot typicals catalog + huisstijl.docx + human verification checkpoint
+- [ ] 07-05-PLAN.md -- End-to-end verification checkpoint (automated checks + human approval)
+
 **Success Criteria:**
 
 1. Engineer runs `/doc:generate-sds` on a completed FDS and receives an SDS document where equipment modules are matched against CATALOG.json typicals -- matched modules get SDS content derived from the typical, unmatched modules are flagged as "NEW TYPICAL NEEDED" (never hallucinated)
@@ -232,4 +241,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-14 -- Phase 6 complete (knowledge transfer, fresh eyes, review)*
+*Last updated: 2026-02-14 -- Phase 7 planned (5 plans in 4 waves)*
