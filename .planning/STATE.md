@@ -10,10 +10,10 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 - Phase: 6 of 7 (Knowledge Transfer + Review)
-- Plan: 2 of 5 in phase (Plans 06-01, 06-02 complete)
+- Plan: 1 of 5 in phase (Plan 06-01 complete)
 - Status: In Progress
-- Last activity: 2026-02-14 - Plan 06-02 complete (Edge case capture system)
-- Next: Continue with Plan 06-03
+- Last activity: 2026-02-14 - Plan 06-01 complete (Knowledge transfer templates + discuss-phase enhancement)
+- Next: Continue with Plan 06-02
 
 ## Progress
 
@@ -26,7 +26,7 @@ Progress: █████████████████████░░�
 | 3 | Write + Verify (Core Value) | 5/5 | ✓ Verified |
 | 4 | State Management + Recovery | 5/5 | ✓ Verified |
 | 5 | Complete-FDS + Standards | 5/5 | ✓ Verified |
-| 6 | Knowledge Transfer + Review | 2/5 | In Progress |
+| 6 | Knowledge Transfer + Review | 1/5 | In Progress |
 | 7 | SDS Generation + Export | -/- | Pending |
 
 ## Decisions
@@ -122,6 +122,9 @@ Progress: █████████████████████░░�
 - [Phase 06]: CRITICAL edge cases get dual format: table row + blockquote warning box for visual distinction (2026-02-14)
 - [Phase 06]: Temporary file pattern ({plan-id}-edge-cases.tmp) prevents race conditions between parallel writers (2026-02-14)
 - [Phase 06]: EDGE-CASES.md is per-phase (in phase directory, not project-wide) (2026-02-14)
+- [Phase 06]: RATIONALE.md is project-wide single file organized by FDS section reference
+- [Phase 06]: Edge cases have required Design Reason column - incomplete without it
+- [Phase 06]: Incremental RATIONALE.md capture after each discussion topic (not batch at end)
 
 ## Blockers
 
