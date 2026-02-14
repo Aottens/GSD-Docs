@@ -206,11 +206,11 @@ Plans:
 **Plans:** 5 plans
 
 Plans:
-- [ ] 07-01-PLAN.md -- SDS templates + typicals catalog schema + SDS structure template
-- [ ] 07-02-PLAN.md -- /doc:export command + DOCX export workflow (Pandoc + Mermaid rendering)
-- [ ] 07-03-PLAN.md -- /doc:generate-sds command + SDS generation workflow (typicals matching + scaffolding)
-- [ ] 07-04-PLAN.md -- Pilot typicals catalog + huisstijl.docx + human verification checkpoint
-- [ ] 07-05-PLAN.md -- End-to-end verification checkpoint (automated checks + human approval)
+- [x] 07-01-PLAN.md -- SDS templates + typicals catalog schema + SDS structure template
+- [x] 07-02-PLAN.md -- /doc:export command + DOCX export workflow (Pandoc + Mermaid rendering)
+- [x] 07-03-PLAN.md -- /doc:generate-sds command + SDS generation workflow (typicals matching + scaffolding)
+- [x] 07-04-PLAN.md -- Pilot typicals catalog + huisstijl.docx + human verification checkpoint
+- [x] 07-05-PLAN.md -- End-to-end verification checkpoint (automated checks + human approval)
 
 **Success Criteria:**
 
@@ -236,9 +236,9 @@ Plans:
 | 4 | State Management + Recovery + Dynamic ROADMAP | 9 | Complete |
 | 5 | Complete-FDS + Standards + Assembly | 19 | Complete |
 | 6 | Knowledge Transfer + Review | 9 | Complete |
-| 7 | SDS Generation + DOCX Export + Pilot | 11 | Pending |
+| 7 | SDS Generation + DOCX Export + Pilot | 11 | Complete |
 | **Total** | | **89** | |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-14 -- Phase 7 planned (5 plans in 4 waves)*
+*Last updated: 2026-02-14 -- Phase 7 complete (v1.0 milestone complete)*
