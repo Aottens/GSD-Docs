@@ -143,6 +143,15 @@ Plans:
 
 **Requirements:** STND-01, STND-02, STND-03, STND-04, STND-05, STND-06, ASBL-01, ASBL-02, ASBL-03, ASBL-04, ASBL-05, ASBL-06, ASBL-07, ASBL-08, ASBL-09, ASBL-10, ASBL-11, ASBL-12, KNOW-04
 
+**Plans:** 5 plans
+
+Plans:
+- [ ] 05-01-PLAN.md -- Standards reference data (PackML/ISA-88) + /doc:check-standards command + COMPLIANCE.md template
+- [ ] 05-02-PLAN.md -- FDS structure template (fds-structure.json) + front matter templates (title page, revision history, abbreviations)
+- [ ] 05-03-PLAN.md -- /doc:complete-fds command + full assembly workflow (15 steps) + XREF-REPORT.md template
+- [ ] 05-04-PLAN.md -- /doc:release command + version management workflow (internal/client bumps, archiving, git tagging)
+- [ ] 05-05-PLAN.md -- End-to-end verification checkpoint (11-category automated checks + human approval)
+
 **Success Criteria:**
 
 1. Engineer runs `/doc:complete-fds` and all phases are verified as PASS before assembly proceeds; the output is a single FDS document with proper section numbering, symbolic cross-references resolved to final section numbers, and phase files archived to `.planning/archive/vN.M/`
