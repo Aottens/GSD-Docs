@@ -177,11 +177,11 @@ Plans:
 **Plans:** 5 plans
 
 Plans:
-- [ ] 06-01-PLAN.md -- Templates (RATIONALE, EDGE-CASES, FRESH-EYES, REVIEW) + discuss-phase RATIONALE capture
-- [ ] 06-02-PLAN.md -- Doc-writer edge case capture + write-phase edge case aggregation
-- [ ] 06-03-PLAN.md -- Fresh Eyes subagent + verify-phase Fresh Eyes offer after PASS
-- [ ] 06-04-PLAN.md -- /doc:review-phase command + interactive section-by-section review workflow
-- [ ] 06-05-PLAN.md -- End-to-end verification checkpoint (96 automated checks + human approval)
+- [x] 06-01-PLAN.md -- Templates (RATIONALE, EDGE-CASES, FRESH-EYES, REVIEW) + discuss-phase RATIONALE capture
+- [x] 06-02-PLAN.md -- Doc-writer edge case capture + write-phase edge case aggregation
+- [x] 06-03-PLAN.md -- Fresh Eyes subagent + verify-phase Fresh Eyes offer after PASS
+- [x] 06-04-PLAN.md -- /doc:review-phase command + interactive section-by-section review workflow
+- [x] 06-05-PLAN.md -- End-to-end verification checkpoint (96 automated checks + human approval)
 
 **Success Criteria:**
 
@@ -226,10 +226,10 @@ Plans:
 | 3 | Write + Verify (Core Value) | 15 | Complete |
 | 4 | State Management + Recovery + Dynamic ROADMAP | 9 | Complete |
 | 5 | Complete-FDS + Standards + Assembly | 19 | Complete |
-| 6 | Knowledge Transfer + Review | 9 | Pending |
+| 6 | Knowledge Transfer + Review | 9 | Complete |
 | 7 | SDS Generation + DOCX Export + Pilot | 11 | Pending |
 | **Total** | | **89** | |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-14 -- Phase 5 complete (standards, assembly, version management)*
+*Last updated: 2026-02-14 -- Phase 6 complete (knowledge transfer, fresh eyes, review)*
