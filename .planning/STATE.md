@@ -10,14 +10,14 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 - Phase: 7 of 7 (SDS Generation + Export)
-- Plan: 2 of 5 in phase (Plans 01 and 02 complete)
+- Plan: 3 of 5 in phase (Plans 01, 02, and 03 complete)
 - Status: In Progress
-- Last activity: 2026-02-14 - Plan 07-01 complete (SDS document infrastructure - structure template, typicals catalog schema, section templates, traceability report)
-- Next: Continue Phase 7 Plan 3 (SDS generation scaffolding)
+- Last activity: 2026-02-14 - Plan 07-03 complete (SDS generation command + workflow with typicals matching)
+- Next: Continue Phase 7 Plan 4
 
 ## Progress
 
-Progress: ████████████████████████░░░░░░ ~86%
+Progress: █████████████████████████░░░░░ ~89%
 
 | Phase | Name | Plans | Status |
 |-------|------|-------|--------|
@@ -27,7 +27,7 @@ Progress: ███████████████████████�
 | 4 | State Management + Recovery | 5/5 | ✓ Verified |
 | 5 | Complete-FDS + Standards | 5/5 | ✓ Verified |
 | 6 | Knowledge Transfer + Review | 5/5 | ✓ Verified |
-| 7 | SDS Generation + Export | 2/5 | In Progress |
+| 7 | SDS Generation + Export | 3/5 | In Progress |
 
 ## Decisions
 
@@ -146,6 +146,13 @@ Progress: ███████████████████████�
 - [Phase 07]: Typicals documented via summary + reference pattern (no internal documentation in SDS) (2026-02-14)
 - [Phase 07]: CATALOG-SCHEMA.json is validation schema, not actual catalog (project-specific CATALOG.json files match schema) (2026-02-14)
 - [Phase 07]: TRACEABILITY.md is internal quality check (not client deliverable) with 100% coverage requirement (2026-02-14)
+- [Phase 07]: SDS generation is scaffolding (not transform) — creates project for discuss-plan-write-verify cycle (2026-02-14)
+- [Phase 07]: Typicals matching uses suggest + confirm pattern — engineer reviews during SDS Phase 1 (2026-02-14)
+- [Phase 07]: Three typicals modes: external reference, imported copy (--import), no typicals (skeleton mode) (2026-02-14)
+- [Phase 07]: Matching confidence scoring: I/O 40%, keywords 30%, states 20%, category 10% weights (2026-02-14)
+- [Phase 07]: Unmatched modules get structured skeleton from FDS (not stubs) with NEW TYPICAL NEEDED status (2026-02-14)
+- [Phase 07]: SDS project in parallel .planning/sds/ directory with independent STATE.md (2026-02-14)
+- [Phase 07]: MATCHING-REPORT.md provides human-readable analysis for engineer review (2026-02-14)
 
 ## Blockers
 
@@ -165,7 +172,7 @@ Browser-based UI so non-technical colleagues can run GSD-Docs from a server with
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 07-01-PLAN.md — SDS document infrastructure (structure template, typicals catalog schema, section templates, traceability report)
+Stopped at: Completed 07-03-PLAN.md — SDS generation command + workflow with typicals matching and project scaffolding
 Resume file: N/A
 
 ---
