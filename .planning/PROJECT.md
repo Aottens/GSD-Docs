@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A Claude Code plugin that adapts the GSD (Get Shit Done) workflow for writing industrial FDS (Functional Design Specification) and SDS (Software Design Specification) documents. Same architecture as GSD — frontmatter-driven Markdown commands, subagent delegation, wave-based parallelization — but producing technical documentation instead of code. Commands live under `/doc:*` and run alongside GSD without interference.
+A Claude Code plugin that adapts the GSD (Get Shit Done) workflow for writing industrial FDS (Functional Design Specification) and SDS (Software Design Specification) documents. 14 commands under `/doc:*` cover the full lifecycle: project creation, structured discussion, section planning, parallel writing with context isolation, goal-backward verification, FDS assembly, SDS generation with typicals matching, and DOCX export with corporate styling. Runs alongside GSD without interference.
 
 ## Core Value
 
@@ -12,73 +12,79 @@ Engineers can go from project brief to complete, verified FDS document through a
 
 ### Validated
 
-(None yet — ship to validate)
+- ✓ `/doc:new-fds` -- classify project (Type A/B/C/D), generate all planning artifacts -- v1.0
+- ✓ `/doc:discuss-phase N` -- identify gray areas, capture decisions in CONTEXT.md -- v1.0
+- ✓ `/doc:plan-phase N` -- generate section PLANs with wave assignments -- v1.0
+- ✓ `/doc:write-phase N` -- parallel-write CONTENT.md + SUMMARY.md with context isolation -- v1.0
+- ✓ `/doc:verify-phase N` -- goal-backward 5-level verification with gap detection -- v1.0
+- ✓ `/doc:review-phase N` -- client/engineer review with feedback capture -- v1.0
+- ✓ `/doc:complete-fds` -- FDS assembly with cross-ref resolution and versioning -- v1.0
+- ✓ `/doc:generate-sds` -- SDS scaffolding with typicals matching -- v1.0
+- ✓ `/doc:export` -- DOCX export with Pandoc + Mermaid rendering -- v1.0
+- ✓ `/doc:status` -- project progress overview from STATE.md + ROADMAP.md -- v1.0
+- ✓ `/doc:resume` -- crash recovery with forward-only strategy -- v1.0
+- ✓ `/doc:release` -- version management (internal/client) -- v1.0
+- ✓ `/doc:expand-roadmap` -- dynamic ROADMAP evolution when >5 units discovered -- v1.0
+- ✓ `/doc:check-standards` -- opt-in PackML/ISA-88 compliance checking -- v1.0
+- ✓ 4 project types with distinct ROADMAP templates (A/B/C/D) -- v1.0
+- ✓ Gap closure loop: verify -> plan --gaps -> write -> re-verify (max 2 cycles) -- v1.0
+- ✓ Knowledge transfer: RATIONALE.md, EDGE-CASES.md, Fresh Eyes review -- v1.0
+- ✓ FDS section templates (equipment module, state machine, interface) -- v1.0
+- ✓ Bilingual Dutch/English output -- v1.0
+- ✓ BASELINE.md for modification projects (Type C/D) -- v1.0
+- ✓ Typicals library (CATALOG.json) for SDS matching -- v1.0
 
 ### Active
 
-- [ ] `/doc:new-fds` — classify project (Type A/B/C/D), generate ROADMAP.md, PROJECT.md, REQUIREMENTS.md, STATE.md
-- [ ] `/doc:discuss-phase N` — identify gray areas for a phase, capture decisions in CONTEXT.md
-- [ ] `/doc:plan-phase N` — generate section PLANs with wave assignments and verification criteria
-- [ ] `/doc:write-phase N` — parallel-write CONTENT.md + SUMMARY.md per plan with fresh context
-- [ ] `/doc:verify-phase N` — goal-backward verification, gap detection, VERIFICATION.md
-- [ ] `/doc:review-phase N` — optional client/engineer review, REVIEW.md
-- [ ] `/doc:complete-fds` — merge all phases into final FDS document, cross-ref validation
-- [ ] `/doc:generate-sds` — transform FDS to SDS with typicals matching
-- [ ] `/doc:export` — DOCX export with corporate styling (Pandoc + huisstijl.docx)
-- [ ] `/doc:status` — project progress overview from STATE.md + ROADMAP.md
-- [ ] `/doc:resume` — recover from interrupts, detect incomplete operations
-- [ ] `/doc:release` — version management (internal drafts → client releases)
-- [ ] 4 project types with distinct ROADMAP templates (A: new+standards, B: new flex, C: mod large, D: mod small/TWN)
-- [ ] Dynamic ROADMAP evolution after System Overview phase (>5 units → expand into grouped phases)
-- [ ] Gap closure loop: verify → plan --gaps → write → re-verify
-- [ ] STATE.md checkpoint system with crash recovery (forward-only strategy)
-- [ ] Cross-reference registry (CROSS-REFS.md) with strict validation at complete-fds
-- [ ] Knowledge transfer: RATIONALE.md (at discuss), EDGE-CASES.md (at write), Fresh Eyes (at verify)
-- [ ] SUMMARY.md per section — compact AI-readable summaries (max 150 words, facts only)
-- [ ] Standards integration as opt-in (PackML, ISA-88) — never pushed, loaded only when enabled
-- [ ] Typicals library (CATALOG.json) for SDS generation matching
-- [ ] Configurable output language (Dutch/English) via config setting
-- [ ] BASELINE.md for modification projects (Type C/D) — existing system as given, describe only delta
-- [ ] ENGINEER-TODO.md generated at complete-fds for diagrams too complex for Mermaid
-- [ ] Mermaid diagram support (state, flowchart, sequence) with fallback for complex diagrams
-- [ ] FDS section templates (equipment module, state machine, interface) with structured tables
-- [ ] Versioning: v0.x internal drafts, vN.0 client releases, FDS and SDS versioned independently
+(None -- next milestone requirements TBD via `/gsd:new-milestone`)
 
 ### Out of Scope
 
-- Modifying GSD itself — GSD-Docs is a standalone plugin that follows GSD's patterns
-- P&ID / electrical diagram generation — these are external Engineering Package items, referenced as attachments
-- Real PLC code generation — SDS describes software design, doesn't produce executable code
-- Local LLM deployment (Mac Studio / Llama 405B) — Phase 2 future consideration, not part of this build
-- Pandoc/mermaid-cli installation — assumed as system dependencies, documented but not automated
+- Modifying GSD itself -- GSD-Docs is a standalone plugin
+- PLC code generation -- SDS describes design, not executable code; safety risk
+- P&ID / electrical diagram generation -- Engineering Package items requiring CAD tools
+- Real-time multi-user editing -- document generation is single-user; review-phase handles collaboration
+- Full-auto mode (zero human input) -- equipment specifics cannot be inferred
+- Database-backed state management -- STATE.md is human-readable, git-trackable
+- Local LLM deployment -- deferred to v2 requirements
+- Client-specific RAG system -- CATALOG.json + BASELINE.md handle reuse cleanly
 
 ## Context
 
-- **Architecture model:** Identical to GSD — commands as frontmatter-driven .md files in `~/.claude/commands/doc/`, supporting files (references, templates) in `~/.claude/gsd-docs-industrial/`
-- **Specification:** SPECIFICATION.md v2.7.0 is the SSOT for all behavior, covering workflow, project types, commands, folder structure, standards, export, knowledge transfer, error recovery, and versioning
-- **CLAUDE-CONTEXT.md:** Condensed version of the specification for quick Claude context loading
-- **GSD reference implementation:** GSD v1.6.4 at `~/.claude/get-shit-done/` — 24 commands in `~/.claude/commands/gsd/`, frontmatter-driven with subagent spawning, wave parallelization, and @-reference context injection
-- **Domain:** Industrial automation documentation — FDS/SDS documents describe functional behavior of machinery/production lines for PLC/SCADA programming
-- **Users:** Industrial automation engineers writing documentation for client projects, ranging from small modifications (Type D, ~30 min) to large new installations (Type A, 100+ motors)
+Shipped v1.0 with 48,700 lines of Markdown across 194 files.
+Tech stack: Claude Code plugin (.md commands with frontmatter), GSD architecture (subagent delegation, wave parallelization, @-reference context injection).
+14 commands, 14 workflows, 3 subagents (doc-writer, doc-verifier, fresh-eyes).
+30 templates consumed across 7 phases.
+89/89 requirements satisfied, 7/7 E2E flows verified.
+
+**Architecture:** Commands as frontmatter-driven .md files in `~/.claude/commands/doc/`, supporting files in `~/.claude/gsd-docs-industrial/`. SPECIFICATION.md v2.7.0 is the SSOT.
+
+**Users:** Industrial automation engineers writing FDS/SDS documents for client projects, Type A (new + standards, 100+ motors) through Type D (small modifications/TWN).
 
 ## Constraints
 
-- **Plugin architecture**: Must follow GSD's command registration pattern (frontmatter .md files in `~/.claude/commands/doc/`) — this is how Claude Code discovers and executes custom commands
-- **Context management**: Fresh context per write task (only PROJECT.md + CONTEXT.md + current PLAN.md + standards) — no cross-contamination between sections
-- **Subagent pattern**: Heavy operations (writing, verification) delegated to subagents to protect main context window
-- **Specification compliance**: SPECIFICATION.md v2.7.0 is the SSOT — all behavior must match the spec
-- **Standards opt-in**: PackML/ISA-88 content loaded conditionally based on PROJECT.md config — never hardcoded
+- **Plugin architecture**: Must follow GSD's command registration pattern (frontmatter .md files in `~/.claude/commands/doc/`)
+- **Context management**: Fresh context per write task (only PROJECT.md + CONTEXT.md + current PLAN.md + standards)
+- **Subagent pattern**: Heavy operations delegated to subagents to protect main context window
+- **Specification compliance**: SPECIFICATION.md v2.7.0 is the SSOT
+- **Standards opt-in**: PackML/ISA-88 loaded conditionally, never hardcoded
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Standalone plugin, not GSD fork | GSD-Docs has fundamentally different output (docs vs code); forking would create maintenance burden | — Pending |
-| Commands under `/doc:*` prefix | Clear namespace separation from GSD's `/gsd:*` commands | — Pending |
-| Defer standards content to later milestone | Core workflow is independent of PackML/ISA-88 content; focus on command structure first | — Pending |
-| Configurable language (Dutch/English) | Framework supports international use; Dutch is primary but not hardcoded | — Pending |
-| 7 milestones matching spec §11 roadmap | Natural decomposition; each milestone delivers testable capability | — Pending |
-| Forward-only error recovery | Simpler than rollback; idempotent resume is safer for document generation | — Pending |
+| Standalone plugin, not GSD fork | Different output (docs vs code); forking = maintenance burden | ✓ Good -- clean separation, zero GSD interference |
+| Commands under `/doc:*` prefix | Clear namespace separation from `/gsd:*` | ✓ Good -- 14 commands coexist with GSD |
+| Configurable language (Dutch/English) | Framework supports international use | ✓ Good -- bilingual templates throughout |
+| SUMMARY.md as completion proof | STATE.md can corrupt; file existence is atomic | ✓ Good -- reliable forward-only recovery |
+| Forward-only error recovery | Simpler than rollback; idempotent resume is safer | ✓ Good -- crash recovery works reliably |
+| 5-level verification cascade | Goal-backward checking catches gaps task-based QA misses | ✓ Good -- systematic gap detection |
+| Context isolation for writers | Prevents cross-contamination between parallel sections | ✓ Good -- each writer gets focused context |
+| Standards as opt-in verification level | Never push standards on projects that don't need them | ✓ Good -- PackML/ISA-88 only when enabled |
+| SDS generation as scaffolding (not transform) | SDS needs discuss-plan-write-verify cycle too | ✓ Good -- reuses full pipeline |
+| Typicals matching with confidence scoring | Prevents hallucinated SDS content for unknown equipment | ✓ Good -- NEW TYPICAL NEEDED for unmatched |
+| Pandoc + huisstijl.docx for export | Industry-standard toolchain, corporate styling | ✓ Good -- graceful degradation with --draft/--skip-diagrams |
+| Plugin files in project repo, installed via junctions | No admin required, version-controlled | ✓ Good -- install.ps1 handles setup |
 
 ---
-*Last updated: 2026-02-06 after initialization*
+*Last updated: 2026-02-14 after v1.0 milestone*
