@@ -324,6 +324,83 @@ For each topic in `SELECTED_TOPICS`:
    Anything else for this topic, or move on?
    ```
 
+4a. **Update RATIONALE.md (after each topic completes):**
+
+   After summarizing decisions for a topic, extract and log to RATIONALE.md:
+
+   **4a.1 Check if RATIONALE.md exists:**
+
+   ```bash
+   RATIONALE_FILE=".planning/RATIONALE.md"
+
+   if [ ! -f "$RATIONALE_FILE" ]; then
+     echo "📝 Creating RATIONALE.md from template..."
+     cp ~/.claude/gsd-docs-industrial/templates/rationale.md "$RATIONALE_FILE"
+     # Replace placeholder variables
+     PROJECT_NAME=$(grep "^# " .planning/PROJECT.md | head -1 | sed 's/# //')
+     sed -i "s/{Project Name from PROJECT.md}/${PROJECT_NAME}/g" "$RATIONALE_FILE"
+     sed -i "s/{YYYY-MM-DD}/$(date +%Y-%m-%d)/g" "$RATIONALE_FILE"
+   fi
+   ```
+
+   **4a.2 Extract decision context from the just-discussed topic:**
+
+   For the discussion area just completed, identify:
+   - Decision statement (what was decided)
+   - Reasoning (why this choice - engineer's explanation from discussion)
+   - Alternatives considered (what was ruled out and why)
+   - FDS section reference (which section this decision applies to, derived from discussion context)
+
+   **Entry boundary guidance (Claude's discretion):**
+   - If one discussion answer covers a single topic: one entry
+   - If one answer covers multiple distinct decisions: split into separate entries under same section
+   - If decision spans multiple sections: single entry under most relevant section with "Also applies to: [other sections]"
+
+   **4a.3 Check for existing section entry in RATIONALE.md:**
+
+   ```bash
+   SECTION_REF="§X.Y"  # Derived from discussion context (e.g., "§3.2" for EM-200)
+   SECTION_EXISTS=$(grep -c "^### ${SECTION_REF}" "$RATIONALE_FILE" || echo 0)
+
+   if [ "$SECTION_EXISTS" -gt 0 ]; then
+     # Section heading already exists from previous phase - append under existing section
+     INSERT_MODE="append-to-section"
+   else
+     # New section - create section heading + entry
+     INSERT_MODE="new-section"
+   fi
+   ```
+
+   **4a.4 Append structured entry to RATIONALE.md:**
+
+   Format per template:
+   ```markdown
+   ### {Decision Title}
+   **Decision:** {1-2 sentences describing what was decided}
+   **Reasoning:** {2-3 sentences explaining why this choice, including engineering rationale}
+   **Alternatives:** {What was considered and ruled out, 1-2 sentences with reasons}
+   **Date:** {YYYY-MM-DD}
+   **Phase:** {N}
+   ```
+
+   Example:
+   ```markdown
+   ### E-stop Behavior
+   **Decision:** Controlled stop with position retention
+   **Reasoning:** E-stop must prevent load drop (safety requirement), but immediate motor cut would cause brake engagement at speed causing mechanical stress. Controlled deceleration over 500ms balances safety (no load drop) and equipment protection (gradual brake engagement).
+   **Alternatives:** Immediate stop (ruled out: brake wear and mechanical stress), coast to stop (ruled out: safety - load may drop), drop to safe zone (ruled out: no designated safe zone exists in this facility)
+   **Date:** 2026-02-14
+   **Phase:** 3
+   ```
+
+   **4a.5 Display confirmation:**
+
+   ```
+   📝 RATIONALE.md updated:
+      {Section Ref} {Decision Title}
+      -- Decision, reasoning, and alternatives logged
+   ```
+
 5. **Move to next topic when engineer confirms.**
 
 ### 5.2 Cross-Reference Handling
@@ -452,6 +529,7 @@ Topics discussed: {count}
 Decisions captured: {count}
 Items delegated to Claude's Discretion: {count}
 Deferred items: {count}
+RATIONALE entries: {count} logged to .planning/RATIONALE.md
 
 CONTEXT.md: {path to file}
 ```
@@ -496,5 +574,6 @@ Dutch (if `LANGUAGE = "nl"`): translate "Next Up" to "Volgende Stap", "Also avai
 10. **Interactive conversation:** AskUserQuestion for structured selections. Inline conversation for technical deep-dives.
 11. **No emoji in text:** Only use status symbols defined in ui-brand.md.
 12. **Error handling:** Show error box and stop if ROADMAP.md missing, phase not found, or dependencies unmet.
+13. **RATIONALE.md capture:** After each discussion topic completes, log decisions to .planning/RATIONALE.md. Every significant decision is logged (completeness over curation). RATIONALE.md is project-wide, organized by FDS section reference.
 
 </workflow>
