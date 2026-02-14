@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 - Phase: 5 of 7 (Complete-FDS + Standards)
-- Plan: 1 of 5 in phase (Plan 05-01 complete)
+- Plan: 4 of 5 in phase (Plan 05-04 complete)
 - Status: In progress
-- Last activity: 2026-02-14 - Completed 05-01-PLAN.md (Standards Reference Data + Validation)
+- Last activity: 2026-02-14 - Completed 05-04-PLAN.md (Release and Version Management)
 - Next: Continue Phase 5 planning/execution
 
 ## Progress
@@ -25,7 +25,7 @@ Progress: ██████████████░░░░░░░░░�
 | 2 | Discuss + Plan Commands | 4/4 | ✓ Verified |
 | 3 | Write + Verify (Core Value) | 5/5 | ✓ Verified |
 | 4 | State Management + Recovery | 5/5 | ✓ Verified |
-| 5 | Complete-FDS + Standards | 1/5 | In Progress |
+| 5 | Complete-FDS + Standards | 4/5 | In Progress |
 | 6 | Knowledge Transfer + Review | -/- | Pending |
 | 7 | SDS Generation + Export | -/- | Pending |
 
@@ -107,6 +107,10 @@ Progress: ██████████████░░░░░░░░░�
 - [Phase 05]: PackML state validation uses exact match enforcement with common synonyms mapped to remediation hints (2026-02-14)
 - [Phase 05]: ISA-88 terminology context-aware - enforced in hierarchy sections, relaxed in I/O tables (2026-02-14)
 - [Phase 05]: Standards severity configurable per standard (error blocks assembly, warning is non-blocking) (2026-02-14)
+- [Phase 05]: Version scheme: v0.x internal drafts, v1.0 first client release, v1.1 internal revisions, v2.0 next client (2026-02-14)
+- [Phase 05]: Client release gate: all phases must pass verification, but --force allows release with warnings (2026-02-14)
+- [Phase 05]: Previous version files archived to .planning/archive/vX.Y/ on new release (2026-02-14)
+- [Phase 05]: FDS and SDS versioned independently, SDS references source FDS version (2026-02-14)
 
 ## Blockers
 
@@ -126,7 +130,7 @@ Browser-based UI so non-technical colleagues can run GSD-Docs from a server with
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 05-01-PLAN.md - Standards reference data and validation workflow complete
+Stopped at: Completed 05-04-PLAN.md - Release and version management workflow complete
 Resume file: .planning/phases/05-complete-fds-standards/.continue-here.md
 
 ---
