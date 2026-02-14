@@ -1,0 +1,316 @@
+{
+  "version": "1.0",
+  "description": "Canonical FDS section ordering for document assembly. Consumed by /doc:complete-fds workflow to reorder phase content into correct IEC-style hierarchical structure regardless of ROADMAP phase order.",
+  "placeholder_stub": "[TO BE COMPLETED]",
+
+  "sections": [
+    {
+      "id": "1",
+      "title": { "en": "Introduction", "nl": "Introductie" },
+      "depth": 1,
+      "required": true,
+      "source_type": "system-overview",
+      "children": [
+        {
+          "id": "1.1",
+          "title": { "en": "Purpose and Scope", "nl": "Doel en Scope" },
+          "depth": 2,
+          "required": true,
+          "source_type": "system-overview"
+        },
+        {
+          "id": "1.2",
+          "title": { "en": "Document Conventions", "nl": "Document Conventies" },
+          "depth": 2,
+          "required": true,
+          "source_type": "system-overview"
+        },
+        {
+          "id": "1.3",
+          "title": { "en": "References", "nl": "Referenties" },
+          "depth": 2,
+          "required": true,
+          "source_type": "system-overview"
+        },
+        {
+          "id": "1.4",
+          "title": { "en": "Abbreviations", "nl": "Afkortingen" },
+          "depth": 2,
+          "required": true,
+          "source_type": "auto-generated"
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "title": { "en": "System Overview", "nl": "Systeemoverzicht" },
+      "depth": 1,
+      "required": true,
+      "source_type": "system-overview",
+      "children": [
+        {
+          "id": "2.1",
+          "title": { "en": "System Description", "nl": "Systeembeschrijving" },
+          "depth": 2,
+          "required": true,
+          "source_type": "system-overview"
+        },
+        {
+          "id": "2.2",
+          "title": { "en": "System Architecture", "nl": "Systeemarchitectuur" },
+          "depth": 2,
+          "required": true,
+          "source_type": "system-overview"
+        },
+        {
+          "id": "2.3",
+          "title": { "en": "Equipment Overview", "nl": "Apparatuuroverzicht" },
+          "depth": 2,
+          "required": true,
+          "source_type": "system-overview"
+        }
+      ]
+    },
+    {
+      "id": "3",
+      "title": { "en": "Functional Requirements", "nl": "Functionele Eisen" },
+      "depth": 1,
+      "required": true,
+      "source_type": "functional-requirements",
+      "children": [
+        {
+          "id": "3.1",
+          "title": { "en": "Operating Modes", "nl": "Bedrijfsmodi" },
+          "depth": 2,
+          "required": true,
+          "source_type": "functional-requirements"
+        },
+        {
+          "id": "3.2",
+          "title": { "en": "State Machine", "nl": "Toestandsmachine" },
+          "depth": 2,
+          "required": true,
+          "source_type": "functional-requirements"
+        },
+        {
+          "id": "3.3",
+          "title": { "en": "General Operating Sequence", "nl": "Algemene Bedrijfsvolgorde" },
+          "depth": 2,
+          "required": true,
+          "source_type": "functional-requirements"
+        }
+      ]
+    },
+    {
+      "id": "4",
+      "title": { "en": "Equipment Modules", "nl": "Apparatuurmodules" },
+      "depth": 1,
+      "required": true,
+      "source_type": "dynamic",
+      "children": []
+    },
+    {
+      "id": "5",
+      "title": { "en": "Interfaces", "nl": "Interfaces" },
+      "depth": 1,
+      "required": true,
+      "source_type": "interfaces",
+      "children": [
+        {
+          "id": "5.1",
+          "title": { "en": "PLC Interfaces", "nl": "PLC Interfaces" },
+          "depth": 2,
+          "required": true,
+          "source_type": "interfaces"
+        },
+        {
+          "id": "5.2",
+          "title": { "en": "SCADA/HMI Interface", "nl": "SCADA/HMI Interface" },
+          "depth": 2,
+          "required": true,
+          "source_type": "interfaces"
+        },
+        {
+          "id": "5.3",
+          "title": { "en": "External System Interfaces", "nl": "Externe Systeeminterfaces" },
+          "depth": 2,
+          "required": false,
+          "source_type": "interfaces"
+        }
+      ]
+    },
+    {
+      "id": "6",
+      "title": { "en": "Safety", "nl": "Veiligheid" },
+      "depth": 1,
+      "required": true,
+      "source_type": "safety",
+      "children": [
+        {
+          "id": "6.1",
+          "title": { "en": "Safety Functions", "nl": "Veiligheidsfuncties" },
+          "depth": 2,
+          "required": true,
+          "source_type": "safety"
+        },
+        {
+          "id": "6.2",
+          "title": { "en": "Emergency Stop", "nl": "Noodstop" },
+          "depth": 2,
+          "required": true,
+          "source_type": "safety"
+        },
+        {
+          "id": "6.3",
+          "title": { "en": "Safety Interlocks", "nl": "Veiligheidsinterlocks" },
+          "depth": 2,
+          "required": true,
+          "source_type": "safety"
+        }
+      ]
+    },
+    {
+      "id": "7",
+      "title": { "en": "Appendices", "nl": "Bijlagen" },
+      "depth": 1,
+      "required": false,
+      "source_type": "appendices",
+      "children": [
+        {
+          "id": "7.1",
+          "title": { "en": "Complete I/O List", "nl": "Volledige I/O Lijst" },
+          "depth": 2,
+          "required": false,
+          "source_type": "auto-generated"
+        },
+        {
+          "id": "7.2",
+          "title": { "en": "Signal Descriptions", "nl": "Signaalbeschrijvingen" },
+          "depth": 2,
+          "required": false,
+          "source_type": "appendices"
+        },
+        {
+          "id": "7.3",
+          "title": { "en": "Mermaid Diagram Notes", "nl": "Mermaid Diagram Opmerkingen" },
+          "depth": 2,
+          "required": false,
+          "source_type": "appendices"
+        }
+      ]
+    }
+  ],
+
+  "dynamic_sections": {
+    "equipment_modules": {
+      "parent_id": "4",
+      "source": "roadmap_phases",
+      "per_unit": true,
+      "description": "One subsection per equipment module discovered in ROADMAP phases. Subsection numbering follows 4.x pattern where x is sequential.",
+      "subsections": [
+        {
+          "suffix": "1",
+          "title": { "en": "Function Description", "nl": "Functiebeschrijving" },
+          "required": true,
+          "source_field": "function"
+        },
+        {
+          "suffix": "2",
+          "title": { "en": "Operating States", "nl": "Bedrijfstoestanden" },
+          "required": true,
+          "source_field": "states"
+        },
+        {
+          "suffix": "3",
+          "title": { "en": "Parameters and Setpoints", "nl": "Parameters en Setpoints" },
+          "required": true,
+          "source_field": "parameters"
+        },
+        {
+          "suffix": "4",
+          "title": { "en": "Interlocks and Conditions", "nl": "Interlocks en Condities" },
+          "required": true,
+          "source_field": "interlocks"
+        },
+        {
+          "suffix": "5",
+          "title": { "en": "I/O List", "nl": "I/O Lijst" },
+          "required": true,
+          "source_field": "io_list"
+        },
+        {
+          "suffix": "6",
+          "title": { "en": "HMI Visualization", "nl": "HMI Visualisatie" },
+          "required": false,
+          "source_field": "hmi"
+        },
+        {
+          "suffix": "7",
+          "title": { "en": "Alarms and Events", "nl": "Alarmen en Events" },
+          "required": false,
+          "source_field": "alarms"
+        },
+        {
+          "suffix": "8",
+          "title": { "en": "Communication Interfaces", "nl": "Communicatie-interfaces" },
+          "required": false,
+          "source_field": "communication"
+        },
+        {
+          "suffix": "9",
+          "title": { "en": "Maintenance", "nl": "Onderhoud" },
+          "required": false,
+          "source_field": "maintenance"
+        }
+      ],
+      "required_subsections": ["function", "states", "parameters", "interlocks", "io_list"],
+      "optional_subsections": ["hmi", "alarms", "communication", "maintenance"]
+    }
+  },
+
+  "type_conditional": {
+    "baseline_section": {
+      "applies_to": ["C", "D"],
+      "parent_id": "1",
+      "insert_after": "1.3",
+      "id": "1.4",
+      "title": { "en": "Baseline System", "nl": "Bestaand Systeem" },
+      "depth": 2,
+      "required": true,
+      "source_type": "baseline",
+      "note": "When baseline section is inserted, standard section 1.4 (Abbreviations) shifts to 1.5"
+    }
+  },
+
+  "mapping_conventions": {
+    "description": "How the assembly workflow maps ROADMAP phase content to FDS sections",
+    "static_sections": {
+      "system-overview": "Maps to section 1 (Introduction) and section 2 (System Overview) from ROADMAP phase with goal containing 'system overview' or 'introduction'",
+      "functional-requirements": "Maps to section 3 (Functional Requirements) from ROADMAP phase with goal containing 'operating modes', 'state machine', or 'sequence'",
+      "interfaces": "Maps to section 5 (Interfaces) from ROADMAP phase with goal containing 'interface', 'communication', or 'integration'",
+      "safety": "Maps to section 6 (Safety) from ROADMAP phase with goal containing 'safety', 'emergency', or 'interlock'",
+      "baseline": "Maps to section 1.4 (Baseline System) from BASELINE.md file in project root (Type C/D only)",
+      "appendices": "Maps to section 7 (Appendices) from various sources: complete I/O list auto-generated from all equipment modules, signal descriptions from dedicated appendix phase"
+    },
+    "dynamic_sections": {
+      "equipment_modules": "Maps to section 4.x subsections from ROADMAP phases where phase name matches equipment module naming convention (e.g., 'EM-XX: Equipment Name'). Each equipment module phase CONTENT.md provides content for subsections 4.x.1 through 4.x.9 based on subsection markers in the content file."
+    },
+    "auto_generated": {
+      "abbreviations": "Section 1.4 (or 1.5 if baseline exists) auto-generated from scanning all document content for uppercase 2+ letter sequences, matched against industrial abbreviations dictionary, plus manual additions from abbreviations.md frontmatter template",
+      "complete_io_list": "Section 7.1 auto-generated by aggregating all I/O List subsections (4.x.5) from equipment modules into a single consolidated table"
+    }
+  },
+
+  "assembly_workflow_instructions": {
+    "step_1": "Parse this fds-structure.json to determine canonical section ordering and hierarchy",
+    "step_2": "Determine project type (A/B/C/D) from PROJECT.md metadata",
+    "step_3": "If Type C or D, insert baseline section per type_conditional rules (shifts abbreviations from 1.4 to 1.5)",
+    "step_4": "Scan ROADMAP.md to discover all equipment module phases (match naming pattern)",
+    "step_5": "For each equipment module, create section 4.x with 9 subsections per dynamic_sections.equipment_modules template",
+    "step_6": "Map ROADMAP phase content to static sections using mapping_conventions",
+    "step_7": "For any required section without content, insert placeholder_stub text",
+    "step_8": "Auto-generate abbreviations list (1.4 or 1.5) and complete I/O list (7.1)",
+    "step_9": "Number all sections according to hierarchy (handle baseline insertion offset)",
+    "step_10": "Assemble final document with: frontmatter (title page, revision history, ToC, abbreviations) + body (sections 1-7) + appendices"
+  }
+}
