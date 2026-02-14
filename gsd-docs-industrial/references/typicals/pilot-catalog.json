@@ -1,0 +1,722 @@
+{
+  "$schema": "../CATALOG-SCHEMA.json",
+  "schema_version": "1.0",
+  "library": {
+    "name": "GSD-Standard-Library",
+    "version": "1.0.0",
+    "platform": "TIA Portal V18",
+    "updated": "2026-02-14"
+  },
+  "typicals": [
+    {
+      "id": "FB_AnalogIn",
+      "type": "Control Module",
+      "category": "Input Processing",
+      "description": "Processes 4-20mA analog input signals with scaling, high/low alarm limits, and signal quality monitoring.",
+      "interfaces": {
+        "inputs": [
+          {
+            "name": "RawValue",
+            "dataType": "INT",
+            "description": "Raw ADC value from PLC input card"
+          },
+          {
+            "name": "ScaleMin",
+            "dataType": "REAL",
+            "description": "Engineering unit value at 4mA"
+          },
+          {
+            "name": "ScaleMax",
+            "dataType": "REAL",
+            "description": "Engineering unit value at 20mA"
+          },
+          {
+            "name": "HighLimit",
+            "dataType": "REAL",
+            "description": "High alarm threshold"
+          },
+          {
+            "name": "LowLimit",
+            "dataType": "REAL",
+            "description": "Low alarm threshold"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "ScaledValue",
+            "dataType": "REAL",
+            "description": "Scaled value in engineering units"
+          },
+          {
+            "name": "HighAlarm",
+            "dataType": "BOOL",
+            "description": "TRUE when value exceeds HighLimit"
+          },
+          {
+            "name": "LowAlarm",
+            "dataType": "BOOL",
+            "description": "TRUE when value below LowLimit"
+          },
+          {
+            "name": "SignalFault",
+            "dataType": "BOOL",
+            "description": "TRUE when signal out of range or invalid"
+          }
+        ]
+      },
+      "use_cases": [
+        "Temperature sensors",
+        "Pressure transmitters",
+        "Flow meters",
+        "Level sensors"
+      ],
+      "documentation": null
+    },
+    {
+      "id": "FB_DigitalIn",
+      "type": "Control Module",
+      "category": "Input Processing",
+      "description": "Processes digital input signals with debouncing, inversion option, and pulse counting capabilities.",
+      "interfaces": {
+        "inputs": [
+          {
+            "name": "RawInput",
+            "dataType": "BOOL",
+            "description": "Raw digital input from field device"
+          },
+          {
+            "name": "DebounceTime",
+            "dataType": "TIME",
+            "description": "Debounce time to filter noise"
+          },
+          {
+            "name": "Invert",
+            "dataType": "BOOL",
+            "description": "TRUE to invert input logic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "ProcessedValue",
+            "dataType": "BOOL",
+            "description": "Debounced and processed value"
+          },
+          {
+            "name": "PulseCount",
+            "dataType": "DINT",
+            "description": "Count of rising edges detected"
+          },
+          {
+            "name": "FaultState",
+            "dataType": "BOOL",
+            "description": "TRUE when input fault detected"
+          }
+        ]
+      },
+      "use_cases": [
+        "Limit switches",
+        "Proximity sensors",
+        "Push buttons"
+      ],
+      "documentation": null
+    },
+    {
+      "id": "FB_MotorDOL",
+      "type": "Control Module",
+      "category": "Motor Control",
+      "description": "Direct-on-line motor starter with thermal protection, start/stop control, and running feedback monitoring.",
+      "interfaces": {
+        "inputs": [
+          {
+            "name": "CmdStart",
+            "dataType": "BOOL",
+            "description": "Command to start motor"
+          },
+          {
+            "name": "CmdStop",
+            "dataType": "BOOL",
+            "description": "Command to stop motor"
+          },
+          {
+            "name": "FeedbackRunning",
+            "dataType": "BOOL",
+            "description": "Contactor auxiliary feedback"
+          },
+          {
+            "name": "ThermalOK",
+            "dataType": "BOOL",
+            "description": "Motor thermal overload relay status"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "ContactorOut",
+            "dataType": "BOOL",
+            "description": "Contactor coil output"
+          },
+          {
+            "name": "MotorRunning",
+            "dataType": "BOOL",
+            "description": "TRUE when motor confirmed running"
+          },
+          {
+            "name": "MotorFault",
+            "dataType": "BOOL",
+            "description": "TRUE when fault detected"
+          },
+          {
+            "name": "RunHours",
+            "dataType": "REAL",
+            "description": "Accumulated motor run hours"
+          }
+        ]
+      },
+      "use_cases": [
+        "Conveyor motors",
+        "Pump motors (constant speed)",
+        "Fan motors"
+      ],
+      "states": [
+        {
+          "name": "IDLE",
+          "description": "Motor stopped, ready to start"
+        },
+        {
+          "name": "STARTING",
+          "description": "Contactor energized, waiting for feedback"
+        },
+        {
+          "name": "RUNNING",
+          "description": "Motor running normally"
+        },
+        {
+          "name": "STOPPING",
+          "description": "Contactor de-energized, coast to stop"
+        },
+        {
+          "name": "FAULT",
+          "description": "Fault condition detected"
+        }
+      ],
+      "documentation": null
+    },
+    {
+      "id": "FB_MotorVFD",
+      "type": "Control Module",
+      "category": "Motor Control",
+      "description": "Variable frequency drive motor control with speed setpoint, ramp management, and frequency feedback.",
+      "interfaces": {
+        "inputs": [
+          {
+            "name": "CmdStart",
+            "dataType": "BOOL",
+            "description": "Command to start VFD"
+          },
+          {
+            "name": "CmdStop",
+            "dataType": "BOOL",
+            "description": "Command to stop VFD"
+          },
+          {
+            "name": "SpeedSetpoint",
+            "dataType": "REAL",
+            "description": "Speed setpoint in Hz or %"
+          },
+          {
+            "name": "RampUpTime",
+            "dataType": "TIME",
+            "description": "Acceleration ramp time"
+          },
+          {
+            "name": "RampDownTime",
+            "dataType": "TIME",
+            "description": "Deceleration ramp time"
+          },
+          {
+            "name": "FrequencyFeedback",
+            "dataType": "REAL",
+            "description": "Actual output frequency from drive"
+          },
+          {
+            "name": "DriveReady",
+            "dataType": "BOOL",
+            "description": "Drive ready status"
+          },
+          {
+            "name": "DriveFault",
+            "dataType": "BOOL",
+            "description": "Drive fault input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "DriveEnable",
+            "dataType": "BOOL",
+            "description": "Drive enable output"
+          },
+          {
+            "name": "SpeedReference",
+            "dataType": "REAL",
+            "description": "Speed reference output to drive"
+          },
+          {
+            "name": "MotorRunning",
+            "dataType": "BOOL",
+            "description": "TRUE when motor running"
+          },
+          {
+            "name": "AtSpeed",
+            "dataType": "BOOL",
+            "description": "TRUE when at setpoint speed"
+          },
+          {
+            "name": "DriveFaultOut",
+            "dataType": "BOOL",
+            "description": "Drive fault status"
+          }
+        ]
+      },
+      "use_cases": [
+        "Mixer agitators",
+        "Variable speed pumps",
+        "Dosing systems"
+      ],
+      "states": [
+        {
+          "name": "IDLE",
+          "description": "Drive stopped and ready"
+        },
+        {
+          "name": "ACCELERATING",
+          "description": "Ramping up to setpoint"
+        },
+        {
+          "name": "RUNNING",
+          "description": "Running at setpoint speed"
+        },
+        {
+          "name": "DECELERATING",
+          "description": "Ramping down to stop"
+        },
+        {
+          "name": "FAULT",
+          "description": "Drive fault condition"
+        }
+      ],
+      "documentation": null
+    },
+    {
+      "id": "FB_ValveOnOff",
+      "type": "Control Module",
+      "category": "Valve Control",
+      "description": "On/off valve control with feedback monitoring, stroke time supervision, and interlock support.",
+      "interfaces": {
+        "inputs": [
+          {
+            "name": "CmdOpen",
+            "dataType": "BOOL",
+            "description": "Command to open valve"
+          },
+          {
+            "name": "CmdClose",
+            "dataType": "BOOL",
+            "description": "Command to close valve"
+          },
+          {
+            "name": "FbkOpen",
+            "dataType": "BOOL",
+            "description": "Valve open position feedback"
+          },
+          {
+            "name": "FbkClosed",
+            "dataType": "BOOL",
+            "description": "Valve closed position feedback"
+          },
+          {
+            "name": "Interlock",
+            "dataType": "BOOL",
+            "description": "Interlock permissive (TRUE = allowed)"
+          },
+          {
+            "name": "StrokeTime",
+            "dataType": "TIME",
+            "description": "Maximum time for valve to stroke"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "ValveOpen",
+            "dataType": "BOOL",
+            "description": "TRUE when valve fully open"
+          },
+          {
+            "name": "ValveClosed",
+            "dataType": "BOOL",
+            "description": "TRUE when valve fully closed"
+          },
+          {
+            "name": "ValveTransit",
+            "dataType": "BOOL",
+            "description": "TRUE while valve moving"
+          },
+          {
+            "name": "ValveFault",
+            "dataType": "BOOL",
+            "description": "TRUE when fault detected"
+          }
+        ]
+      },
+      "use_cases": [
+        "Isolation valves",
+        "Drain valves",
+        "Product routing"
+      ],
+      "states": [
+        {
+          "name": "CLOSED",
+          "description": "Valve fully closed"
+        },
+        {
+          "name": "OPENING",
+          "description": "Valve moving to open position"
+        },
+        {
+          "name": "OPEN",
+          "description": "Valve fully open"
+        },
+        {
+          "name": "CLOSING",
+          "description": "Valve moving to closed position"
+        },
+        {
+          "name": "FAULT",
+          "description": "Valve fault detected"
+        }
+      ],
+      "documentation": null
+    },
+    {
+      "id": "FB_ValveModulating",
+      "type": "Control Module",
+      "category": "Valve Control",
+      "description": "Modulating control valve with position setpoint, feedback monitoring, and PID control option.",
+      "interfaces": {
+        "inputs": [
+          {
+            "name": "PositionSetpoint",
+            "dataType": "REAL",
+            "description": "Desired valve position 0-100%"
+          },
+          {
+            "name": "PositionFeedback",
+            "dataType": "REAL",
+            "description": "Actual valve position 0-100%"
+          },
+          {
+            "name": "CmdOpen",
+            "dataType": "BOOL",
+            "description": "Manual open command"
+          },
+          {
+            "name": "CmdClose",
+            "dataType": "BOOL",
+            "description": "Manual close command"
+          },
+          {
+            "name": "PIDEnable",
+            "dataType": "BOOL",
+            "description": "Enable PID control mode"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "ValveOutput",
+            "dataType": "REAL",
+            "description": "Control output to valve actuator"
+          },
+          {
+            "name": "PositionError",
+            "dataType": "REAL",
+            "description": "Setpoint minus feedback"
+          },
+          {
+            "name": "ValveFault",
+            "dataType": "BOOL",
+            "description": "TRUE when position error exceeds limit"
+          }
+        ]
+      },
+      "use_cases": [
+        "Flow control valves",
+        "Temperature control valves",
+        "Pressure control valves"
+      ],
+      "documentation": null
+    },
+    {
+      "id": "FB_PIDControl",
+      "type": "Control Module",
+      "category": "Process Control",
+      "description": "Standard PID controller with auto/manual mode, anti-windup protection, and output limiting.",
+      "interfaces": {
+        "inputs": [
+          {
+            "name": "Setpoint",
+            "dataType": "REAL",
+            "description": "Process setpoint value"
+          },
+          {
+            "name": "ProcessValue",
+            "dataType": "REAL",
+            "description": "Measured process value"
+          },
+          {
+            "name": "Kp",
+            "dataType": "REAL",
+            "description": "Proportional gain"
+          },
+          {
+            "name": "Ti",
+            "dataType": "TIME",
+            "description": "Integral time constant"
+          },
+          {
+            "name": "Td",
+            "dataType": "TIME",
+            "description": "Derivative time constant"
+          },
+          {
+            "name": "OutputMin",
+            "dataType": "REAL",
+            "description": "Minimum output limit"
+          },
+          {
+            "name": "OutputMax",
+            "dataType": "REAL",
+            "description": "Maximum output limit"
+          },
+          {
+            "name": "ManualMode",
+            "dataType": "BOOL",
+            "description": "TRUE for manual mode"
+          },
+          {
+            "name": "ManualOutput",
+            "dataType": "REAL",
+            "description": "Manual mode output value"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "ControlOutput",
+            "dataType": "REAL",
+            "description": "PID controller output"
+          },
+          {
+            "name": "Error",
+            "dataType": "REAL",
+            "description": "Current error (SP - PV)"
+          },
+          {
+            "name": "InAuto",
+            "dataType": "BOOL",
+            "description": "TRUE when in automatic mode"
+          }
+        ]
+      },
+      "use_cases": [
+        "Temperature control",
+        "Level control",
+        "Pressure control",
+        "Flow control"
+      ],
+      "documentation": null
+    },
+    {
+      "id": "FB_WeighScale",
+      "type": "Control Module",
+      "category": "Measurement",
+      "description": "Weighing scale function with tare capability, calibration factor, and dosing integration support.",
+      "interfaces": {
+        "inputs": [
+          {
+            "name": "RawWeight",
+            "dataType": "REAL",
+            "description": "Raw weight value from load cell"
+          },
+          {
+            "name": "TareCmd",
+            "dataType": "BOOL",
+            "description": "Command to tare scale"
+          },
+          {
+            "name": "CalibrationFactor",
+            "dataType": "REAL",
+            "description": "Scale calibration factor"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "NetWeight",
+            "dataType": "REAL",
+            "description": "Net weight (gross minus tare)"
+          },
+          {
+            "name": "GrossWeight",
+            "dataType": "REAL",
+            "description": "Gross weight including tare"
+          },
+          {
+            "name": "Stable",
+            "dataType": "BOOL",
+            "description": "TRUE when weight reading stable"
+          },
+          {
+            "name": "Overload",
+            "dataType": "BOOL",
+            "description": "TRUE when scale overloaded"
+          }
+        ]
+      },
+      "use_cases": [
+        "Batch dosing",
+        "Material handling",
+        "Packaging"
+      ],
+      "documentation": null
+    },
+    {
+      "id": "FB_AlarmHandler",
+      "type": "Control Module",
+      "category": "System",
+      "description": "Alarm management with priority levels, acknowledgment tracking, and logging interface support.",
+      "interfaces": {
+        "inputs": [
+          {
+            "name": "AlarmActive",
+            "dataType": "BOOL",
+            "description": "Alarm condition active"
+          },
+          {
+            "name": "AlarmPriority",
+            "dataType": "INT",
+            "description": "Alarm priority (1=High, 2=Medium, 3=Low)"
+          },
+          {
+            "name": "AcknowledgeCmd",
+            "dataType": "BOOL",
+            "description": "Operator acknowledgment command"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "AlarmState",
+            "dataType": "INT",
+            "description": "Alarm state (0=Inactive, 1=Active unack, 2=Active ack)"
+          },
+          {
+            "name": "Acknowledged",
+            "dataType": "BOOL",
+            "description": "TRUE when alarm acknowledged"
+          },
+          {
+            "name": "AlarmTimestamp",
+            "dataType": "DT",
+            "description": "Timestamp of alarm activation"
+          }
+        ]
+      },
+      "use_cases": [
+        "Equipment alarms",
+        "Process alarms",
+        "Safety alarms"
+      ],
+      "documentation": null
+    },
+    {
+      "id": "FB_SequenceCtrl",
+      "type": "Control Module",
+      "category": "Sequence Control",
+      "description": "Step sequence controller with step management, transition logic, and hold/resume functionality.",
+      "interfaces": {
+        "inputs": [
+          {
+            "name": "CmdStart",
+            "dataType": "BOOL",
+            "description": "Start sequence command"
+          },
+          {
+            "name": "CmdHold",
+            "dataType": "BOOL",
+            "description": "Hold sequence command"
+          },
+          {
+            "name": "CmdResume",
+            "dataType": "BOOL",
+            "description": "Resume sequence command"
+          },
+          {
+            "name": "CmdAbort",
+            "dataType": "BOOL",
+            "description": "Abort sequence command"
+          },
+          {
+            "name": "TransitionOK",
+            "dataType": "BOOL",
+            "description": "Transition condition met"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "CurrentStep",
+            "dataType": "INT",
+            "description": "Current active step number"
+          },
+          {
+            "name": "StepActive",
+            "dataType": "BOOL",
+            "description": "TRUE when sequence active"
+          },
+          {
+            "name": "SequenceComplete",
+            "dataType": "BOOL",
+            "description": "TRUE when sequence finished"
+          },
+          {
+            "name": "SequenceHeld",
+            "dataType": "BOOL",
+            "description": "TRUE when sequence held"
+          }
+        ]
+      },
+      "use_cases": [
+        "Batch sequences",
+        "CIP cleaning",
+        "Startup sequences"
+      ],
+      "states": [
+        {
+          "name": "IDLE",
+          "description": "Sequence not running"
+        },
+        {
+          "name": "RUNNING",
+          "description": "Sequence executing steps"
+        },
+        {
+          "name": "HELD",
+          "description": "Sequence paused"
+        },
+        {
+          "name": "COMPLETE",
+          "description": "Sequence finished successfully"
+        },
+        {
+          "name": "ABORTED",
+          "description": "Sequence aborted by operator"
+        }
+      ],
+      "documentation": null
+    }
+  ]
+}
