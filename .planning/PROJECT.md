@@ -2,11 +2,25 @@
 
 ## What This Is
 
-A Claude Code plugin that adapts the GSD (Get Shit Done) workflow for writing industrial FDS (Functional Design Specification) and SDS (Software Design Specification) documents. 14 commands under `/doc:*` cover the full lifecycle: project creation, structured discussion, section planning, parallel writing with context isolation, goal-backward verification, FDS assembly, SDS generation with typicals matching, and DOCX export with corporate styling. Runs alongside GSD without interference.
+A web-based application for writing industrial FDS (Functional Design Specification) and SDS (Software Design Specification) documents. Built on the proven GSD-Docs workflow (v1.0 shipped as Claude Code plugin), the GUI provides a visual interface with project wizard, phase timeline, document preview, reference library, and embedded chat — making the FDS/SDS workflow accessible to engineering teams without CLI knowledge. FastAPI backend orchestrates Claude API calls using the domain knowledge from v1.0; React frontend provides the engineer's cockpit.
 
 ## Core Value
 
-Engineers can go from project brief to complete, verified FDS document through a structured, AI-assisted workflow that maintains fresh context per section, verifies goals (not just task completion), and catches gaps before delivery.
+Engineers can create, manage, and review FDS/SDS projects through a visual web interface that guides them through the full document lifecycle — from project setup through verified export — with human-in-the-loop quality gates and team-accessible reference management.
+
+## Current Milestone: v2.0 GUI
+
+**Goal:** Build a web-based GUI that wraps the proven v1.0 FDS/SDS workflow in a visual, team-accessible interface.
+
+**Target features:**
+- Project wizard (type classification, language, reference file upload)
+- Phase timeline + document outline as main working view
+- Embedded chat panel for discussion phases
+- Automated writing with progress feedback, human-in-the-loop verification
+- Reference library (shared standards/typicals + per-project uploads/overrides)
+- Rendered document preview (not raw Markdown)
+- Full workflow coverage (all 14 /doc:* steps through the GUI)
+- Team server deployment (VM, browser access)
 
 ## Requirements
 
@@ -36,7 +50,11 @@ Engineers can go from project brief to complete, verified FDS document through a
 
 ### Active
 
-(None -- next milestone requirements TBD via `/gsd:new-milestone`)
+- [ ] Web-based GUI with project wizard, phase timeline, and document preview
+- [ ] FastAPI backend orchestrating Claude API calls with v1.0 workflow logic
+- [ ] React frontend with dashboard, chat panel, and reference management
+- [ ] Reference library with shared + per-project file management
+- [ ] Team server deployment (VM, Nginx reverse proxy)
 
 ### Out of Scope
 
@@ -46,27 +64,30 @@ Engineers can go from project brief to complete, verified FDS document through a
 - Real-time multi-user editing -- document generation is single-user; review-phase handles collaboration
 - Full-auto mode (zero human input) -- equipment specifics cannot be inferred
 - Database-backed state management -- STATE.md is human-readable, git-trackable
-- Local LLM deployment -- deferred to v2 requirements
+- Local LLM deployment -- deferred to v3.0; architecture supports provider swap
 - Client-specific RAG system -- CATALOG.json + BASELINE.md handle reuse cleanly
+- Real-time collaborative editing -- v2.0 is single-engineer workflow; review handled through review phase
 
 ## Context
 
-Shipped v1.0 with 48,700 lines of Markdown across 194 files.
-Tech stack: Claude Code plugin (.md commands with frontmatter), GSD architecture (subagent delegation, wave parallelization, @-reference context injection).
-14 commands, 14 workflows, 3 subagents (doc-writer, doc-verifier, fresh-eyes).
-30 templates consumed across 7 phases.
-89/89 requirements satisfied, 7/7 E2E flows verified.
+**v1.0 foundation:** Shipped CLI plugin with 48,700 lines of Markdown across 194 files. 14 commands, 14 workflows, 3 subagents, 30 templates, 89/89 requirements satisfied. Proven workflow for FDS/SDS document generation.
 
-**Architecture:** Commands as frontmatter-driven .md files in `~/.claude/commands/doc/`, supporting files in `~/.claude/gsd-docs-industrial/`. SPECIFICATION.md v2.7.0 is the SSOT.
+**v1.0 architecture:** Commands as frontmatter-driven .md files in `~/.claude/commands/doc/`, supporting files in `~/.claude/gsd-docs-industrial/`. SPECIFICATION.md v2.7.0 is the SSOT. Domain knowledge (templates, section structures, verification criteria, prompt patterns) transfers to v2.0 as API prompt context.
 
-**Users:** Industrial automation engineers writing FDS/SDS documents for client projects, Type A (new + standards, 100+ motors) through Type D (small modifications/TWN).
+**v2.0 architecture:** FastAPI backend replaces Claude Code as workflow orchestrator. React frontend replaces terminal as user interface. Claude API (Anthropic SDK) replaces Claude Code's built-in LLM access. LLM provider abstracted behind interface for future local model support (v3.0). SQLite for project/file metadata. Deployed on VM with Nginx reverse proxy.
+
+**Users:** Industrial automation engineering team writing FDS/SDS documents for client projects. Team server deployment — engineers access via browser. No Docker available; VM-based hosting.
+
+**CLI coexistence:** v1.0 `/doc:*` commands remain functional. GUI and CLI produce compatible project files.
 
 ## Constraints
 
-- **Plugin architecture**: Must follow GSD's command registration pattern (frontmatter .md files in `~/.claude/commands/doc/`)
-- **Context management**: Fresh context per write task (only PROJECT.md + CONTEXT.md + current PLAN.md + standards)
-- **Subagent pattern**: Heavy operations delegated to subagents to protect main context window
-- **Specification compliance**: SPECIFICATION.md v2.7.0 is the SSOT
+- **Tech stack**: FastAPI (Python) backend + React (TypeScript) frontend
+- **Deployment**: VM-based, no Docker. Nginx reverse proxy, systemd services
+- **API dependency**: Claude API (Anthropic) required for AI features; offline mode limited to review/export
+- **LLM abstraction**: Provider interface must support future swap to local models (v3.0)
+- **CLI compatibility**: Project file format must remain compatible with v1.0 `/doc:*` commands
+- **Domain knowledge reuse**: v1.0 templates, section structures, and prompt patterns are the SSOT for document generation logic
 - **Standards opt-in**: PackML/ISA-88 loaded conditionally, never hardcoded
 
 ## Key Decisions
@@ -85,6 +106,10 @@ Tech stack: Claude Code plugin (.md commands with frontmatter), GSD architecture
 | Typicals matching with confidence scoring | Prevents hallucinated SDS content for unknown equipment | ✓ Good -- NEW TYPICAL NEEDED for unmatched |
 | Pandoc + huisstijl.docx for export | Industry-standard toolchain, corporate styling | ✓ Good -- graceful degradation with --draft/--skip-diagrams |
 | Plugin files in project repo, installed via junctions | No admin required, version-controlled | ✓ Good -- install.ps1 handles setup |
+| FastAPI + React for v2.0 GUI | Full control over UI, proper web app architecture, model-agnostic | -- Pending |
+| LLM provider abstraction | Enables local model support in v3.0 without rewriting orchestration | -- Pending |
+| SQLite for metadata | Lightweight, zero-config, sufficient for single-server deployment | -- Pending |
+| VM deployment (no Docker) | Company policy; systemd + Nginx is proven and maintainable | -- Pending |
 
 ---
-*Last updated: 2026-02-14 after v1.0 milestone*
+*Last updated: 2026-02-14 after v2.0 milestone started*

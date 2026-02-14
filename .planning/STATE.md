@@ -4,29 +4,31 @@
 
 See: .planning/PROJECT.md (updated 2026-02-14)
 
-**Core value:** Engineers can go from project brief to complete, verified FDS/SDS documents through a structured, AI-assisted workflow with DOCX export
-**Current focus:** v1.0 shipped. Planning next milestone.
+**Core value:** Engineers can create and manage FDS/SDS projects through a visual web interface that guides them through the full document lifecycle
+**Current focus:** v2.0 GUI — defining requirements
 
 ## Current Position
 
-- Phase: v1.0 complete (7/7 phases shipped)
-- Status: Milestone archived
-- Last activity: 2026-02-14 - v1.0 milestone completed and archived
-- Next: `/gsd:new-milestone` to define v1.1/v2.0
+- Phase: Not started (defining requirements)
+- Plan: —
+- Status: Defining requirements
+- Last activity: 2026-02-14 — Milestone v2.0 started
 
 ## Progress
 
-Progress: ████████████████████████████████ 100% (v1.0)
+Progress: ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 0% (v2.0)
 
-| Phase | Name | Plans | Status |
-|-------|------|-------|--------|
-| 1 | Framework Foundation + /doc:new-fds | 4/4 | ✅ Shipped v1.0 |
-| 2 | Discuss + Plan Commands | 4/4 | ✅ Shipped v1.0 |
-| 3 | Write + Verify (Core Value) | 5/5 | ✅ Shipped v1.0 |
-| 4 | State Management + Recovery | 5/5 | ✅ Shipped v1.0 |
-| 5 | Complete-FDS + Standards | 5/5 | ✅ Shipped v1.0 |
-| 6 | Knowledge Transfer + Review | 5/5 | ✅ Shipped v1.0 |
-| 7 | SDS Generation + Export | 5/5 | ✅ Shipped v1.0 |
+(Phases TBD — roadmap creation pending)
+
+## Accumulated Context
+
+**From v1.0:**
+- 14 `/doc:*` commands with proven workflow (discuss → plan → write → verify → review → assemble → export)
+- Domain knowledge in 194 files: templates, section structures, verification criteria, prompt patterns
+- SPECIFICATION.md v2.7.0 is SSOT for document generation logic
+- 4 project types (A/B/C/D) with distinct workflow templates
+- Typicals library (CATALOG.json) for SDS matching
+- Bilingual Dutch/English support throughout
 
 ## Decisions
 
@@ -39,7 +41,7 @@ See PROJECT.md Key Decisions table for full list with outcomes.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: v1.0 milestone completed and archived
+Stopped at: v2.0 milestone initialization
 Resume file: N/A
 
 ---
