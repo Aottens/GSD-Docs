@@ -146,11 +146,11 @@ Plans:
 **Plans:** 5 plans
 
 Plans:
-- [ ] 05-01-PLAN.md -- Standards reference data (PackML/ISA-88) + /doc:check-standards command + COMPLIANCE.md template
-- [ ] 05-02-PLAN.md -- FDS structure template (fds-structure.json) + front matter templates (title page, revision history, abbreviations)
-- [ ] 05-03-PLAN.md -- /doc:complete-fds command + full assembly workflow (15 steps) + XREF-REPORT.md template
-- [ ] 05-04-PLAN.md -- /doc:release command + version management workflow (internal/client bumps, archiving, git tagging)
-- [ ] 05-05-PLAN.md -- End-to-end verification checkpoint (11-category automated checks + human approval)
+- [x] 05-01-PLAN.md -- Standards reference data (PackML/ISA-88) + /doc:check-standards command + COMPLIANCE.md template
+- [x] 05-02-PLAN.md -- FDS structure template (fds-structure.json) + front matter templates (title page, revision history, abbreviations)
+- [x] 05-03-PLAN.md -- /doc:complete-fds command + full assembly workflow (15 steps) + XREF-REPORT.md template
+- [x] 05-04-PLAN.md -- /doc:release command + version management workflow (internal/client bumps, archiving, git tagging)
+- [x] 05-05-PLAN.md -- End-to-end verification checkpoint (11-category automated checks + human approval)
 
 **Success Criteria:**
 
@@ -216,11 +216,11 @@ Plans:
 | 2 | Discuss + Plan Commands | 14 | Complete |
 | 3 | Write + Verify (Core Value) | 15 | Complete |
 | 4 | State Management + Recovery + Dynamic ROADMAP | 9 | Complete |
-| 5 | Complete-FDS + Standards + Assembly | 19 | Pending |
+| 5 | Complete-FDS + Standards + Assembly | 19 | Complete |
 | 6 | Knowledge Transfer + Review | 9 | Pending |
 | 7 | SDS Generation + DOCX Export + Pilot | 11 | Pending |
 | **Total** | | **89** | |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-13 -- Phase 4 complete (state management, recovery, ROADMAP expansion)*
+*Last updated: 2026-02-14 -- Phase 5 complete (standards, assembly, version management)*
