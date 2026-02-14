@@ -10,10 +10,10 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 - Phase: 5 of 7 (Complete-FDS + Standards)
-- Plan: 2 of 5 in phase (Plan 05-02 complete)
+- Plan: 1 of 5 in phase (Plan 05-01 complete)
 - Status: In progress
-- Last activity: 2026-02-14 - Completed 05-02-PLAN.md (FDS Structure and Front Matter Templates)
-- Next: Execute 05-03-PLAN.md (/doc:complete-fds workflow implementation)
+- Last activity: 2026-02-14 - Completed 05-01-PLAN.md (Standards Reference Data + Validation)
+- Next: Continue Phase 5 planning/execution
 
 ## Progress
 
@@ -25,7 +25,7 @@ Progress: ██████████████░░░░░░░░░�
 | 2 | Discuss + Plan Commands | 4/4 | ✓ Verified |
 | 3 | Write + Verify (Core Value) | 5/5 | ✓ Verified |
 | 4 | State Management + Recovery | 5/5 | ✓ Verified |
-| 5 | Complete-FDS + Standards | 2/5 | In Progress |
+| 5 | Complete-FDS + Standards | 1/5 | In Progress |
 | 6 | Knowledge Transfer + Review | -/- | Pending |
 | 7 | SDS Generation + Export | -/- | Pending |
 
@@ -104,6 +104,9 @@ Progress: ██████████████░░░░░░░░░�
 - [Phase 05]: Bilingual template pattern: dual language blocks with lang attributes, assembly selects based on PROJECT.md (2026-02-14)
 - [Phase 05]: Revision history hybrid approach: auto-generated from git as draft, engineer edits before release (2026-02-14)
 - [Phase 05]: Abbreviations auto-extraction from document content plus manual additions (2026-02-14)
+- [Phase 05]: PackML state validation uses exact match enforcement with common synonyms mapped to remediation hints (2026-02-14)
+- [Phase 05]: ISA-88 terminology context-aware - enforced in hierarchy sections, relaxed in I/O tables (2026-02-14)
+- [Phase 05]: Standards severity configurable per standard (error blocks assembly, warning is non-blocking) (2026-02-14)
 
 ## Blockers
 
@@ -123,7 +126,7 @@ Browser-based UI so non-technical colleagues can run GSD-Docs from a server with
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 05-02-PLAN.md - FDS structure and front matter templates ready for assembly workflow
+Stopped at: Completed 05-01-PLAN.md - Standards reference data and validation workflow complete
 Resume file: .planning/phases/05-complete-fds-standards/.continue-here.md
 
 ---
