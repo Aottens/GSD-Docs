@@ -9,11 +9,11 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 
 ## Current Position
 
-- Phase: 4 of 7 (State Management + Recovery)
-- Plan: 5 of 5 in phase (All waves complete - Phase 4 verified)
-- Status: Phase 4 verified complete
-- Last activity: 2026-02-13 - Completed Phase 4 verification (04-05-PLAN.md)
-- Next: Continue to Phase 5 (Complete-FDS + Standards)
+- Phase: 5 of 7 (Complete-FDS + Standards)
+- Plan: 2 of 5 in phase (Plan 05-02 complete)
+- Status: In progress
+- Last activity: 2026-02-14 - Completed 05-02-PLAN.md (FDS Structure and Front Matter Templates)
+- Next: Execute 05-03-PLAN.md (/doc:complete-fds workflow implementation)
 
 ## Progress
 
@@ -25,7 +25,7 @@ Progress: ██████████████░░░░░░░░░�
 | 2 | Discuss + Plan Commands | 4/4 | ✓ Verified |
 | 3 | Write + Verify (Core Value) | 5/5 | ✓ Verified |
 | 4 | State Management + Recovery | 5/5 | ✓ Verified |
-| 5 | Complete-FDS + Standards | -/- | Pending |
+| 5 | Complete-FDS + Standards | 2/5 | In Progress |
 | 6 | Knowledge Transfer + Review | -/- | Pending |
 | 7 | SDS Generation + Export | -/- | Pending |
 
@@ -96,6 +96,14 @@ Progress: ██████████████░░░░░░░░░�
 - [Phase 04]: Interactive approval: one group at a time with approve/modify/skip options (2026-02-13)
 - [Phase 04]: Auto-trigger threshold: >5 units in System Overview triggers expansion proposal via verify-phase Step 6A (2026-02-13)
 - [Phase 04]: Phase 4 verified complete through 11-category automated checks + human approval (2026-02-13)
+- [Phase 05]: FDS structure follows IEC-style hierarchical numbering (1, 1.1, 1.2, 2, 2.1, etc.) - locked in fds-structure.json (2026-02-14)
+- [Phase 05]: Section ordering predefined in template, not ROADMAP phase order - assembly reorders content (2026-02-14)
+- [Phase 05]: Unwritten sections appear as '[TO BE COMPLETED]' placeholder stubs (2026-02-14)
+- [Phase 05]: Equipment modules (section 4) expand dynamically - one 4.x subsection per ROADMAP equipment module (2026-02-14)
+- [Phase 05]: Type-conditional baseline section (1.4) only for Type C/D projects (2026-02-14)
+- [Phase 05]: Bilingual template pattern: dual language blocks with lang attributes, assembly selects based on PROJECT.md (2026-02-14)
+- [Phase 05]: Revision history hybrid approach: auto-generated from git as draft, engineer edits before release (2026-02-14)
+- [Phase 05]: Abbreviations auto-extraction from document content plus manual additions (2026-02-14)
 
 ## Blockers
 
@@ -114,9 +122,9 @@ Browser-based UI so non-technical colleagues can run GSD-Docs from a server with
 
 ## Session Continuity
 
-Last session: 2026-02-13
-Stopped at: Completed Phase 4 verification (04-05-PLAN.md)
-Resume file: .planning/phases/04-state-management-recovery/04-05-SUMMARY.md
+Last session: 2026-02-14
+Stopped at: Completed 05-02-PLAN.md - FDS structure and front matter templates ready for assembly workflow
+Resume file: .planning/phases/05-complete-fds-standards/.continue-here.md
 
 ---
-*Last updated: 2026-02-13*
+*Last updated: 2026-02-14*
