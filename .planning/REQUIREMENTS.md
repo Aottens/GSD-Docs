@@ -115,13 +115,55 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| *(populated by roadmapper)* | | |
+| PROJ-01 | Phase 8 | Pending |
+| PROJ-02 | Phase 8 | Pending |
+| PROJ-03 | Phase 9 | Pending |
+| PROJ-04 | Phase 8 | Pending |
+| PROJ-05 | Phase 8 | Pending |
+| WORK-01 | Phase 10 | Pending |
+| WORK-02 | Phase 10 | Pending |
+| WORK-03 | Phase 11 | Pending |
+| WORK-04 | Phase 11 | Pending |
+| DISC-01 | Phase 10 | Pending |
+| DISC-02 | Phase 10 | Pending |
+| DISC-03 | Phase 10 | Pending |
+| DISC-04 | Phase 10 | Pending |
+| DOCG-01 | Phase 11 | Pending |
+| DOCG-02 | Phase 12 | Pending |
+| DOCG-03 | Phase 12 | Pending |
+| DOCG-04 | Phase 12 | Pending |
+| QUAL-01 | Phase 13 | Pending |
+| QUAL-02 | Phase 13 | Pending |
+| QUAL-03 | Phase 13 | Pending |
+| QUAL-04 | Phase 13 | Pending |
+| QUAL-05 | Phase 14 | Pending |
+| QUAL-06 | Phase 14 | Pending |
+| QUAL-07 | Phase 13 | Pending |
+| QUAL-08 | Phase 13 | Pending |
+| REFM-01 | Phase 9 | Pending |
+| REFM-02 | Phase 9 | Pending |
+| REFM-03 | Phase 9 | Pending |
+| REFM-04 | Phase 9 | Pending |
+| REFM-05 | Phase 9 | Pending |
+| OUTP-01 | Phase 12 | Pending |
+| OUTP-02 | Phase 15 | Pending |
+| OUTP-03 | Phase 15 | Pending |
+| OUTP-04 | Phase 15 | Pending |
+| OUTP-05 | Phase 16 | Pending |
+| OUTP-06 | Phase 16 | Pending |
+| OUTP-07 | Phase 15 | Pending |
+| SYST-01 | Phase 17 | Pending |
+| SYST-02 | Phase 17 | Pending |
+| SYST-03 | Phase 17 | Pending |
+| SYST-04 | Phase 8 | Pending |
 
 **Coverage:**
 - v1 requirements: 41 total
-- Mapped to phases: 0
-- Unmapped: 41 (pending roadmap)
+- Mapped to phases: 41
+- Unmapped: 0 ✓
+
+**Coverage validation:** 100% - All v2.0 requirements mapped to phases 8-17
 
 ---
 *Requirements defined: 2026-02-14*
-*Last updated: 2026-02-14 after initial definition*
+*Last updated: 2026-02-14 after roadmap creation*
