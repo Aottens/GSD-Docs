@@ -487,6 +487,108 @@ Phase {N} content is complete and ready.
 # Set phase {N} status to "✓ Verified"
 ```
 
+### Step 6A.5: Offer Fresh Eyes Review
+
+After verification PASS, offer the engineer an optional Fresh Eyes review.
+
+**Check for --perspective flag in arguments:**
+```bash
+# Parse flags from $ARGUMENTS
+PERSPECTIVE_FLAG=$(echo "$ARGUMENTS" | grep -oE "\-\-perspective (engineer|customer|operator|all)" | cut -d' ' -f2)
+ACTIONABLE_FLAG=$(echo "$ARGUMENTS" | grep -c "\-\-actionable")
+```
+
+**If --perspective flag provided:** Skip selection, use provided perspective.
+
+**If no flag:** Present selection using AskUserQuestion:
+
+Use AskUserQuestion:
+- header: "Optional: Fresh Eyes Review"
+- question: "Verification passed. Simulate a new reader reviewing the documentation?"
+- options:
+  - "Engineer (technical clarity for new team member)"
+  - "Customer (jargon, commitments, scope for client review)"
+  - "Operator (procedures, alarms, recovery for daily use)"
+  - "All perspectives (comprehensive review)"
+  - "Skip Fresh Eyes"
+
+**If "Skip Fresh Eyes" selected:** Display "Fresh Eyes review skipped." and continue to ROADMAP Evolution Check.
+
+**If perspective selected:** Spawn fresh-eyes subagent:
+
+1. Build context file list:
+```bash
+CONTEXT_FILES=".planning/PROJECT.md"
+
+# Add RATIONALE.md if exists
+if [ -f ".planning/RATIONALE.md" ]; then
+  CONTEXT_FILES="${CONTEXT_FILES},.planning/RATIONALE.md"
+fi
+
+# Add phase CONTEXT.md
+CONTEXT_FILES="${CONTEXT_FILES},${PHASE_DIR}/${PADDED_PHASE}-CONTEXT.md"
+
+# Add all CONTENT.md files
+for CONTENT in ${PHASE_DIR}/*-CONTENT.md; do
+  if [ -f "$CONTENT" ]; then
+    CONTEXT_FILES="${CONTEXT_FILES},${CONTENT}"
+  fi
+done
+
+# Add all SUMMARY.md files
+for SUMMARY in ${PHASE_DIR}/*-SUMMARY.md; do
+  if [ -f "$SUMMARY" ]; then
+    CONTEXT_FILES="${CONTEXT_FILES},${SUMMARY}"
+  fi
+done
+```
+
+2. Display spawning indicator:
+```
+DOC > Launching Fresh Eyes review ({perspective} perspective)...
+```
+
+3. Spawn using Task tool:
+```
+Spawn fresh-eyes subagent with:
+  - Context files: ${CONTEXT_FILES}
+  - Message: "Perform Fresh Eyes review from {perspective} perspective for phase {N}. Write findings to ${PHASE_DIR}/${PADDED_PHASE}-FRESH-EYES.md using template at ~/.claude/gsd-docs-industrial/templates/fresh-eyes.md."
+  - Agent: @~/.claude/gsd-docs-industrial/agents/fresh-eyes.md
+```
+
+4. Wait for completion, then display results summary:
+```bash
+# Read FRESH-EYES.md summary
+MUST_FIX=$(grep -c "MUST-FIX" "${PHASE_DIR}/${PADDED_PHASE}-FRESH-EYES.md" || echo 0)
+SHOULD_FIX=$(grep -c "SHOULD-FIX" "${PHASE_DIR}/${PADDED_PHASE}-FRESH-EYES.md" || echo 0)
+CONSIDER=$(grep -c "CONSIDER" "${PHASE_DIR}/${PADDED_PHASE}-FRESH-EYES.md" || echo 0)
+
+echo ""
+echo "Fresh Eyes review complete:"
+echo "  MUST-FIX: ${MUST_FIX}"
+echo "  SHOULD-FIX: ${SHOULD_FIX}"
+echo "  CONSIDER: ${CONSIDER}"
+echo ""
+echo "  See: ${PHASE_DIR}/${PADDED_PHASE}-FRESH-EYES.md"
+```
+
+5. Check --actionable flag:
+```bash
+if [ "$ACTIONABLE_FLAG" -gt 0 ]; then
+  if [ "$MUST_FIX" -gt 0 ] || [ "$SHOULD_FIX" -gt 0 ]; then
+    echo ""
+    echo "Routing actionable findings to gap closure pipeline..."
+    echo "Run: /doc:plan-phase ${PHASE} --gaps --source fresh-eyes"
+  else
+    echo ""
+    echo "No actionable findings (MUST-FIX or SHOULD-FIX). Gap closure not needed."
+  fi
+else
+  echo ""
+  echo "Findings are informational. Use --actionable flag to route to gap closure."
+fi
+```
+
 ### ROADMAP Evolution Check (VERF-08)
 
 **Check if this is a System Overview phase that may require ROADMAP expansion.**
@@ -599,7 +701,8 @@ If expansion **declined**:
 ───────────────────────────────────────────────────────────────
 
 **Also available:**
-- `/doc:review-phase {N}` -- optional client/engineer review
+- `/doc:review-phase {N}` -- structured section-by-section review
+- `/doc:verify-phase {N} --perspective engineer` -- Fresh Eyes with specific perspective
 - `/doc:status` -- view overall progress
 
 ───────────────────────────────────────────────────────────────
@@ -898,6 +1001,15 @@ This step was already integrated into Step 4 (Spawn Verifier Subagent) as the sc
 - Update STATE.md after verification result
 - Phase status values: "In Progress", "GAPS_FOUND", "✓ Verified", "BLOCKED"
 - Track gap_closure_cycle in STATE.md
+
+**Fresh Eyes review:**
+- Offered after PASS only (never after GAPS_FOUND)
+- Engineer can accept or skip (never forced)
+- Output: per-phase FRESH-EYES.md (distinct from VERIFICATION.md)
+- Default: informational only (findings logged, no action)
+- --actionable flag: routes MUST-FIX and SHOULD-FIX to gap closure pipeline
+- --perspective flag: skip selection, use provided perspective
+- Fresh Eyes does NOT change PASS result -- verification is complete regardless
 
 **ROADMAP evolution:**
 - After System Overview phase verification PASS, check unit count
