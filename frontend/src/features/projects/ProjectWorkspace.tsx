@@ -1,14 +1,10 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Bot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { ErrorMessage } from '@/components/common/ErrorMessage'
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from '@/components/ui/resizable'
 import { ProjectNavigation } from './components/ProjectNavigation'
 import { ProjectOverview } from './components/ProjectOverview'
 import { ChatContextPanel } from './components/ChatContextPanel'
@@ -28,7 +24,6 @@ export function ProjectWorkspace() {
         <div className="flex gap-4 h-[calc(100%-4rem)]">
           <Skeleton className="w-64 h-full" />
           <Skeleton className="flex-1 h-full" />
-          <Skeleton className="w-80 h-full" />
         </div>
       </div>
     )
@@ -57,59 +52,63 @@ export function ProjectWorkspace() {
       {/* Breadcrumb Header */}
       <div className="border-b bg-background shrink-0">
         <div className="px-4 py-3">
-          <div className="flex items-center gap-2 text-sm">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/')}
-              className="h-auto p-0 hover:bg-transparent"
-            >
-              <span className="text-muted-foreground hover:text-foreground">Projecten</span>
-            </Button>
-            <span className="text-muted-foreground">/</span>
-            <span className="font-medium">{project.name}</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/')}
+                className="h-auto p-0 hover:bg-transparent"
+              >
+                <span className="text-muted-foreground hover:text-foreground">Projecten</span>
+              </Button>
+              <span className="text-muted-foreground">/</span>
+              <span className="font-medium">{project.name}</span>
+            </div>
+
+            {/* Assistant Toggle */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Bot className="h-4 w-4" />
+                  Assistent
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[400px] sm:w-[540px] p-0">
+                <ChatContextPanel />
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </div>
 
-      {/* Three-Panel Layout */}
-      <ResizablePanelGroup orientation="horizontal" className="flex-1">
-        {/* Left Sidebar */}
-        <ResizablePanel id="sidebar" defaultSize={20} minSize={15} maxSize={30}>
+      {/* Two-Panel Layout: Fixed Sidebar + Content */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Sidebar — fixed width */}
+        <div className="w-64 shrink-0 border-r">
           <ProjectNavigation
             project={project}
             activeSection={activeSection}
             onSectionChange={setActiveSection}
           />
-        </ResizablePanel>
+        </div>
 
-        <ResizableHandle withHandle />
-
-        {/* Center Content */}
-        <ResizablePanel id="content" defaultSize={55} minSize={40}>
-          <div className="h-full overflow-auto p-6">
-            {activeSection === 'overview' && <ProjectOverview project={project} />}
-            {activeSection !== 'overview' && (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center space-y-2">
-                  <p className="text-muted-foreground">
-                    {activeSection.charAt(0).toUpperCase() + activeSection.slice(1)} sectie
-                    binnenkort beschikbaar
-                  </p>
-                  <p className="text-sm text-muted-foreground/70">Deze functie wordt in een volgende fase gebouwd</p>
-                </div>
+        {/* Center Content — fills remaining space */}
+        <div className="flex-1 overflow-auto p-6">
+          {activeSection === 'overview' && <ProjectOverview project={project} />}
+          {activeSection !== 'overview' && (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center space-y-2">
+                <p className="text-muted-foreground">
+                  {activeSection.charAt(0).toUpperCase() + activeSection.slice(1)} sectie
+                  binnenkort beschikbaar
+                </p>
+                <p className="text-sm text-muted-foreground/70">Deze functie wordt in een volgende fase gebouwd</p>
               </div>
-            )}
-          </div>
-        </ResizablePanel>
-
-        <ResizableHandle withHandle />
-
-        {/* Right Panel (Chat/Context) */}
-        <ResizablePanel id="assistant" defaultSize={25} minSize={20} maxSize={35}>
-          <ChatContextPanel />
-        </ResizablePanel>
-      </ResizablePanelGroup>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
