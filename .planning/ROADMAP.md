@@ -61,8 +61,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 09-01-PLAN.md -- Backend: file/folder models, defense-in-depth validation, filesystem storage, complete REST API for uploads, downloads, management, and folder CRUD
-- [ ] 09-02-PLAN.md -- Frontend: drag-and-drop upload with progress, file browser with folders, PDF/DOCX/image preview panel, project files and shared library tabs, admin page, wizard step 4
+- [x] 09-01-PLAN.md -- Backend: file/folder models, defense-in-depth validation, filesystem storage, complete REST API for uploads, downloads, management, and folder CRUD
+- [x] 09-02-PLAN.md -- Frontend: drag-and-drop upload with progress, file browser with folders, PDF/DOCX/image preview panel, project files and shared library tabs, admin page, wizard step 4
 
 #### Phase 10: Discussion Workflow & Chat Interface
 
@@ -234,7 +234,7 @@ Plans:
 | 6. Knowledge Transfer | v1.0 | 5/5 | Complete | 2026-02-14 |
 | 7. SDS + Export | v1.0 | 5/5 | Complete | 2026-02-14 |
 | 8. Core Infrastructure | v2.0 | 3/3 | Complete | 2026-02-15 |
-| 9. File Management | v2.0 | 0/2 | Not started | - |
+| 9. File Management | v2.0 | 2/2 | Complete | 2026-02-15 |
 | 10. Discussion Workflow | v2.0 | 0/3 | Not started | - |
 | 11. Planning Workflow | v2.0 | 0/2 | Not started | - |
 | 12. Writing Workflow | v2.0 | 0/3 | Not started | - |
