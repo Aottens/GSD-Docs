@@ -8,7 +8,7 @@ interface ErrorMessageProps {
 }
 
 export function ErrorMessage({
-  title = 'Error',
+  title = 'Fout',
   message,
   onRetry
 }: ErrorMessageProps) {
@@ -19,7 +19,7 @@ export function ErrorMessage({
       <p className="text-muted-foreground mb-4 max-w-md">{message}</p>
       {onRetry && (
         <Button onClick={onRetry} variant="outline">
-          Try Again
+          Opnieuw proberen
         </Button>
       )}
     </div>

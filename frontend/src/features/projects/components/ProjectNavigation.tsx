@@ -10,11 +10,11 @@ interface ProjectNavigationProps {
 }
 
 const navigationSections = [
-  { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-  { id: 'phases', label: 'Phases', icon: Calendar },
-  { id: 'documents', label: 'Documents', icon: FileText },
-  { id: 'references', label: 'References', icon: FolderOpen },
-  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'overview', label: 'Overzicht', icon: LayoutDashboard },
+  { id: 'phases', label: 'Fases', icon: Calendar },
+  { id: 'documents', label: 'Documenten', icon: FileText },
+  { id: 'references', label: 'Referenties', icon: FolderOpen },
+  { id: 'settings', label: 'Instellingen', icon: Settings },
 ]
 
 const typeColors = {
@@ -68,12 +68,12 @@ export function ProjectNavigation({
                 ${!isActive && section.id !== 'overview' ? 'opacity-60' : ''}
               `}
               disabled={section.id !== 'overview'}
-              title={section.id !== 'overview' ? 'Coming in future phases' : undefined}
+              title={section.id !== 'overview' ? 'Beschikbaar in een volgende fase' : undefined}
             >
               <Icon className="h-4 w-4 flex-shrink-0" />
               <span className="truncate">{section.label}</span>
               {section.id !== 'overview' && !isActive && (
-                <span className="ml-auto text-xs opacity-50">Soon</span>
+                <span className="ml-auto text-xs opacity-50">Binnenkort</span>
               )}
             </button>
           )

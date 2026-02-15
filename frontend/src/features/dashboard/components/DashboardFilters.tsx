@@ -17,10 +17,10 @@ interface DashboardFiltersProps {
 }
 
 const sortOptions: { value: SortOption; label: string }[] = [
-  { value: 'updated_at', label: 'Most Recent' },
-  { value: 'name', label: 'Name A-Z' },
+  { value: 'updated_at', label: 'Meest recent' },
+  { value: 'name', label: 'Naam A-Z' },
   { value: 'type', label: 'Type' },
-  { value: 'created_at', label: 'Created Date' },
+  { value: 'created_at', label: 'Aanmaakdatum' },
 ]
 
 export function DashboardFilters({ filters, onFiltersChange }: DashboardFiltersProps) {
@@ -55,9 +55,9 @@ export function DashboardFilters({ filters, onFiltersChange }: DashboardFiltersP
     <div className="space-y-4">
       <Tabs value={filters.tab} onValueChange={handleTabChange}>
         <TabsList>
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="active">Active</TabsTrigger>
-          <TabsTrigger value="completed">Completed</TabsTrigger>
+          <TabsTrigger value="all">Alles</TabsTrigger>
+          <TabsTrigger value="active">Actief</TabsTrigger>
+          <TabsTrigger value="completed">Afgerond</TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -65,7 +65,7 @@ export function DashboardFilters({ filters, onFiltersChange }: DashboardFiltersP
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search projects..."
+            placeholder="Zoek projecten..."
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             className="pl-9"

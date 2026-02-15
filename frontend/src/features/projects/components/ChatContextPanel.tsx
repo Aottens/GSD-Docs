@@ -14,7 +14,7 @@ export function ChatContextPanel() {
       <div className="p-4 border-b bg-background">
         <div className="flex items-center gap-2">
           <Bot className="h-5 w-5 text-primary" />
-          <h3 className="font-semibold">Assistant</h3>
+          <h3 className="font-semibold">Assistent</h3>
         </div>
       </div>
 
@@ -34,9 +34,9 @@ export function ChatContextPanel() {
             <div className="text-center p-6 max-w-sm space-y-2">
               <Bot className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
               <p className="text-sm text-muted-foreground">
-                Chat will be available when you start a discussion phase.
+                Chat wordt beschikbaar wanneer u een discussiefase start.
               </p>
-              <p className="text-xs text-muted-foreground/70">Coming in Phase 10</p>
+              <p className="text-xs text-muted-foreground/70">Beschikbaar in fase 10</p>
             </div>
           </Card>
         </TabsContent>
@@ -45,9 +45,9 @@ export function ChatContextPanel() {
           <Card className="h-full flex items-center justify-center bg-muted/50">
             <div className="text-center p-6 max-w-sm space-y-2">
               <p className="text-sm text-muted-foreground">
-                Context documents will appear here during active phases.
+                Contextdocumenten verschijnen hier tijdens actieve fases.
               </p>
-              <p className="text-xs text-muted-foreground/70">Coming in Phase 10</p>
+              <p className="text-xs text-muted-foreground/70">Beschikbaar in fase 10</p>
             </div>
           </Card>
         </TabsContent>
@@ -57,7 +57,7 @@ export function ChatContextPanel() {
       <div className="p-4 border-t bg-background">
         <div className="flex gap-2">
           <Input
-            placeholder="Available in discussion phase..."
+            placeholder="Beschikbaar in discussiefase..."
             disabled
             className="flex-1"
           />
@@ -66,7 +66,7 @@ export function ChatContextPanel() {
           </Button>
         </div>
         <p className="text-xs text-muted-foreground mt-2 text-center">
-          Phase 10: Discussion workflow
+          Fase 10: Discussie workflow
         </p>
       </div>
     </div>

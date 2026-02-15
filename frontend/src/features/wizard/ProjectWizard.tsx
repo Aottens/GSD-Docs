@@ -107,11 +107,11 @@ export function ProjectWizard() {
             className="mb-4"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
+            Terug naar overzicht
           </Button>
-          <h1 className="text-4xl font-bold tracking-tight">Create New Project</h1>
+          <h1 className="text-4xl font-bold tracking-tight">Nieuw project aanmaken</h1>
           <p className="text-muted-foreground mt-1">
-            Follow the steps below to set up your FDS documentation project
+            Volg de onderstaande stappen om uw FDS documentatieproject in te richten
           </p>
         </div>
 
@@ -174,7 +174,7 @@ export function ProjectWizard() {
             {createProjectMutation.isError && (
               <div className="mb-6">
                 <ErrorMessage
-                  title="Failed to create project"
+                  title="Project aanmaken mislukt"
                   message={
                     createProjectMutation.error instanceof Error
                       ? createProjectMutation.error.message
@@ -196,7 +196,7 @@ export function ProjectWizard() {
                     disabled={createProjectMutation.isPending}
                   >
                     <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back
+                    Vorige
                   </Button>
                 )}
               </div>
@@ -211,7 +211,7 @@ export function ProjectWizard() {
                       (currentStep === 2 && !canProceedStep2)
                     }
                   >
-                    Next
+                    Volgende
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 ) : (
@@ -222,10 +222,10 @@ export function ProjectWizard() {
                     {createProjectMutation.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating...
+                        Aanmaken...
                       </>
                     ) : (
-                      'Create Project'
+                      'Project aanmaken'
                     )}
                   </Button>
                 )}

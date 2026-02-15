@@ -21,9 +21,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
+    return date.toLocaleDateString('nl-NL', {
       day: 'numeric',
+      month: 'short',
       year: 'numeric',
     })
   }
@@ -47,7 +47,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
           <div className="flex items-center gap-2 mt-2">
             <Badge variant="outline">{project.language.toUpperCase()}</Badge>
             <span className="text-sm text-muted-foreground">
-              Phase {project.current_phase}
+              Fase {project.current_phase}
             </span>
           </div>
         </CardHeader>
@@ -55,13 +55,13 @@ export function ProjectCard({ project }: ProjectCardProps) {
           <div className="space-y-3">
             <div>
               <div className="flex items-center justify-between text-sm mb-1.5">
-                <span className="text-muted-foreground">Progress</span>
+                <span className="text-muted-foreground">Voortgang</span>
                 <span className="font-medium">{project.progress}%</span>
               </div>
               <Progress value={project.progress} />
             </div>
             <div className="flex items-center justify-between text-sm text-muted-foreground pt-1">
-              <span>Modified</span>
+              <span>Gewijzigd</span>
               <span>{formatDate(project.updated_at)}</span>
             </div>
           </div>

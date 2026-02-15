@@ -24,7 +24,7 @@ export function RecentProjects() {
   if (isLoading) {
     return (
       <div className="space-y-3">
-        <h2 className="text-xl font-semibold">Recent Projects</h2>
+        <h2 className="text-xl font-semibold">Recente projecten</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i}>

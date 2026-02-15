@@ -33,14 +33,14 @@ export function Dashboard() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold tracking-tight">Projects</h1>
+            <h1 className="text-4xl font-bold tracking-tight">Projecten</h1>
             <p className="text-muted-foreground mt-1">
-              Manage your FDS/SDS documentation projects
+              Beheer uw FDS/SDS documentatieprojecten
             </p>
           </div>
           <Button onClick={() => navigate('/projects/new')}>
             <Plus className="mr-2 h-4 w-4" />
-            New Project
+            Nieuw project
           </Button>
         </div>
 

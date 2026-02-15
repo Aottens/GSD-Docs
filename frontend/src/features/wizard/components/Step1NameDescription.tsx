@@ -20,15 +20,15 @@ export function Step1NameDescription({ register, errors }: Step1NameDescriptionP
     <div className="space-y-6">
       <div className="space-y-2">
         <Label htmlFor="project-name" className="text-base">
-          Project Name <span className="text-destructive">*</span>
+          Projectnaam <span className="text-destructive">*</span>
         </Label>
         <Input
           id="project-name"
-          placeholder="e.g., Dairy Packaging Line"
+          placeholder="bijv. Zuivel Verpakkingslijn"
           {...register('name', {
-            required: 'Project name is required',
-            minLength: { value: 1, message: 'Project name must be at least 1 character' },
-            maxLength: { value: 255, message: 'Project name must not exceed 255 characters' },
+            required: 'Projectnaam is verplicht',
+            minLength: { value: 1, message: 'Projectnaam moet minimaal 1 teken bevatten' },
+            maxLength: { value: 255, message: 'Projectnaam mag maximaal 255 tekens bevatten' },
           })}
           className={errors.name ? 'border-destructive' : ''}
         />
@@ -39,16 +39,16 @@ export function Step1NameDescription({ register, errors }: Step1NameDescriptionP
 
       <div className="space-y-2">
         <Label htmlFor="project-description" className="text-base">
-          Description (Optional)
+          Beschrijving (optioneel)
         </Label>
         <Textarea
           id="project-description"
-          placeholder="Brief description of the project scope and objectives..."
+          placeholder="Korte beschrijving van de projectscope en doelstellingen..."
           rows={4}
           {...register('description')}
         />
         <p className="text-sm text-muted-foreground">
-          Provide additional context about the project if needed
+          Geef indien nodig extra context over het project
         </p>
       </div>
     </div>

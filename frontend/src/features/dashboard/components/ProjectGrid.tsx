@@ -17,14 +17,14 @@ export function ProjectGrid({ projects }: ProjectGridProps) {
         <div className="rounded-full bg-muted p-6 mb-4">
           <Plus className="h-10 w-10 text-muted-foreground" />
         </div>
-        <h3 className="text-lg font-semibold mb-2">No projects found</h3>
+        <h3 className="text-lg font-semibold mb-2">Geen projecten gevonden</h3>
         <p className="text-muted-foreground mb-6 max-w-md">
-          Get started by creating your first project. Choose from project types A, B, C, or D
-          based on your documentation needs.
+          Maak uw eerste project aan. Kies uit projecttype A, B, C of D
+          op basis van uw documentatiebehoeften.
         </p>
         <Button onClick={() => navigate('/projects/new')}>
           <Plus className="mr-2 h-4 w-4" />
-          Create Your First Project
+          Eerste project aanmaken
         </Button>
       </div>
     )

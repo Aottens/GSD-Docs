@@ -11,15 +11,15 @@ interface Step3LanguageConfirmProps {
 }
 
 const languages = [
-  { id: 'nl' as const, label: 'Dutch', badge: 'NL', flag: '🇳🇱' },
-  { id: 'en' as const, label: 'English', badge: 'EN', flag: '🇬🇧' },
+  { id: 'nl' as const, label: 'Nederlands', badge: 'NL', flag: '🇳🇱' },
+  { id: 'en' as const, label: 'Engels', badge: 'EN', flag: '🇬🇧' },
 ]
 
 const projectTypeLabels = {
-  A: 'New Installation',
-  B: 'Standard System',
-  C: 'Modification',
-  D: 'Migration',
+  A: 'Nieuwbouw + Standaarden',
+  B: 'Nieuwbouw Flex',
+  C: 'Modificatie Groot',
+  D: 'Modificatie Klein / TWN',
 }
 
 export function Step3LanguageConfirm({ control, watch }: Step3LanguageConfirmProps) {
@@ -31,17 +31,17 @@ export function Step3LanguageConfirm({ control, watch }: Step3LanguageConfirmPro
       <div className="space-y-4">
         <div className="space-y-2">
           <h2 className="text-lg font-semibold">
-            Select Language <span className="text-destructive">*</span>
+            Selecteer taal <span className="text-destructive">*</span>
           </h2>
           <p className="text-sm text-muted-foreground">
-            Choose the primary language for your FDS documentation
+            Kies de primaire taal voor uw FDS documentatie
           </p>
         </div>
 
         <Controller
           name="language"
           control={control}
-          rules={{ required: 'Please select a language' }}
+          rules={{ required: 'Selecteer een taal' }}
           render={({ field }) => (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {languages.map((lang) => (
@@ -79,15 +79,15 @@ export function Step3LanguageConfirm({ control, watch }: Step3LanguageConfirmPro
 
       {/* Confirmation Summary */}
       <Card className="p-6 bg-muted/50">
-        <h3 className="font-semibold text-lg mb-4">Project Summary</h3>
+        <h3 className="font-semibold text-lg mb-4">Samenvatting</h3>
         <div className="space-y-3">
           <div>
-            <p className="text-sm text-muted-foreground">Project Name</p>
+            <p className="text-sm text-muted-foreground">Projectnaam</p>
             <p className="font-medium">{formData.name || '—'}</p>
           </div>
           {formData.description && (
             <div>
-              <p className="text-sm text-muted-foreground">Description</p>
+              <p className="text-sm text-muted-foreground">Beschrijving</p>
               <p className="text-sm">{formData.description}</p>
             </div>
           )}
@@ -111,9 +111,9 @@ export function Step3LanguageConfirm({ control, watch }: Step3LanguageConfirmPro
             </div>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Language</p>
+            <p className="text-sm text-muted-foreground">Taal</p>
             <p className="font-medium">
-              {formData.language === 'nl' ? 'Dutch (NL)' : formData.language === 'en' ? 'English (EN)' : '—'}
+              {formData.language === 'nl' ? 'Nederlands (NL)' : formData.language === 'en' ? 'Engels (EN)' : '—'}
             </p>
           </div>
         </div>

@@ -7,9 +7,9 @@ interface StepIndicatorProps {
 }
 
 const steps = [
-  { step: 1, label: 'Project Info' },
+  { step: 1, label: 'Projectinfo' },
   { step: 2, label: 'Type' },
-  { step: 3, label: 'Language & Confirm' },
+  { step: 3, label: 'Taal & Bevestiging' },
 ]
 
 export function StepIndicator({ currentStep }: StepIndicatorProps) {

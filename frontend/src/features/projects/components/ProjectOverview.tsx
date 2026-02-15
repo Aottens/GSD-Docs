@@ -11,10 +11,10 @@ interface ProjectOverviewProps {
 }
 
 const typeLabels = {
-  A: 'New Installation',
-  B: 'Standard System',
-  C: 'Modification',
-  D: 'Migration',
+  A: 'Nieuwbouw + Standaarden',
+  B: 'Nieuwbouw Flex',
+  C: 'Modificatie Groot',
+  D: 'Modificatie Klein / TWN',
 }
 
 const typeColors = {
@@ -22,6 +22,12 @@ const typeColors = {
   B: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
   C: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
   D: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
+}
+
+const statusLabels = {
+  active: 'Actief',
+  completed: 'Afgerond',
+  archived: 'Gearchiveerd',
 }
 
 const statusColors = {
@@ -32,7 +38,7 @@ const statusColors = {
 
 export function ProjectOverview({ project }: ProjectOverviewProps) {
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString('nl-NL', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -51,10 +57,10 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
                 Type {project.type} - {typeLabels[project.type]}
               </Badge>
               <Badge variant="outline">
-                {project.language === 'nl' ? 'Dutch (NL)' : 'English (EN)'}
+                {project.language === 'nl' ? 'Nederlands (NL)' : 'Engels (EN)'}
               </Badge>
               <Badge variant="outline" className={statusColors[project.status]}>
-                {project.status.charAt(0).toUpperCase() + project.status.slice(1)}
+                {statusLabels[project.status]}
               </Badge>
             </div>
           </div>
@@ -64,12 +70,12 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
           {/* Progress */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Overall Progress</span>
+              <span className="text-muted-foreground">Totale voortgang</span>
               <span className="font-medium">{project.progress}%</span>
             </div>
             <Progress value={project.progress} className="h-2" />
             <p className="text-xs text-muted-foreground">
-              Current Phase: {project.current_phase} / 17
+              Huidige fase: {project.current_phase} / 17
             </p>
           </div>
 
@@ -78,11 +84,11 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
           {/* Metadata */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div>
-              <p className="text-muted-foreground">Created</p>
+              <p className="text-muted-foreground">Aangemaakt</p>
               <p className="font-medium">{formatDate(project.created_at)}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Last Modified</p>
+              <p className="text-muted-foreground">Laatst gewijzigd</p>
               <p className="font-medium">{formatDate(project.updated_at)}</p>
             </div>
           </div>
@@ -91,37 +97,37 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
 
       {/* Quick Actions */}
       <Card className="p-6">
-        <h3 className="font-semibold text-lg mb-4">Quick Actions</h3>
+        <h3 className="font-semibold text-lg mb-4">Snelkoppelingen</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Button
             variant="outline"
             className="h-auto py-4 flex-col gap-2"
             disabled
-            title="Available in Phase 10"
+            title="Beschikbaar in fase 10"
           >
             <MessageSquare className="h-5 w-5" />
-            <span className="text-sm">Start Discussion</span>
-            <span className="text-xs text-muted-foreground">Phase 10</span>
+            <span className="text-sm">Discussie starten</span>
+            <span className="text-xs text-muted-foreground">Fase 10</span>
           </Button>
           <Button
             variant="outline"
             className="h-auto py-4 flex-col gap-2"
             disabled
-            title="Available in Phase 9"
+            title="Beschikbaar in fase 9"
           >
             <Upload className="h-5 w-5" />
-            <span className="text-sm">Upload References</span>
-            <span className="text-xs text-muted-foreground">Phase 9</span>
+            <span className="text-sm">Referenties uploaden</span>
+            <span className="text-xs text-muted-foreground">Fase 9</span>
           </Button>
           <Button
             variant="outline"
             className="h-auto py-4 flex-col gap-2"
             disabled
-            title="Available in Phase 11"
+            title="Beschikbaar in fase 11"
           >
             <FileText className="h-5 w-5" />
-            <span className="text-sm">View Documents</span>
-            <span className="text-xs text-muted-foreground">Phase 11</span>
+            <span className="text-sm">Documenten bekijken</span>
+            <span className="text-xs text-muted-foreground">Fase 11</span>
           </Button>
         </div>
       </Card>
