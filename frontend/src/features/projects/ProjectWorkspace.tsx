@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { ProjectNavigation } from './components/ProjectNavigation'
 import { ProjectOverview } from './components/ProjectOverview'
 import { ChatPanel } from '../discussions/components/ChatPanel'
+import { ConversationHistory } from '../discussions/components/ConversationHistory'
 import { ReferenceManager } from '../files/components/ReferenceManager'
 import { PhaseTimeline } from '../timeline/components/PhaseTimeline'
 import { FaseringTab } from '../timeline/components/FaseringTab'
@@ -40,6 +41,17 @@ export function ProjectWorkspace() {
       // Placeholder for future actions
       toast.info(`Actie "${action}" voor Fase ${phaseNumber} beschikbaar in een volgende fase`)
     }
+  }
+
+  const handleViewConversation = (conversationId: number) => {
+    setDiscussionConversationId(conversationId)
+    setDiscussionPhase(null)
+    setChatOpen(true)
+  }
+
+  const handleStartRevision = (_conversationId: number) => {
+    // TODO: Start revision discussion
+    toast.info('Revisie starten wordt binnenkort beschikbaar')
   }
 
   if (isLoading) {
@@ -129,11 +141,19 @@ export function ProjectWorkspace() {
         {/* Center Content — fills remaining space */}
         <div className="flex-1 overflow-auto p-6">
           {activeSection === 'overview' && <ProjectOverview project={project} />}
-          {activeSection === 'fasering' && <FaseringTab projectId={project.id} onAction={handlePhaseAction} />}
           {activeSection === 'references' && <ReferenceManager projectId={project.id} />}
+          {activeSection === 'fasering' && <FaseringTab projectId={project.id} onAction={handlePhaseAction} />}
+          {activeSection === 'conversations' && (
+            <ConversationHistory
+              projectId={String(project.id)}
+              onViewConversation={handleViewConversation}
+              onStartRevision={handleStartRevision}
+            />
+          )}
           {activeSection !== 'overview' &&
+            activeSection !== 'references' &&
             activeSection !== 'fasering' &&
-            activeSection !== 'references' && (
+            activeSection !== 'conversations' && (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center space-y-2">
                   <p className="text-muted-foreground">
