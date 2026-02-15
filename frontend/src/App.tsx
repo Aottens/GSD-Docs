@@ -6,22 +6,14 @@ import { queryClient } from '@/lib/queryClient'
 import { useThemeStore } from '@/stores/themeStore'
 import { Header } from '@/components/layout/Header'
 import { Dashboard } from '@/features/dashboard/Dashboard'
+import { ProjectWizard } from '@/features/wizard/ProjectWizard'
 
-// Placeholder components for future implementation
-function ProjectWizard() {
-  return (
-    <div className="container py-6">
-      <h1 className="text-3xl font-bold">New Project</h1>
-      <p className="text-muted-foreground mt-2">Project wizard will be implemented in Phase 8 Plan 3.</p>
-    </div>
-  )
-}
-
+// Placeholder component for future implementation
 function ProjectWorkspace() {
   return (
     <div className="container py-6">
       <h1 className="text-3xl font-bold">Project Workspace</h1>
-      <p className="text-muted-foreground mt-2">Project workspace placeholder for future phases.</p>
+      <p className="text-muted-foreground mt-2">Project workspace will be implemented shortly.</p>
     </div>
   )
 }
