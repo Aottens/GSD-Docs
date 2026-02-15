@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GSD-Docs Industrial</title>
+    <script>
+      // Prevent FOUC by applying theme class before React loads
+      (function() {
+        try {
+          const stored = localStorage.getItem('theme-storage');
+          if (stored) {
+            const { state } = JSON.parse(stored);
+            const theme = state?.theme || 'system';
+
+            if (theme === 'dark') {
+              document.documentElement.classList.add('dark');
+            } else if (theme === 'system') {
+              const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+              if (isDark) {
+                document.documentElement.classList.add('dark');
+              }
+            }
+          }
+        } catch (e) {
+          // Ignore errors
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
