@@ -83,10 +83,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 10-01-PLAN.md -- Backend: conversation/message models, phase status model, Pydantic schemas, migration, config, dependencies
-- [ ] 10-02-PLAN.md -- Backend: phase timeline API, discussion engine with v1.0 pattern extraction, SSE streaming endpoints, context generator, prompts
-- [ ] 10-03-PLAN.md -- Frontend: horizontal phase timeline bar, phase node popovers with actions, Fasering tab, workspace integration
-- [ ] 10-04-PLAN.md -- Frontend: chat panel with SSE streaming, question cards, summary panel, conversation history, workspace chat integration
+- [x] 10-01-PLAN.md -- Backend: conversation/message models, phase status model, Pydantic schemas, migration, config, dependencies
+- [x] 10-02-PLAN.md -- Backend: phase timeline API, discussion engine with v1.0 pattern extraction, SSE streaming endpoints, context generator, prompts
+- [x] 10-03-PLAN.md -- Frontend: horizontal phase timeline bar, phase node popovers with actions, Fasering tab, workspace integration
+- [x] 10-04-PLAN.md -- Frontend: chat panel with SSE streaming, question cards, summary panel, conversation history, workspace chat integration
 
 #### Phase 11: Planning Workflow & Section Organization
 
@@ -236,7 +236,7 @@ Plans:
 | 7. SDS + Export | v1.0 | 5/5 | Complete | 2026-02-14 |
 | 8. Core Infrastructure | v2.0 | 3/3 | Complete | 2026-02-15 |
 | 9. File Management | v2.0 | 2/2 | Complete | 2026-02-15 |
-| 10. Discussion Workflow | v2.0 | 0/4 | Planned | - |
+| 10. Discussion Workflow | v2.0 | 4/4 | Complete | 2026-02-15 |
 | 11. Planning Workflow | v2.0 | 0/2 | Not started | - |
 | 12. Writing Workflow | v2.0 | 0/3 | Not started | - |
 | 13. Verification | v2.0 | 0/2 | Not started | - |
@@ -247,4 +247,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-14 -- v2.0 milestone added*
+*Last updated: 2026-02-15 -- Phase 10 complete*
