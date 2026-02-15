@@ -38,9 +38,9 @@ Complete Claude Code plugin for FDS/SDS document generation. 14 commands, 194 fi
 **Plans**: 3 plans
 
 Plans:
-- [ ] 08-01-PLAN.md — Backend foundation: FastAPI + SQLite + Alembic + Project CRUD API + LLM abstraction
-- [ ] 08-02-PLAN.md — Frontend foundation + Dashboard: Vite/React/Tailwind/shadcn setup + project card grid with filters
-- [ ] 08-03-PLAN.md — Project wizard + Working view: 3-step creation wizard + three-panel workspace + visual checkpoint
+- [x] 08-01-PLAN.md — Backend foundation: FastAPI + SQLite + Alembic + Project CRUD API + LLM abstraction
+- [x] 08-02-PLAN.md — Frontend foundation + Dashboard: Vite/React/Tailwind/shadcn setup + project card grid with filters
+- [x] 08-03-PLAN.md — Project wizard + Working view: 3-step creation wizard + fixed sidebar workspace + slide-in assistant
 
 #### Phase 9: Reference Library & File Management
 
@@ -233,7 +233,7 @@ Plans:
 | 5. Complete-FDS + Standards | v1.0 | 5/5 | Complete | 2026-02-14 |
 | 6. Knowledge Transfer | v1.0 | 5/5 | Complete | 2026-02-14 |
 | 7. SDS + Export | v1.0 | 5/5 | Complete | 2026-02-14 |
-| 8. Core Infrastructure | v2.0 | 0/3 | Planned | - |
+| 8. Core Infrastructure | v2.0 | 3/3 | Complete | 2026-02-15 |
 | 9. File Management | v2.0 | 0/2 | Not started | - |
 | 10. Discussion Workflow | v2.0 | 0/3 | Not started | - |
 | 11. Planning Workflow | v2.0 | 0/2 | Not started | - |
