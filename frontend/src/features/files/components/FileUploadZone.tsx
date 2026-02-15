@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useDropzone, type FileRejection } from 'react-dropzone'
 import { Upload, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
@@ -43,9 +44,11 @@ export function FileUploadZone({
       fileRejections.forEach((rejection) => {
         rejection.errors.forEach((error) => {
           if (error.code === 'file-too-large') {
-            console.error(`${rejection.file.name} is te groot (max ${maxSizeMB}MB)`)
+            toast.error(`${rejection.file.name} is te groot (max ${maxSizeMB}MB)`)
           } else if (error.code === 'file-invalid-type') {
-            console.error(`${rejection.file.name}: bestandstype niet toegestaan`)
+            toast.error(`${rejection.file.name}: bestandstype niet toegestaan`)
+          } else {
+            toast.error(`${rejection.file.name}: ${error.message}`)
           }
         })
       })

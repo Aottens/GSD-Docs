@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { Download, Pencil, FolderInput, RefreshCw, Trash2 } from 'lucide-react'
+import { Download, Pencil, FolderInput, RefreshCw, Trash2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -20,6 +20,7 @@ interface FileActionsProps {
   onDelete: () => void
   onDownload: () => void
   readOnly?: boolean
+  disabled?: boolean
 }
 
 export function FileActions({
@@ -31,6 +32,7 @@ export function FileActions({
   onDelete,
   onDownload,
   readOnly = false,
+  disabled = false,
 }: FileActionsProps) {
   const [isRenaming, setIsRenaming] = useState(false)
   const [newName, setNewName] = useState(file.original_filename)
@@ -77,84 +79,99 @@ export function FileActions({
       />
 
       {/* Rename Section */}
-      {!readOnly && (
-        <div>
-          {isRenaming ? (
-            <div className="flex gap-2">
-              <Input
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleRename()
-                  if (e.key === 'Escape') setIsRenaming(false)
-                }}
-                autoFocus
-              />
-              <Button onClick={handleRename} size="sm">
-                OK
-              </Button>
-              <Button variant="outline" onClick={() => setIsRenaming(false)} size="sm">
-                Annuleren
-              </Button>
-            </div>
-          ) : null}
+      {!readOnly && isRenaming && (
+        <div className="flex gap-2">
+          <Input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleRename()
+              if (e.key === 'Escape') setIsRenaming(false)
+            }}
+            autoFocus
+          />
+          <Button onClick={handleRename} size="sm" disabled={disabled}>
+            OK
+          </Button>
+          <Button variant="outline" onClick={() => setIsRenaming(false)} size="sm">
+            Annuleren
+          </Button>
         </div>
       )}
 
       {/* Move Section */}
-      {!readOnly && (
-        <div>
-          {isMoving ? (
-            <div className="flex gap-2">
-              <Select
-                value={file.folder_id?.toString() || 'root'}
-                onValueChange={handleMove}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="root">Root</SelectItem>
-                  {folders.map((folder) => (
-                    <SelectItem key={folder.id} value={folder.id.toString()}>
-                      {folder.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button variant="outline" onClick={() => setIsMoving(false)} size="sm">
-                Annuleren
-              </Button>
-            </div>
-          ) : null}
+      {!readOnly && isMoving && (
+        <div className="flex gap-2">
+          <Select
+            value={file.folder_id?.toString() || 'root'}
+            onValueChange={handleMove}
+            disabled={disabled}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="root">Root</SelectItem>
+              {folders.map((folder) => (
+                <SelectItem key={folder.id} value={folder.id.toString()}>
+                  {folder.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" onClick={() => setIsMoving(false)} size="sm">
+            Annuleren
+          </Button>
         </div>
       )}
 
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" onClick={onDownload}>
+        <Button variant="outline" size="sm" onClick={onDownload} disabled={disabled}>
           <Download className="h-4 w-4 mr-2" />
           Downloaden
         </Button>
 
         {!readOnly && (
           <>
-            <Button variant="outline" size="sm" onClick={() => setIsRenaming(true)}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setNewName(file.original_filename)
+                setIsRenaming(true)
+              }}
+              disabled={disabled || isRenaming}
+            >
               <Pencil className="h-4 w-4 mr-2" />
               Hernoemen
             </Button>
 
-            <Button variant="outline" size="sm" onClick={() => setIsMoving(true)}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsMoving(true)}
+              disabled={disabled || isMoving}
+            >
               <FolderInput className="h-4 w-4 mr-2" />
               Verplaatsen
             </Button>
 
-            <Button variant="outline" size="sm" onClick={handleReplaceClick}>
-              <RefreshCw className="h-4 w-4 mr-2" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReplaceClick}
+              disabled={disabled}
+            >
+              {disabled ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
               Vervangen
             </Button>
 
-            <Button variant="destructive" size="sm" onClick={onDelete}>
+            <Button variant="destructive" size="sm" onClick={onDelete} disabled={disabled}>
               <Trash2 className="h-4 w-4 mr-2" />
               Verwijderen
             </Button>

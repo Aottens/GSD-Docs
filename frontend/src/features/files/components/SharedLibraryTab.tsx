@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { Search } from 'lucide-react'
+import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -46,10 +47,16 @@ export function SharedLibraryTab({ projectId }: SharedLibraryTabProps) {
   const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file && selectedSharedFileId) {
-      overrideMutation.mutate({
-        fileId: selectedSharedFileId,
-        newFile: file,
-      })
+      overrideMutation.mutate(
+        {
+          fileId: selectedSharedFileId,
+          newFile: file,
+        },
+        {
+          onSuccess: () => toast.success('Bestand overschreven in projectbestanden'),
+          onError: () => toast.error('Overschrijven mislukt'),
+        }
+      )
       setSelectedSharedFileId(null)
     }
     // Reset input

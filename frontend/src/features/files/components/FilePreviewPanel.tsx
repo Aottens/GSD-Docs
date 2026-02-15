@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import { ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react'
+import { toast } from 'sonner'
 import {
   Sheet,
   SheetContent,
@@ -46,6 +47,8 @@ export function FilePreviewPanel({
   const updateMutation = useUpdateFile()
   const replaceMutation = useReplaceFile()
 
+  const isMutating = deleteMutation.isPending || updateMutation.isPending || replaceMutation.isPending
+
   // Reset page number when file changes
   useEffect(() => {
     setPageNumber(1)
@@ -86,29 +89,56 @@ export function FilePreviewPanel({
   const handleRename = (newName: string) => {
     updateMutation.mutate(
       { fileId: file.id, updates: { original_filename: newName } },
-      { onSuccess: onFileUpdated }
+      {
+        onSuccess: () => {
+          toast.success(`Hernoemd naar "${newName}"`)
+          onFileUpdated()
+        },
+        onError: () => toast.error('Hernoemen mislukt'),
+      }
     )
   }
 
   const handleMove = (folderId: number | null) => {
+    const folderName = folderId
+      ? folders.find((f) => f.id === folderId)?.name || 'map'
+      : 'Root'
     updateMutation.mutate(
       { fileId: file.id, updates: { folder_id: folderId } },
-      { onSuccess: onFileUpdated }
+      {
+        onSuccess: () => {
+          toast.success(`Verplaatst naar "${folderName}"`)
+          onFileUpdated()
+        },
+        onError: () => toast.error('Verplaatsen mislukt'),
+      }
     )
   }
 
   const handleReplace = (newFile: File) => {
     replaceMutation.mutate(
       { fileId: file.id, newFile },
-      { onSuccess: onFileUpdated }
+      {
+        onSuccess: () => {
+          toast.success('Bestand vervangen')
+          onFileUpdated()
+        },
+        onError: () => toast.error('Vervangen mislukt'),
+      }
     )
   }
 
   const handleDelete = () => {
     deleteMutation.mutate(file.id, {
       onSuccess: () => {
+        toast.success(`"${file.original_filename}" verwijderd`)
+        setDeleteDialogOpen(false)
         onFileUpdated()
         onOpenChange(false)
+      },
+      onError: () => {
+        toast.error('Verwijderen mislukt')
+        setDeleteDialogOpen(false)
       },
     })
   }
@@ -135,141 +165,141 @@ export function FilePreviewPanel({
   }
 
   return (
-    <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="w-3/4 sm:max-w-2xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{file.original_filename}</SheetTitle>
-          </SheetHeader>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-3/4 sm:max-w-2xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>{file.original_filename}</SheetTitle>
+        </SheetHeader>
 
-          <div className="px-6 pb-6 space-y-6">
-            {/* Preview Area */}
-            <div className="border rounded-lg p-4 bg-muted/30">
-              {/* Images */}
-              {file.mime_type.startsWith('image/') && (
-                <img
-                  src={previewUrl}
-                  alt={file.original_filename}
-                  className="w-full h-auto rounded"
-                />
-              )}
+        <div className="px-6 pb-6 space-y-6">
+          {/* Preview Area */}
+          <div className="border rounded-lg p-4 bg-muted/30">
+            {/* Images */}
+            {file.mime_type.startsWith('image/') && (
+              <img
+                src={previewUrl}
+                alt={file.original_filename}
+                className="w-full h-auto rounded"
+              />
+            )}
 
-              {/* PDF */}
-              {file.mime_type === 'application/pdf' && (
-                <div className="space-y-4">
-                  <Document
-                    file={previewUrl}
-                    onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-                    className="flex justify-center"
-                  >
-                    <Page pageNumber={pageNumber} className="max-w-full" />
-                  </Document>
+            {/* PDF */}
+            {file.mime_type === 'application/pdf' && (
+              <div className="space-y-4">
+                <Document
+                  file={previewUrl}
+                  onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+                  className="flex justify-center"
+                >
+                  <Page pageNumber={pageNumber} className="max-w-full" />
+                </Document>
 
-                  {numPages > 1 && (
-                    <div className="flex items-center justify-center gap-4">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
-                        disabled={pageNumber <= 1}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <span className="text-sm text-muted-foreground">
-                        Pagina {pageNumber} van {numPages}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPageNumber((p) => Math.min(numPages, p + 1))}
-                        disabled={pageNumber >= numPages}
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* DOCX */}
-              {(file.mime_type.includes('word') ||
-                file.mime_type.includes('openxmlformats')) && (
-                <div>
-                  {docxError ? (
-                    <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
-                      <AlertCircle className="h-5 w-5" />
-                      <span>Fout bij laden van document. Download het bestand om te bekijken.</span>
-                    </div>
-                  ) : (
-                    <div ref={docxContainerRef} className="docx-preview max-w-full overflow-auto" />
-                  )}
-                </div>
-              )}
-
-              {/* Fallback */}
-              {!file.mime_type.startsWith('image/') &&
-                file.mime_type !== 'application/pdf' &&
-                !file.mime_type.includes('word') &&
-                !file.mime_type.includes('openxmlformats') && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>Voorbeeld niet beschikbaar voor dit bestandstype</p>
-                    <Button variant="link" onClick={handleDownload} className="mt-2">
-                      Download bestand
+                {numPages > 1 && (
+                  <div className="flex items-center justify-center gap-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
+                      disabled={pageNumber <= 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      Pagina {pageNumber} van {numPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPageNumber((p) => Math.min(numPages, p + 1))}
+                      disabled={pageNumber >= numPages}
+                    >
+                      <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
                 )}
-            </div>
-
-            {/* Metadata */}
-            <div className="space-y-3">
-              <h3 className="font-semibold text-sm">Metadata</h3>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Type</p>
-                  <p className="font-medium">{getMimeTypeLabel(file.mime_type)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Grootte</p>
-                  <p className="font-medium">{formatBytes(file.size_bytes)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Geüpload op</p>
-                  <p className="font-medium">{formatDate(file.uploaded_at)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Map</p>
-                  <p className="font-medium">{getFolderName()}</p>
-                </div>
               </div>
-              {file.overrides_file_id && (
-                <Badge variant="outline" className="mt-2">
-                  Overschrijft gedeeld bestand
-                </Badge>
+            )}
+
+            {/* DOCX */}
+            {(file.mime_type.includes('word') ||
+              file.mime_type.includes('openxmlformats')) && (
+              <div>
+                {docxError ? (
+                  <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
+                    <AlertCircle className="h-5 w-5" />
+                    <span>Fout bij laden van document. Download het bestand om te bekijken.</span>
+                  </div>
+                ) : (
+                  <div ref={docxContainerRef} className="docx-preview max-w-full overflow-auto" />
+                )}
+              </div>
+            )}
+
+            {/* Fallback */}
+            {!file.mime_type.startsWith('image/') &&
+              file.mime_type !== 'application/pdf' &&
+              !file.mime_type.includes('word') &&
+              !file.mime_type.includes('openxmlformats') && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>Voorbeeld niet beschikbaar voor dit bestandstype</p>
+                  <Button variant="link" onClick={handleDownload} className="mt-2">
+                    Download bestand
+                  </Button>
+                </div>
               )}
-            </div>
-
-            {/* File Actions */}
-            <FileActions
-              file={file}
-              folders={folders}
-              onRename={handleRename}
-              onMove={handleMove}
-              onReplace={handleReplace}
-              onDelete={() => setDeleteDialogOpen(true)}
-              onDownload={handleDownload}
-              readOnly={readOnly}
-            />
           </div>
-        </SheetContent>
-      </Sheet>
 
-      {/* Delete Confirmation */}
-      <DeleteConfirmation
-        file={file}
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={handleDelete}
-      />
-    </>
+          {/* Metadata */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-sm">Metadata</h3>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <p className="text-muted-foreground">Type</p>
+                <p className="font-medium">{getMimeTypeLabel(file.mime_type)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Grootte</p>
+                <p className="font-medium">{formatBytes(file.size_bytes)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Ge&uuml;pload op</p>
+                <p className="font-medium">{formatDate(file.uploaded_at)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Map</p>
+                <p className="font-medium">{getFolderName()}</p>
+              </div>
+            </div>
+            {file.overrides_file_id && (
+              <Badge variant="outline" className="mt-2">
+                Overschrijft gedeeld bestand
+              </Badge>
+            )}
+          </div>
+
+          {/* File Actions */}
+          <FileActions
+            file={file}
+            folders={folders}
+            onRename={handleRename}
+            onMove={handleMove}
+            onReplace={handleReplace}
+            onDelete={() => setDeleteDialogOpen(true)}
+            onDownload={handleDownload}
+            readOnly={readOnly}
+            disabled={isMutating}
+          />
+        </div>
+
+        {/* Delete Confirmation - inside SheetContent for proper Radix focus management */}
+        <DeleteConfirmation
+          file={file}
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onConfirm={handleDelete}
+          isDeleting={deleteMutation.isPending}
+        />
+      </SheetContent>
+    </Sheet>
   )
 }

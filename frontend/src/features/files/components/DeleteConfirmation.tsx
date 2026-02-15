@@ -1,3 +1,4 @@
+import { Loader2 } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,6 +16,7 @@ interface DeleteConfirmationProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onConfirm: () => void
+  isDeleting?: boolean
 }
 
 export function DeleteConfirmation({
@@ -22,6 +24,7 @@ export function DeleteConfirmation({
   open,
   onOpenChange,
   onConfirm,
+  isDeleting = false,
 }: DeleteConfirmationProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -34,15 +37,17 @@ export function DeleteConfirmation({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Annuleren</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDeleting}>Annuleren</AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault()
               onConfirm()
             }}
+            disabled={isDeleting}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            Verwijderen
+            {isDeleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isDeleting ? 'Verwijderen...' : 'Verwijderen'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
