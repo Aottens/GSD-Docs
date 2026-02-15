@@ -9,11 +9,13 @@ from fastapi import (
     status, Header
 )
 from fastapi.responses import FileResponse as FastAPIFileResponse
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db
 from app.config import get_settings, Settings
 from app.models.file import FileScope
+from app.models.project import Project
 from app.schemas.file import (
     FileResponse, FileUploadResponse, FileUpdate, FileListResponse
 )
@@ -76,6 +78,16 @@ async def upload_project_file(
     Returns:
         Upload response with file metadata
     """
+    # Verify project exists
+    project_result = await db.execute(
+        select(Project).where(Project.id == project_id)
+    )
+    if not project_result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project met id {project_id} niet gevonden"
+        )
+
     # Validate file
     validation = await validate_file_upload(file, settings)
 

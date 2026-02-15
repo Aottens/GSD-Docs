@@ -5,8 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.database import engine, Base
-from app.dependencies import get_db
+from app.database import engine, Base, async_session_maker
 from app.api import health, projects, files, folders
 from app.services.file_storage import ensure_upload_dir
 from app.services.file_service import FolderService
@@ -29,11 +28,14 @@ async def lifespan(app: FastAPI):
     await ensure_upload_dir(settings)
 
     # Create default shared library folders
-    async for db in get_db():
-        folder_service = FolderService(db)
-        await folder_service.create_default_shared_folders()
-        await db.commit()
-        break
+    async with async_session_maker() as db:
+        try:
+            folder_service = FolderService(db)
+            await folder_service.create_default_shared_folders()
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            raise
 
     yield
 
