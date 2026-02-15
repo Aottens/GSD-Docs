@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.project import Project
 from app.schemas.project import ProjectCreate, ProjectUpdate
+from app.services.file_service import FolderService
 
 
 class ProjectService:
@@ -34,6 +35,11 @@ class ProjectService:
         self.db.add(project)
         await self.db.flush()
         await self.db.refresh(project)
+
+        # Create default folders for the project
+        folder_service = FolderService(self.db)
+        await folder_service.create_default_folders(project.id, data.type.value)
+
         return project
 
     async def get_project(self, project_id: int) -> Optional[Project]:

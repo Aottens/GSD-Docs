@@ -6,7 +6,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.database import engine, Base
-from app.api import health, projects
+from app.dependencies import get_db
+from app.api import health, projects, files, folders
+from app.services.file_storage import ensure_upload_dir
+from app.services.file_service import FolderService
 
 
 @asynccontextmanager
@@ -16,9 +19,21 @@ async def lifespan(app: FastAPI):
 
     Creates database tables on startup and cleans up on shutdown.
     """
+    settings = get_settings()
+
     # Startup: create tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    # Ensure upload directory exists
+    await ensure_upload_dir(settings)
+
+    # Create default shared library folders
+    async for db in get_db():
+        folder_service = FolderService(db)
+        await folder_service.create_default_shared_folders()
+        await db.commit()
+        break
 
     yield
 
@@ -47,6 +62,8 @@ app.add_middleware(
 # Register routers
 app.include_router(health.router)
 app.include_router(projects.router)
+app.include_router(files.router)
+app.include_router(folders.router)
 
 
 if __name__ == "__main__":
