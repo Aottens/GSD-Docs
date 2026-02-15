@@ -28,7 +28,11 @@ async function handleResponse<T>(response: Response): Promise<T> {
     )
   }
 
-  // Handle empty responses (like DELETE)
+  // Handle empty responses (204 No Content, or no body)
+  if (response.status === 204) {
+    return {} as T
+  }
+
   const contentType = response.headers.get('content-type')
   if (!contentType?.includes('application/json')) {
     return {} as T
