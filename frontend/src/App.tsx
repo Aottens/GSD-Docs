@@ -8,6 +8,7 @@ import { Header } from '@/components/layout/Header'
 import { Dashboard } from '@/features/dashboard/Dashboard'
 import { ProjectWizard } from '@/features/wizard/ProjectWizard'
 import { ProjectWorkspace } from '@/features/projects/ProjectWorkspace'
+import { AdminLibraryPage } from '@/features/files/components/AdminLibraryPage'
 
 function App() {
   const { theme, setTheme } = useThemeStore()
@@ -26,6 +27,7 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/projects/new" element={<ProjectWizard />} />
             <Route path="/projects/:id" element={<ProjectWorkspace />} />
+            <Route path="/admin/library" element={<AdminLibraryPage />} />
           </Routes>
         </div>
       </BrowserRouter>

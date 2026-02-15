@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/select'
 import { FolderNavigation } from './FolderNavigation'
 import { FileList } from './FileList'
+import { FilePreviewPanel } from './FilePreviewPanel'
 import { useSharedFiles, useSharedFolders, useOverrideFile } from '../hooks/useFiles'
 import type { FileMetadata } from '../types/file'
 
@@ -23,6 +24,8 @@ export function SharedLibraryTab({ projectId }: SharedLibraryTabProps) {
   const [fileType, setFileType] = useState<string | undefined>(undefined)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedSharedFileId, setSelectedSharedFileId] = useState<number | null>(null)
+  const [selectedFile, setSelectedFile] = useState<FileMetadata | null>(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   // Queries
   const { data: filesData } = useSharedFiles(
@@ -55,8 +58,9 @@ export function SharedLibraryTab({ projectId }: SharedLibraryTabProps) {
     }
   }
 
-  const handleFileClick = (_file: any) => {
-    // TODO: Open FilePreviewPanel (read-only mode) in Task 2
+  const handleFileClick = (file: FileMetadata) => {
+    setSelectedFile(file)
+    setPreviewOpen(true)
   }
 
   return (
@@ -110,6 +114,16 @@ export function SharedLibraryTab({ projectId }: SharedLibraryTabProps) {
         onFileClick={handleFileClick}
         showOverrideAction={true}
         onOverride={handleOverride}
+      />
+
+      {/* File Preview Panel (read-only for shared library) */}
+      <FilePreviewPanel
+        file={selectedFile}
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        folders={folders}
+        onFileUpdated={() => {}} // No updates needed for shared library
+        readOnly={true}
       />
     </div>
   )

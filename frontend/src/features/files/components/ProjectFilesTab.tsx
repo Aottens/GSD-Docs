@@ -11,8 +11,10 @@ import {
 import { FileUploadZone } from './FileUploadZone'
 import { FolderNavigation } from './FolderNavigation'
 import { FileList } from './FileList'
+import { FilePreviewPanel } from './FilePreviewPanel'
 import { useFileUpload } from '../hooks/useFileUpload'
 import { useProjectFiles, useProjectFolders, useCreateFolder } from '../hooks/useFiles'
+import type { FileMetadata } from '../types/file'
 
 interface ProjectFilesTabProps {
   projectId: number
@@ -22,6 +24,8 @@ export function ProjectFilesTab({ projectId }: ProjectFilesTabProps) {
   const [currentFolderId, setCurrentFolderId] = useState<number | null>(null)
   const [search, setSearch] = useState('')
   const [fileType, setFileType] = useState<string | undefined>(undefined)
+  const [selectedFile, setSelectedFile] = useState<FileMetadata | null>(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   // Queries
   const { data: filesData, refetch: refetchFiles } = useProjectFiles(
@@ -54,8 +58,9 @@ export function ProjectFilesTab({ projectId }: ProjectFilesTabProps) {
     })
   }
 
-  const handleFileClick = (_file: any) => {
-    // TODO: Open FilePreviewPanel in Task 2
+  const handleFileClick = (file: FileMetadata) => {
+    setSelectedFile(file)
+    setPreviewOpen(true)
   }
 
   return (
@@ -106,6 +111,15 @@ export function ProjectFilesTab({ projectId }: ProjectFilesTabProps) {
       <FileList
         files={filesData?.files || []}
         onFileClick={handleFileClick}
+      />
+
+      {/* File Preview Panel */}
+      <FilePreviewPanel
+        file={selectedFile}
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        folders={folders}
+        onFileUpdated={refetchFiles}
       />
     </div>
   )

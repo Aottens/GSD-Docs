@@ -10,7 +10,9 @@ import { StepIndicator } from './components/StepIndicator'
 import { Step1NameDescription } from './components/Step1NameDescription'
 import { Step2TypeClassification } from './components/Step2TypeClassification'
 import { Step3LanguageConfirm } from './components/Step3LanguageConfirm'
+import { Step4ReferenceUpload } from './components/Step4ReferenceUpload'
 import { useCreateProject } from '@/features/projects/queries'
+import { useFileUpload } from '@/features/files/hooks/useFileUpload'
 import type { WizardFormData, WizardStep } from './types'
 
 const slideVariants = {
@@ -32,6 +34,7 @@ export function ProjectWizard() {
   const navigate = useNavigate()
   const [currentStep, setCurrentStep] = useState<WizardStep>(1)
   const [direction, setDirection] = useState(0)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
 
   const {
     register,
@@ -51,12 +54,24 @@ export function ProjectWizard() {
   })
 
   const createProjectMutation = useCreateProject()
+  const [createdProjectId, setCreatedProjectId] = useState<number | null>(null)
+
+  // File upload hook (only active after project creation)
+  const { uploadFiles, progressMap, isUploading } = useFileUpload({
+    projectId: createdProjectId || undefined,
+    onUploadComplete: () => {
+      if (createdProjectId) {
+        navigate(`/projects/${createdProjectId}`)
+      }
+    },
+  })
 
   const formData = watch()
 
   const canProceedStep1 = !!formData.name && formData.name.length > 0
   const canProceedStep2 = !!formData.type
   const canProceedStep3 = !!formData.language
+  const canProceedStep4 = true // Files are optional
 
   const handleNext = async () => {
     let isStepValid = false
@@ -73,6 +88,12 @@ export function ProjectWizard() {
         setDirection(1)
         setCurrentStep(3)
       }
+    } else if (currentStep === 3) {
+      isStepValid = await trigger(['language'])
+      if (isStepValid && canProceedStep3) {
+        setDirection(1)
+        setCurrentStep(4)
+      }
     }
   }
 
@@ -83,7 +104,33 @@ export function ProjectWizard() {
     }
   }
 
+  const handleFilesSelected = (files: File[]) => {
+    setSelectedFiles((prev) => [...prev, ...files])
+  }
+
   const onSubmit = async (data: WizardFormData) => {
+    try {
+      const newProject = await createProjectMutation.mutateAsync({
+        name: data.name,
+        type: data.type,
+        language: data.language,
+      })
+      setCreatedProjectId(newProject.id)
+
+      // Upload files if any were selected
+      if (selectedFiles.length > 0) {
+        uploadFiles(selectedFiles)
+      } else {
+        navigate(`/projects/${newProject.id}`)
+      }
+    } catch (error) {
+      console.error('Failed to create project:', error)
+    }
+  }
+
+  const handleSkipAndCreate = async () => {
+    // Create project without files
+    const data = formData as WizardFormData
     try {
       const newProject = await createProjectMutation.mutateAsync({
         name: data.name,
@@ -167,6 +214,23 @@ export function ProjectWizard() {
                     <Step3LanguageConfirm control={control} watch={watch} />
                   </motion.div>
                 )}
+
+                {currentStep === 4 && (
+                  <motion.div
+                    key="step4"
+                    custom={direction}
+                    variants={slideVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                  >
+                    <Step4ReferenceUpload
+                      onFilesSelected={handleFilesSelected}
+                      progressMap={progressMap}
+                    />
+                  </motion.div>
+                )}
               </AnimatePresence>
             </div>
 
@@ -201,33 +265,46 @@ export function ProjectWizard() {
                 )}
               </div>
 
-              <div>
-                {currentStep < 3 ? (
+              <div className="flex gap-2">
+                {currentStep < 4 ? (
                   <Button
                     type="button"
                     onClick={handleNext}
                     disabled={
                       (currentStep === 1 && !canProceedStep1) ||
-                      (currentStep === 2 && !canProceedStep2)
+                      (currentStep === 2 && !canProceedStep2) ||
+                      (currentStep === 3 && !canProceedStep3)
                     }
                   >
                     Volgende
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 ) : (
-                  <Button
-                    type="submit"
-                    disabled={!canProceedStep3 || createProjectMutation.isPending}
-                  >
-                    {createProjectMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Aanmaken...
-                      </>
-                    ) : (
-                      'Project aanmaken'
-                    )}
-                  </Button>
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleSkipAndCreate}
+                      disabled={createProjectMutation.isPending || isUploading}
+                    >
+                      Overslaan & aanmaken
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={
+                        !canProceedStep4 || createProjectMutation.isPending || isUploading
+                      }
+                    >
+                      {createProjectMutation.isPending || isUploading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {createProjectMutation.isPending ? 'Aanmaken...' : 'Uploaden...'}
+                        </>
+                      ) : (
+                        'Project aanmaken'
+                      )}
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
