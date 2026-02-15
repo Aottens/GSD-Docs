@@ -78,6 +78,9 @@ class FileService:
 
         if folder_id is not None:
             query = query.where(File.folder_id == folder_id)
+        else:
+            # Root view: only show files without a folder
+            query = query.where(File.folder_id.is_(None))
 
         if file_type:
             # Map file type to MIME prefix
@@ -94,6 +97,8 @@ class FileService:
         )
         if folder_id is not None:
             count_query = count_query.where(File.folder_id == folder_id)
+        else:
+            count_query = count_query.where(File.folder_id.is_(None))
         if file_type:
             mime_prefix = self._get_mime_prefix(file_type)
             count_query = count_query.where(File.mime_type.like(f"{mime_prefix}%"))
@@ -132,6 +137,8 @@ class FileService:
 
         if folder_id is not None:
             query = query.where(File.folder_id == folder_id)
+        else:
+            query = query.where(File.folder_id.is_(None))
 
         if file_type:
             mime_prefix = self._get_mime_prefix(file_type)
@@ -146,6 +153,8 @@ class FileService:
         )
         if folder_id is not None:
             count_query = count_query.where(File.folder_id == folder_id)
+        else:
+            count_query = count_query.where(File.folder_id.is_(None))
         if file_type:
             mime_prefix = self._get_mime_prefix(file_type)
             count_query = count_query.where(File.mime_type.like(f"{mime_prefix}%"))

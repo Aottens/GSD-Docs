@@ -142,7 +142,7 @@ export function FilePreviewPanel({
             <SheetTitle>{file.original_filename}</SheetTitle>
           </SheetHeader>
 
-          <div className="mt-6 space-y-6">
+          <div className="px-6 pb-6 space-y-6">
             {/* Preview Area */}
             <div className="border rounded-lg p-4 bg-muted/30">
               {/* Images */}

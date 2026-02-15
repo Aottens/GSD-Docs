@@ -29,14 +29,17 @@ export function DeleteConfirmation({
         <AlertDialogHeader>
           <AlertDialogTitle>Bestand verwijderen?</AlertDialogTitle>
           <AlertDialogDescription>
-            Weet je zeker dat je "{file?.original_filename}" wilt verwijderen? Deze actie kan niet
-            ongedaan worden gemaakt.
+            Weet je zeker dat je &ldquo;{file?.original_filename}&rdquo; wilt verwijderen? Deze
+            actie kan niet ongedaan worden gemaakt.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Annuleren</AlertDialogCancel>
           <AlertDialogAction
-            onClick={onConfirm}
+            onClick={(e) => {
+              e.preventDefault()
+              onConfirm()
+            }}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
             Verwijderen
