@@ -116,6 +116,10 @@ Recent decisions affecting v2.0:
 - **Phase dependency chain** (10): Subsequent phases locked until previous completes
 - **Discussion behavior needs rework** (10): Phase 10.1 planned for deeper discussion UX design
 
+### Roadmap Evolution
+
+- Phase 10.1 inserted after Phase 10: Discussion behavior rework (URGENT)
+
 ## Blockers
 
 (None)

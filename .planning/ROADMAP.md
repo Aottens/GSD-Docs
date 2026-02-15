@@ -88,6 +88,17 @@ Plans:
 - [x] 10-03-PLAN.md -- Frontend: horizontal phase timeline bar, phase node popovers with actions, Fasering tab, workspace integration
 - [x] 10-04-PLAN.md -- Frontend: chat panel with SSE streaming, question cards, summary panel, conversation history, workspace chat integration
 
+#### Phase 10.1: Discussion behavior rework (INSERTED)
+
+**Goal**: Deeper discussion UX design and behavior rework for the chat interface.
+
+**Depends on**: Phase 10
+
+**Plans**: TBD
+
+Plans:
+- [ ] 10.1-01: TBD
+
 #### Phase 11: Planning Workflow & Section Organization
 
 **Goal**: Engineers can trigger plan-phase to generate section plans with wave assignments and navigate document outline.
@@ -237,6 +248,7 @@ Plans:
 | 8. Core Infrastructure | v2.0 | 3/3 | Complete | 2026-02-15 |
 | 9. File Management | v2.0 | 2/2 | Complete | 2026-02-15 |
 | 10. Discussion Workflow | v2.0 | 4/4 | Complete | 2026-02-15 |
+| 10.1 Discussion behavior rework | v2.0 | 0/1 | Not started | - |
 | 11. Planning Workflow | v2.0 | 0/2 | Not started | - |
 | 12. Writing Workflow | v2.0 | 0/3 | Not started | - |
 | 13. Verification | v2.0 | 0/2 | Not started | - |
@@ -248,3 +260,12 @@ Plans:
 ---
 *Roadmap created: 2026-02-06*
 *Last updated: 2026-02-15 -- Phase 10 complete*
+
+### Phase 10.1: Discussion behavior rework (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Depends on:** Phase 10
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 10.1 to break down)
