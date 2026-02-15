@@ -58,11 +58,11 @@ Plans:
   5. Engineer can override shared references with project-specific uploads
   6. Admin can manage shared reference library (add, remove, categorize files)
 
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 09-01: TBD
-- [ ] 09-02: TBD
+- [ ] 09-01-PLAN.md -- Backend: file/folder models, defense-in-depth validation, filesystem storage, complete REST API for uploads, downloads, management, and folder CRUD
+- [ ] 09-02-PLAN.md -- Frontend: drag-and-drop upload with progress, file browser with folders, PDF/DOCX/image preview panel, project files and shared library tabs, admin page, wizard step 4
 
 #### Phase 10: Discussion Workflow & Chat Interface
 
