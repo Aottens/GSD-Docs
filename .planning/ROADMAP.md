@@ -80,12 +80,12 @@ Plans:
   5. Engineer can view conversation history for completed discussions
   6. Discussion decisions persist in CONTEXT.md for downstream phases
 
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 10-01: TBD
-- [ ] 10-02: TBD
-- [ ] 10-03: TBD
+- [ ] 10-01-PLAN.md -- Backend: conversation/message models, phase timeline API, discussion engine with v1.0 pattern extraction, SSE streaming endpoints, context generator
+- [ ] 10-02-PLAN.md -- Frontend: horizontal phase timeline bar, phase node popovers with actions, Fasering tab, workspace integration
+- [ ] 10-03-PLAN.md -- Frontend: chat panel with SSE streaming, question cards, summary panel, conversation history, workspace chat integration
 
 #### Phase 11: Planning Workflow & Section Organization
 
@@ -235,7 +235,7 @@ Plans:
 | 7. SDS + Export | v1.0 | 5/5 | Complete | 2026-02-14 |
 | 8. Core Infrastructure | v2.0 | 3/3 | Complete | 2026-02-15 |
 | 9. File Management | v2.0 | 2/2 | Complete | 2026-02-15 |
-| 10. Discussion Workflow | v2.0 | 0/3 | Not started | - |
+| 10. Discussion Workflow | v2.0 | 0/3 | Planned | - |
 | 11. Planning Workflow | v2.0 | 0/2 | Not started | - |
 | 12. Writing Workflow | v2.0 | 0/3 | Not started | - |
 | 13. Verification | v2.0 | 0/2 | Not started | - |
