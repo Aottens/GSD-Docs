@@ -7,16 +7,7 @@ import { useThemeStore } from '@/stores/themeStore'
 import { Header } from '@/components/layout/Header'
 import { Dashboard } from '@/features/dashboard/Dashboard'
 import { ProjectWizard } from '@/features/wizard/ProjectWizard'
-
-// Placeholder component for future implementation
-function ProjectWorkspace() {
-  return (
-    <div className="container py-6">
-      <h1 className="text-3xl font-bold">Project Workspace</h1>
-      <p className="text-muted-foreground mt-2">Project workspace will be implemented shortly.</p>
-    </div>
-  )
-}
+import { ProjectWorkspace } from '@/features/projects/ProjectWorkspace'
 
 function App() {
   const { theme, setTheme } = useThemeStore()
