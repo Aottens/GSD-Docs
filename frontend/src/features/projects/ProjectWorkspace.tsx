@@ -8,6 +8,7 @@ import { ErrorMessage } from '@/components/common/ErrorMessage'
 import { ProjectNavigation } from './components/ProjectNavigation'
 import { ProjectOverview } from './components/ProjectOverview'
 import { ChatContextPanel } from './components/ChatContextPanel'
+import { ReferenceManager } from '../files/components/ReferenceManager'
 import { useProject } from './queries'
 
 export function ProjectWorkspace() {
@@ -96,7 +97,8 @@ export function ProjectWorkspace() {
         {/* Center Content — fills remaining space */}
         <div className="flex-1 overflow-auto p-6">
           {activeSection === 'overview' && <ProjectOverview project={project} />}
-          {activeSection !== 'overview' && (
+          {activeSection === 'references' && <ReferenceManager projectId={project.id} />}
+          {activeSection !== 'overview' && activeSection !== 'references' && (
             <div className="flex items-center justify-center h-full">
               <div className="text-center space-y-2">
                 <p className="text-muted-foreground">

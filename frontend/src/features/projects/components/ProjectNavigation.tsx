@@ -53,6 +53,7 @@ export function ProjectNavigation({
         {navigationSections.map((section) => {
           const Icon = section.icon
           const isActive = activeSection === section.id
+          const isEnabled = section.id === 'overview' || section.id === 'references'
 
           return (
             <button
@@ -65,14 +66,14 @@ export function ProjectNavigation({
                     ? 'bg-primary text-primary-foreground'
                     : 'hover:bg-muted text-muted-foreground hover:text-foreground'
                 }
-                ${!isActive && section.id !== 'overview' ? 'opacity-60' : ''}
+                ${!isActive && !isEnabled ? 'opacity-60' : ''}
               `}
-              disabled={section.id !== 'overview'}
-              title={section.id !== 'overview' ? 'Beschikbaar in een volgende fase' : undefined}
+              disabled={!isEnabled}
+              title={!isEnabled ? 'Beschikbaar in een volgende fase' : undefined}
             >
               <Icon className="h-4 w-4 flex-shrink-0" />
               <span className="truncate">{section.label}</span>
-              {section.id !== 'overview' && !isActive && (
+              {!isEnabled && !isActive && (
                 <span className="ml-auto text-xs opacity-50">Binnenkort</span>
               )}
             </button>
