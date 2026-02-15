@@ -1,7 +1,6 @@
 """Phase timeline API for status tracking."""
 
 from pathlib import Path
-from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -9,9 +8,20 @@ from sqlalchemy import select
 from app.dependencies import get_db
 from app.schemas.phase import PhaseTimelineResponse, PhaseStatusResponse
 from app.models.conversation import Conversation, ConversationStatus
+from app.models.project import Project
+from app.prompts.discuss_phase import PROJECT_TYPE_PHASES
 
 
 router = APIRouter(prefix="/api/projects/{project_id}/phases", tags=["phases"])
+
+
+def _get_phases_for_project_type(project_type: str) -> list[dict]:
+    """Get phase definitions for a project type from v1.0 extracted data."""
+    phases = PROJECT_TYPE_PHASES.get(project_type, [])
+    return [
+        {"number": p["number"], "name": p["name"], "goal": p["description"]}
+        for p in phases
+    ]
 
 
 @router.get("/", response_model=PhaseTimelineResponse)
@@ -19,42 +29,19 @@ async def get_phase_timeline(
     project_id: int,
     db: AsyncSession = Depends(get_db)
 ) -> PhaseTimelineResponse:
+    """Get all phases with status for a project.
+
+    Phase list comes from project type (A/B/C/D) definitions.
+    Status is derived from conversation records in the database.
     """
-    Get all phases with status for a project.
+    # Get project from database
+    result = await db.execute(select(Project).where(Project.id == project_id))
+    project = result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
 
-    Phase status is DERIVED from filesystem artifacts (per CONTEXT.md decision):
-    - Check for {phase_dir}/{NN}-CONTEXT.md -> "discussed"
-    - Check for {phase_dir}/{NN}-*-PLAN.md -> "planned"
-    - Check for {phase_dir}/{NN}-*-SUMMARY.md (content plans) -> "written"
-    - Check for {phase_dir}/{NN}-VERIFICATION.md -> "verified"
-    - Check for {phase_dir}/{NN}-REVIEW.md -> "reviewed"
-
-    Available actions derived from status:
-    - not_started: ["discuss"]
-    - discussed: ["plan", "discuss"] (discuss = update)
-    - planned: ["write"]
-    - written: ["verify"]
-    - verified: ["review"]
-    - reviewed: [] (phase complete)
-
-    Also queries conversations table for active conversation_id per phase.
-
-    NOTE: Parses ROADMAP.md at project root to get phase names/goals.
-    For v2.0, the ROADMAP.md structure follows project type templates from v1.0.
-
-    Args:
-        project_id: Project ID
-        db: Database session
-
-    Returns:
-        Phase timeline with all phases and their statuses
-    """
-    # TODO: Get project directory from database
-    project_dir = Path(f"projects/{project_id}")
-    roadmap_path = project_dir / ".planning" / "ROADMAP.md"
-
-    # Parse ROADMAP.md for phases
-    phases_data = _parse_roadmap(roadmap_path) if roadmap_path.exists() else []
+    # Get phases for this project type
+    phases_data = _get_phases_for_project_type(project.type.value)
 
     # Query active conversations
     result = await db.execute(
@@ -62,31 +49,59 @@ async def get_phase_timeline(
         .where(Conversation.project_id == project_id)
         .where(Conversation.status == ConversationStatus.active.value)
     )
-    conversations = {conv.phase_number: conv.id for conv in result.scalars().all()}
+    active_conversations = {conv.phase_number: conv.id for conv in result.scalars().all()}
 
-    # Build phase statuses
+    # Query completed conversations (for discussed status)
+    result = await db.execute(
+        select(Conversation)
+        .where(Conversation.project_id == project_id)
+        .where(Conversation.status == ConversationStatus.completed.value)
+    )
+    completed_conversations = {conv.phase_number for conv in result.scalars().all()}
+
+    # Build phase statuses with dependency chain enforcement
     phases = []
-    for phase_data in phases_data:
+    for i, phase_data in enumerate(phases_data):
         phase_number = phase_data["number"]
-        phase_name = phase_data["name"]
-        phase_goal = phase_data["goal"]
 
-        # Derive status from filesystem
-        status_info = _derive_phase_status(project_dir, phase_number)
+        # Check if previous phase is completed (dependency chain)
+        previous_completed = True
+        if i > 0:
+            prev_number = phases_data[i - 1]["number"]
+            previous_completed = prev_number in completed_conversations
+
+        # Derive status from conversation records
+        if phase_number in completed_conversations:
+            status = "discussed"
+            sub_status = "Besproken"
+            actions = ["plan", "discuss"]
+        elif phase_number in active_conversations:
+            status = "discussing"
+            sub_status = "In bespreking"
+            actions = ["discuss"]
+        elif previous_completed:
+            status = "not_started"
+            sub_status = None
+            actions = ["discuss"]
+        else:
+            # Locked — previous phase not completed
+            status = "not_started"
+            sub_status = None
+            actions = []
 
         phase_status = PhaseStatusResponse(
             number=phase_number,
-            name=phase_name,
-            goal=phase_goal,
-            status=status_info["status"],
-            sub_status=status_info["sub_status"],
-            available_actions=status_info["available_actions"],
-            has_context=status_info["has_context"],
-            has_plans=status_info["has_plans"],
-            has_content=status_info["has_content"],
-            has_verification=status_info["has_verification"],
-            has_review=status_info["has_review"],
-            conversation_id=conversations.get(phase_number),
+            name=phase_data["name"],
+            goal=phase_data["goal"],
+            status=status,
+            sub_status=sub_status,
+            available_actions=actions,
+            has_context=phase_number in completed_conversations,
+            has_plans=False,
+            has_content=False,
+            has_verification=False,
+            has_review=False,
+            conversation_id=active_conversations.get(phase_number),
         )
         phases.append(phase_status)
 
@@ -102,75 +117,60 @@ async def get_phase_status(
     phase_number: int,
     db: AsyncSession = Depends(get_db)
 ) -> PhaseStatusResponse:
-    """
-    Get detailed status for a single phase.
+    """Get detailed status for a single phase."""
+    # Get project from database
+    result = await db.execute(select(Project).where(Project.id == project_id))
+    project = result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
 
-    Args:
-        project_id: Project ID
-        phase_number: Phase number
-        db: Database session
-
-    Returns:
-        Phase status details
-    """
-    # TODO: Get project directory from database
-    project_dir = Path(f"projects/{project_id}")
-    roadmap_path = project_dir / ".planning" / "ROADMAP.md"
-
-    # Parse ROADMAP.md for phase info
-    phases_data = _parse_roadmap(roadmap_path) if roadmap_path.exists() else []
+    # Get phases for this project type
+    phases_data = _get_phases_for_project_type(project.type.value)
     phase_data = next(
         (p for p in phases_data if p["number"] == phase_number),
         None
     )
 
     if not phase_data:
-        raise HTTPException(status_code=404, detail=f"Phase {phase_number} not found in ROADMAP.md")
+        raise HTTPException(status_code=404, detail=f"Phase {phase_number} not found for project type {project.type.value}")
 
-    # Query active conversation
+    # Query conversations for this phase
     result = await db.execute(
         select(Conversation)
         .where(Conversation.project_id == project_id)
         .where(Conversation.phase_number == phase_number)
-        .where(Conversation.status == ConversationStatus.active.value)
     )
-    conversation = result.scalar_one_or_none()
+    conversations = result.scalars().all()
+    active = next((c for c in conversations if c.status == ConversationStatus.active.value), None)
+    completed = any(c.status == ConversationStatus.completed.value for c in conversations)
 
-    # Derive status from filesystem
-    status_info = _derive_phase_status(project_dir, phase_number)
+    if completed:
+        status = "discussed"
+        sub_status = "Besproken"
+        actions = ["plan", "discuss"]
+    elif active:
+        status = "discussing"
+        sub_status = "In bespreking"
+        actions = ["discuss"]
+    else:
+        status = "not_started"
+        sub_status = None
+        actions = ["discuss"]
 
     return PhaseStatusResponse(
         number=phase_number,
         name=phase_data["name"],
         goal=phase_data["goal"],
-        status=status_info["status"],
-        sub_status=status_info["sub_status"],
-        available_actions=status_info["available_actions"],
-        has_context=status_info["has_context"],
-        has_plans=status_info["has_plans"],
-        has_content=status_info["has_content"],
-        has_verification=status_info["has_verification"],
-        has_review=status_info["has_review"],
-        conversation_id=conversation.id if conversation else None,
+        status=status,
+        sub_status=sub_status,
+        available_actions=actions,
+        has_context=completed,
+        has_plans=False,
+        has_content=False,
+        has_verification=False,
+        has_review=False,
+        conversation_id=active.id if active else None,
     )
-
-
-def _parse_roadmap(roadmap_path: Path) -> list[dict]:
-    """
-    Parse ROADMAP.md to extract phase information.
-
-    Args:
-        roadmap_path: Path to ROADMAP.md
-
-    Returns:
-        List of phase dictionaries with number, name, and goal
-    """
-    # TODO: Implement robust ROADMAP.md parsing
-    # For now, return placeholder
-    return [
-        {"number": 1, "name": "foundation", "goal": "Foundation phase"},
-        {"number": 2, "name": "architecture", "goal": "System architecture"},
-    ]
 
 
 def _derive_phase_status(project_dir: Path, phase_number: int) -> dict:

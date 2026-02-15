@@ -26,22 +26,17 @@ router = APIRouter(prefix="/api/projects/{project_id}/discussions", tags=["discu
 @router.post("/", response_model=ConversationResponse)
 async def start_discussion(
     project_id: int,
-    phase_number: int,
+    body: dict = Body(...),
     db: AsyncSession = Depends(get_db)
 ) -> ConversationResponse:
-    """
-    Start a new discussion for a phase.
+    """Start a new discussion for a phase.
 
     Creates conversation and returns initial state with topic selection.
-
-    Args:
-        project_id: Project ID
-        phase_number: Phase number
-        db: Database session
-
-    Returns:
-        Created conversation with initial messages
     """
+    phase_number = body.get("phase_number")
+    if phase_number is None:
+        raise HTTPException(status_code=400, detail="phase_number is required")
+
     settings = get_settings()
     llm = get_llm_provider()
     engine = DiscussionEngine(db, llm, settings)
@@ -274,18 +269,13 @@ async def stream_message(
             async for event in engine.send_message(
                 conversation_id, request.content, request.attachments
             ):
-                # Format as SSE event
-                event_type = event.get("event", "message_delta")
-                event_data = event.get("data", {})
-
+                # Format as SSE — frontend expects {"event": ..., "data": {...}} in data field
                 yield {
-                    "event": event_type,
-                    "data": json.dumps(event_data),
+                    "data": json.dumps(event),
                 }
         except Exception as e:
             yield {
-                "event": "error",
-                "data": json.dumps({"error": str(e)}),
+                "data": json.dumps({"event": "error", "data": {"error": str(e)}}),
             }
 
     return EventSourceResponse(event_generator())

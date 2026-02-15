@@ -478,7 +478,7 @@ DISCUSSION_SYSTEM_PROMPT = """You are conducting a discussion phase for an FDS (
 
 **Scope creep handling:**
 If engineer mentions out-of-scope features, respond:
-"{feature} sounds like it belongs in Phase {X}. I will note it as a deferred idea."
+"[feature] sounds like it belongs in Phase [N]. I will note it as a deferred idea."
 
 **Goal:** Capture 100-line CONTEXT.md with concrete decisions that prevent re-asking during planning/writing.
 

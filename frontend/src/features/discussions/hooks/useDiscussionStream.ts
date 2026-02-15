@@ -17,17 +17,26 @@ export function useDiscussionStream(): UseDiscussionStreamReturn {
   const [currentStreamedContent, setCurrentStreamedContent] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [conversationId, setConversationId] = useState<number | null>(null)
+  const projectIdRef = useRef<string | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
 
   const startDiscussion = useCallback(async (projectId: string, phaseNumber: number) => {
     try {
       setError(null)
+      projectIdRef.current = projectId
       // Create new conversation
-      const conversation = await api.post<{ id: number }>(
+      const conversation = await api.post<{ id: number; message_count: number }>(
         `/projects/${projectId}/discussions`,
         { phase_number: phaseNumber }
       )
       setConversationId(conversation.id)
+
+      // Load initial messages (system + topic selection)
+      const msgs = await api.get<Message[]>(
+        `/projects/${projectId}/discussions/${conversation.id}/messages`
+      )
+      // Filter out system messages, show only assistant messages
+      setMessages(msgs.filter((m: Message) => m.role !== 'system'))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start discussion')
     }
@@ -63,7 +72,7 @@ export function useDiscussionStream(): UseDiscussionStreamReturn {
       setMessages((prev) => [...prev, userMessage])
 
       // Use fetch with ReadableStream for POST with body
-      const response = await fetch(`/api/projects/-/discussions/${conversationId}/messages/stream`, {
+      const response = await fetch(`/api/projects/${projectIdRef.current}/discussions/${conversationId}/messages/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

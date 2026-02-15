@@ -10,10 +10,12 @@ from sqlalchemy import select
 from app.config import Settings
 from app.llm.provider import LLMProvider
 from app.models.conversation import Conversation, Message, ConversationStatus, MessageRole, MessageType
+from app.models.project import Project
 from app.prompts.discuss_phase import (
     detect_content_types,
     get_gray_areas,
     build_system_prompt,
+    PROJECT_TYPE_PHASES,
 )
 
 
@@ -68,8 +70,8 @@ class DiscussionEngine:
         project_type = project_data.get("type", "B")
         project_language = project_data.get("language", "nl")
 
-        # Parse ROADMAP.md to get phase goal
-        phase_info = self._parse_roadmap_for_phase(project_id, phase_number)
+        # Get phase info from project type definition
+        phase_info = self._parse_roadmap_for_phase(project_type, phase_number)
         phase_goal = phase_info["goal"]
         phase_name = phase_info["name"]
 
@@ -213,7 +215,7 @@ class DiscussionEngine:
             # Yield complete event
             yield {
                 "event": "message_complete",
-                "data": {"content": full_response}
+                "data": {"final": full_response}
             }
 
             # Parse for structured content
@@ -315,54 +317,33 @@ class DiscussionEngine:
 
         return conversation.summary_data
 
-    def _parse_roadmap_for_phase(self, project_id: int, phase_number: int) -> dict:
-        """
-        Parse project ROADMAP.md to extract phase goal and dependencies.
-
-        Args:
-            project_id: Project ID
-            phase_number: Phase number
-
-        Returns:
-            Dictionary with phase name, goal, and dependencies
-        """
-        # TODO: Implement ROADMAP.md parsing
-        # For now, return placeholder
+    def _parse_roadmap_for_phase(self, project_type: str, phase_number: int) -> dict:
+        """Get phase info from PROJECT_TYPE_PHASES for this project type."""
+        phases = PROJECT_TYPE_PHASES.get(project_type, [])
+        phase = next((p for p in phases if p["number"] == phase_number), None)
+        if not phase:
+            return {
+                "name": f"Phase {phase_number}",
+                "goal": f"Phase {phase_number}",
+                "dependencies": [],
+            }
         return {
-            "name": f"Phase {phase_number}",
-            "goal": f"Placeholder goal for phase {phase_number}",
+            "name": phase["name"],
+            "goal": phase["description"],
             "dependencies": [],
         }
 
-    def _check_phase_dependencies(self, project_id: int, phase_number: int) -> bool:
-        """
-        Check if phase dependencies are met (SUMMARY.md existence pattern from v1.0).
-
-        Args:
-            project_id: Project ID
-            phase_number: Phase number
-
-        Returns:
-            True if dependencies are met, False otherwise
-        """
-        # TODO: Implement dependency checking
-        return True
-
     async def _load_project(self, project_id: int) -> dict:
-        """
-        Load project configuration.
-
-        Args:
-            project_id: Project ID
-
-        Returns:
-            Project configuration dictionary
-        """
-        # TODO: Load from database or PROJECT.md
-        # For now, return defaults
+        """Load project from database."""
+        result = await self.db.execute(
+            select(Project).where(Project.id == project_id)
+        )
+        project = result.scalar_one_or_none()
+        if not project:
+            return {"type": "B", "language": "nl"}
         return {
-            "type": "B",
-            "language": "nl",
+            "type": project.type.value,
+            "language": project.language.value,
         }
 
     def _load_baseline_summary(self, project_id: int) -> Optional[str]:
