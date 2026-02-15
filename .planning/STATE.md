@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Engineers can create, manage, and review FDS/SDS projects through a visual web interface that guides them through the full document lifecycle
-**Current focus:** Phase 9 - Reference Library & File Management
+**Current focus:** Phase 9 complete — awaiting verification
 
 ## Current Position
 
 - Phase: 9 of 17 (Reference Library & File Management)
-- Plan: 1 of 2 in current phase
-- Status: In progress
-- Last activity: 2026-02-15 - Completed Phase 9 Plan 01 (Backend File Management API)
+- Plan: 2 of 2 in current phase (all plans complete)
+- Status: Awaiting phase verification
+- Last activity: 2026-02-15 - Completed Phase 9 Plan 02 (Frontend File Management UI)
 
 ## Progress
 
-Progress: [████████░░░░░░░░░░░░] 47% (8 of 17 phases complete)
+Progress: [██████████░░░░░░░░░░] 53% (9 of 17 phases complete)
 
 v1.0 milestone: 7 phases, 33 plans - Complete ✓
-v2.0 milestone: 10 phases, 21 plans - Phase 8 complete
+v2.0 milestone: 10 phases, 21 plans - Phase 9 complete
 
 ## Performance Metrics
 
@@ -29,11 +29,11 @@ v2.0 milestone: 10 phases, 21 plans - Phase 8 complete
 - 89/89 requirements satisfied
 
 **v2.0 (in progress):**
-- Plans completed: 4 of 21
+- Plans completed: 5 of 21
 - Phase 8: 3/3 plans complete ✓
-- Phase 9: 1/2 plans complete
-- Files created: 89
-- Last completed: Phase 9 Plan 01 (Backend File Management API)
+- Phase 9: 2/2 plans complete ✓
+- Files created: 105
+- Last completed: Phase 9 Plan 02 (Frontend File Management UI)
 
 ## Accumulated Context
 
@@ -59,13 +59,15 @@ v2.0 milestone: 10 phases, 21 plans - Phase 8 complete
 - All UI in Dutch, dark/light theme with FOUC prevention
 - Tailwind v4 with shadcn/ui components
 
-**Phase 9 deliverables (partial - Plan 01 complete):**
-- File/Folder models with FileScope enum (shared/project)
-- Defense-in-depth file validation (5 layers)
-- Filesystem storage with organized paths
-- Complete file/folder REST API (upload, download, preview, CRUD)
+**Phase 9 deliverables (now available):**
+- Backend: File/Folder models, defense-in-depth validation (5 layers), filesystem storage, complete REST API
+- Frontend: Drag-and-drop upload with progress, file browser with folder navigation, inline PDF/DOCX/image preview
+- File actions: delete (with confirmation), rename, replace, download, move between folders
+- Project files and shared library tabs with override mechanism
+- Admin library page at /admin/library
+- 4-step project creation wizard with reference upload
+- Toast notification system (sonner) for all file operations
 - Default folder auto-creation per project type (A/B/C/D)
-- Admin-protected shared library endpoints
 
 ## Decisions
 
@@ -92,6 +94,10 @@ Recent decisions affecting v2.0:
 - **Filesystem storage** (09-01): Files at uploads/{scope}/{project_id}/{folder}/{uuid}.ext, not BLOBs
 - **Soft delete preserves files** (09-01): is_deleted flag only, files remain on disk
 - **Admin auth via X-Admin-Key** (09-01): Simple header-based auth, empty key = dev mode
+- **Sonner for toasts** (09-02): Lightweight toast notifications, fits shadcn/ui ecosystem
+- **XHR for uploads** (09-02): Enables real per-file progress via upload.onprogress (fetch doesn't support this)
+- **DeleteConfirmation inside SheetContent** (09-02): Radix Dialog focus trap requires nested rendering
+- **204 explicit check in API client** (09-02): FastAPI sends content-type on empty 204 responses
 
 ## Blockers
 
@@ -100,10 +106,10 @@ Recent decisions affecting v2.0:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed Phase 9 Plan 01 (Backend File Management API)
-Resume file: .planning/phases/09-reference-library-file-management/09-01-SUMMARY.md
+Stopped at: Completed Phase 9 Plan 02 (Frontend File Management UI) — human verification approved
+Resume file: .planning/phases/09-reference-library-file-management/09-02-SUMMARY.md
 
-**Next step:** Execute Phase 9 Plan 02 (Frontend File Browser) with `/gsd:execute-phase 9`
+**Next step:** Phase verification, then proceed to Phase 10
 
 ---
 *Last updated: 2026-02-15*
