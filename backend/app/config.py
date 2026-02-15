@@ -25,14 +25,68 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = Field(default=["http://localhost:5173"])
 
     # File Upload
-    MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB
+    MAX_UPLOAD_SIZE: int = 50 * 1024 * 1024  # 50MB
     UPLOAD_DIR: str = "./uploads"
+    ALLOWED_EXTENSIONS: list[str] = Field(
+        default=[".pdf", ".docx", ".doc", ".png", ".jpg", ".jpeg", ".tiff", ".bmp"]
+    )
+    ALLOWED_MIME_TYPES: list[str] = Field(
+        default=[
+            "application/pdf",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/msword",
+            "image/png",
+            "image/jpeg",
+            "image/tiff",
+            "image/bmp",
+        ]
+    )
+    ADMIN_API_KEY: str = ""  # Optional - admin auth for shared library writes
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True
     )
+
+
+# Default folder structures per project type
+DEFAULT_PROJECT_FOLDERS = {
+    "A": [
+        "P&IDs",
+        "Specificaties",
+        "Standaarden",
+        "Foto's & Tekeningen",
+        "Bestaande documentatie"
+    ],
+    "B": [
+        "P&IDs",
+        "Specificaties",
+        "Foto's & Tekeningen",
+        "Bestaande documentatie"
+    ],
+    "C": [
+        "P&IDs",
+        "Specificaties",
+        "Standaarden",
+        "Bestaande FDS/SDS",
+        "Foto's & Tekeningen",
+        "Bestaande documentatie"
+    ],
+    "D": [
+        "P&IDs",
+        "Specificaties",
+        "Bestaande FDS/SDS",
+        "Bestaande documentatie"
+    ],
+}
+
+DEFAULT_SHARED_FOLDERS = [
+    "Standaarden",
+    "Typicals",
+    "Sjablonen",
+    "Algemene referenties"
+]
 
 
 @lru_cache

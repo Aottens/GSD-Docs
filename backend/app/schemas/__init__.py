@@ -7,6 +7,15 @@ from app.schemas.project import (
     ProjectResponse,
     ProjectListResponse,
 )
+from app.schemas.file import (
+    FileResponse,
+    FileUploadResponse,
+    FileUpdate,
+    FileListResponse,
+    FolderResponse,
+    FolderCreate,
+    FolderUpdate,
+)
 
 __all__ = [
     "ProjectBase",
@@ -14,4 +23,11 @@ __all__ = [
     "ProjectUpdate",
     "ProjectResponse",
     "ProjectListResponse",
+    "FileResponse",
+    "FileUploadResponse",
+    "FileUpdate",
+    "FileListResponse",
+    "FolderResponse",
+    "FolderCreate",
+    "FolderUpdate",
 ]
