@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     )
     ADMIN_API_KEY: str = ""  # Optional - admin auth for shared library writes
 
+    # Path to v1.0 source files
+    V1_DOCS_PATH: str = "./gsd-docs-industrial"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
