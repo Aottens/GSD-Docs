@@ -447,6 +447,41 @@ PROJECT_TYPE_PHASES = {
     ]
 }
 
+# Foundation intake prompt for Phase 1 (open-ended intake, not structured topics)
+FOUNDATION_INTAKE_PROMPT = """You are conducting the Foundation phase discussion for a Type {project_type} FDS project.
+
+This is an extensive INTAKE conversation to establish the project base.
+Project type {project_type} is already known from project creation — use it as context.
+
+**Your role:**
+Ask open-ended questions about:
+1. What is the system being documented? (Process overview, equipment scope)
+2. What reference documentation exists? (P&IDs, vendor manuals, existing FDS, client standards)
+3. Project scope boundaries: what is IN scope vs explicitly OUT of scope?
+4. Equipment structure and grouping (by area, by function?)
+5. Key terminology, abbreviations, reference standards
+
+**Language:** {project_language}
+
+**Approach:**
+- Ask 2-3 questions at a time, then wait for detailed answers
+- Be thorough — this conversation is the base for everything that follows
+- Do NOT use topic cards or structured question format for Foundation phase
+- If reference files are available in the intake folder, read them to ask informed, context-aware questions
+- Capture concrete details: system description, scope boundaries, equipment organization, terminology
+
+**Goal:** Gather enough context to establish the foundation for all subsequent phases.
+"""
+
+# Topic check-in prompt (after ~4 questions on a topic)
+TOPIC_CHECK_IN_PROMPT = """We have covered {questions_asked} questions about {topic}.
+
+Would you like to:
+- Continue with more questions about {topic}
+- Move to the next topic
+
+What would you prefer?"""
+
 # Chat-optimized system prompt (extracted from v1.0 patterns)
 DISCUSSION_SYSTEM_PROMPT = """You are conducting a discussion phase for an FDS (Functional Design Specification) project.
 
@@ -464,6 +499,28 @@ DISCUSSION_SYSTEM_PROMPT = """You are conducting a discussion phase for an FDS (
 
 **Gray areas to explore:**
 {gray_areas}
+
+**Structured output format:**
+When asking questions, format them as:
+```
+<question>Question text here</question>
+<options>
+  <option>Option 1</option>
+  <option>Option 2</option>
+</options>
+```
+
+If no options are needed (freeform-only question), omit the <options> tag.
+
+When a topic is complete, mark the boundary:
+```
+<topic_boundary topic="Operating parameters" status="complete" />
+```
+
+When all selected topics are covered, signal completion:
+```
+<completion_signal>All selected topics have been covered.</completion_signal>
+```
 
 **Discussion rules:**
 1. Ask specific, functional-spec-depth questions (NOT generic questions)
@@ -516,6 +573,8 @@ def build_system_prompt(
     """
     Build chat-optimized system prompt from v1.0 patterns.
 
+    Detects Foundation phase and returns appropriate prompt template.
+
     Args:
         phase_goal: Phase goal/description from ROADMAP.md
         phase_number: Phase number
@@ -529,6 +588,21 @@ def build_system_prompt(
     Returns:
         Formatted system prompt for discussion
     """
+    # Detect Foundation phase
+    foundation_keywords = ["foundation", "intake", "scope"]
+    is_foundation = (
+        phase_number == 1 or
+        any(keyword in phase_goal.lower() for keyword in foundation_keywords)
+    )
+
+    # Use Foundation prompt for Phase 1 or Foundation-keyword phases
+    if is_foundation:
+        return FOUNDATION_INTAKE_PROMPT.format(
+            project_type=project_type,
+            project_language=project_language
+        )
+
+    # Regular structured discussion prompt
     # Format gray areas
     gray_areas_text = "\n".join([
         f"- {area['topic']}: {area['description']}"

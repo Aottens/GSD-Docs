@@ -33,6 +33,18 @@ class MessageType(str, enum.Enum):
     summary_card = "summary_card"
     topic_selection = "topic_selection"
     decision_edit = "decision_edit"
+    completion_card = "completion_card"
+    topic_boundary = "topic_boundary"
+    decision_captured = "decision_captured"
+    check_in = "check_in"
+
+
+class ConversationPhase(str, enum.Enum):
+    """Conversation phase enumeration (matches state machine phases)."""
+    topic_selection = "topic_selection"
+    discussion = "discussion"
+    check_in = "check_in"
+    completion = "completion"
 
 
 class Conversation(Base):
