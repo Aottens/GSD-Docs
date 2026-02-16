@@ -126,11 +126,11 @@ Recent decisions affecting v2.0:
 
 ## Session Continuity
 
-Last session: 2026-02-15
-Stopped at: Completed Phase 10 execution — all 4 plans, verified, ROADMAP updated
-Resume file: .planning/phases/10-discussion-workflow-chat-interface/10-VERIFICATION.md
+Last session: 2026-02-16
+Stopped at: Phase 10.1 context gathered
+Resume file: .planning/phases/10.1-discussion-behavior-rework/10.1-CONTEXT.md
 
-**Next step:** `/gsd:insert-phase 10.1` for discussion behavior rework, then Phase 11 planning
+**Next step:** `/gsd:plan-phase 10.1` to plan the discussion behavior rework
 
 ---
-*Last updated: 2026-02-15*
+*Last updated: 2026-02-16*
