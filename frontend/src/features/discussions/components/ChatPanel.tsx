@@ -163,71 +163,46 @@ export function ChatPanel({
               onBack={exitPreviewMode}
             />
           ) : (
-            <>
-              <div className="flex-1 flex flex-col overflow-hidden">
-                <MessageList
-                  messages={messages}
-                  isStreaming={isStreaming}
-                  currentStreamedContent={currentStreamedContent}
-                  onAnswer={sendMessage}
-                  onSummaryAction={handleSummaryAction}
-                  onCompletionConfirm={previewContext}
-                  onCompletionAddMore={addMoreTopics}
-                />
-                {isReadOnly ? (
-                  <Alert className="m-4">
-                    <ArrowRight className="h-4 w-4" />
-                    <AlertDescription>
-                      Volgende stap: Planning
-                      <Button variant="link" className="ml-2 p-0 h-auto">
-                        Start planning
-                      </Button>
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <ChatInput
-                    onSend={sendMessage}
-                    disabled={isStreaming}
-                    placeholder="Typ uw antwoord..."
-                  />
-                )}
-              </div>
-
-              {/* Summary Panel (visible whenever there are decisions) */}
-              {decisions.length > 0 && (
-                <SummaryPanel
-                  decisions={decisions}
-                  deferredCount={deferredCount}
-                  onConfirm={confirmDecision}
-                  onReject={rejectDecision}
-                  onAddNote={addDecisionNote}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <MessageList
+                messages={messages}
+                isStreaming={isStreaming}
+                currentStreamedContent={currentStreamedContent}
+                onAnswer={sendMessage}
+                onSummaryAction={handleSummaryAction}
+                onCompletionConfirm={previewContext}
+                onCompletionAddMore={addMoreTopics}
+              />
+              {isReadOnly ? (
+                <Alert className="m-4">
+                  <ArrowRight className="h-4 w-4" />
+                  <AlertDescription>
+                    Volgende stap: Planning
+                    <Button variant="link" className="ml-2 p-0 h-auto">
+                      Start planning
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <ChatInput
+                  onSend={sendMessage}
+                  disabled={isStreaming}
+                  placeholder="Typ uw antwoord..."
                 />
               )}
-            </>
+            </div>
           )}
         </TabsContent>
 
         {/* Decisions Tab */}
-        <TabsContent value="decisions" className="flex-1 overflow-auto p-4 mt-0">
-          {decisions.length === 0 ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-muted-foreground">Nog geen beslissingen vastgelegd</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {decisions.map((decision, idx) => (
-                <div key={idx} className="p-4 border rounded-lg space-y-2">
-                  <h4 className="font-medium">{decision.topic}</h4>
-                  <p className="text-sm text-muted-foreground">{decision.decision}</p>
-                  {decision.reasoning && (
-                    <p className="text-xs text-muted-foreground/70 italic">
-                      {decision.reasoning}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+        <TabsContent value="decisions" className="flex-1 overflow-auto mt-0">
+          <SummaryPanel
+            decisions={decisions}
+            deferredCount={deferredCount}
+            onConfirm={confirmDecision}
+            onReject={rejectDecision}
+            onAddNote={addDecisionNote}
+          />
         </TabsContent>
 
         {/* History Tab */}

@@ -39,7 +39,7 @@ export function SummaryPanel({ decisions, deferredCount, onConfirm, onReject, on
   }
 
   return (
-    <div className="w-72 shrink-0 border-l bg-muted/20 p-4 space-y-4">
+    <div className="p-4 space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold">Beslissingen</h3>
         <Badge variant="secondary">{decisions.length}</Badge>
