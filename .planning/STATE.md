@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Engineers can create, manage, and review FDS/SDS projects through a visual web interface that guides them through the full document lifecycle
-**Current focus:** Phase 10 complete — awaiting Phase 11 planning
+**Current focus:** Phase 10.1 in progress (Discussion Behavior Rework)
 
 ## Current Position
 
-- Phase: 10 of 17 (Discussion Workflow & Chat Interface)
-- Plan: 4 of 4 in current phase (all plans complete)
-- Status: Phase complete, verified
-- Last activity: 2026-02-15 - Completed Phase 10 execution
+- Phase: 10.1 of 17 (Discussion Behavior Rework)
+- Plan: 2 of 4 in current phase (2 plans complete)
+- Status: Phase 10.1 in progress
+- Last activity: 2026-02-16 - Completed Phase 10.1 Plan 02
 
 ## Progress
 
@@ -29,12 +29,13 @@ v2.0 milestone: 10 phases, 21 plans - Phase 10 complete
 - 89/89 requirements satisfied
 
 **v2.0 (in progress):**
-- Plans completed: 9 of 21
+- Plans completed: 11 of 21
 - Phase 8: 3/3 plans complete ✓
 - Phase 9: 2/2 plans complete ✓
 - Phase 10: 4/4 plans complete ✓
+- Phase 10.1: 2/4 plans complete (in progress)
 - Files created: ~145
-- Last completed: Phase 10 Plan 04 (Frontend Chat Panel & Discussion UI)
+- Last completed: Phase 10.1 Plan 02 (Frontend Discussion Behavior Rework)
 
 ## Accumulated Context
 
@@ -115,6 +116,9 @@ Recent decisions affecting v2.0:
 - **Phases from PROJECT_TYPE_PHASES** (10): Phase structure comes from project type definition (A/B/C/D), matching v1.0
 - **Phase dependency chain** (10): Subsequent phases locked until previous completes
 - **Discussion behavior needs rework** (10): Phase 10.1 planned for deeper discussion UX design
+- **Chip selections as starting points** (10.1-02): Chip clicks send message but keep card open for follow-up questions (not final answers)
+- **Reject reopens question in chat** (10.1-02): Rejecting a decision removes it and sends message to reopen discussion (no inline editing)
+- **Freeform input always visible** (10.1-02): Text input always shown below chips for simpler interface (engineer can always type detailed answer)
 
 ### Roadmap Evolution
 
@@ -127,10 +131,10 @@ Recent decisions affecting v2.0:
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Phase 10.1 context gathered
-Resume file: .planning/phases/10.1-discussion-behavior-rework/10.1-CONTEXT.md
+Stopped at: Completed Phase 10.1 Plan 02 (Frontend Discussion Behavior Rework)
+Resume file: .planning/phases/10.1-discussion-behavior-rework/10.1-02-SUMMARY.md
 
-**Next step:** `/gsd:plan-phase 10.1` to plan the discussion behavior rework
+**Next step:** Execute Phase 10.1 Plan 03 (Backend Discussion Engine Rework)
 
 ---
 *Last updated: 2026-02-16*
