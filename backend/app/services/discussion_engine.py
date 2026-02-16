@@ -335,7 +335,7 @@ class DiscussionEngine:
         completion_signal_detected = False
 
         try:
-            async for chunk in self.llm.stream_complete(messages, max_tokens=4096, temperature=0.7):
+            async for chunk in self.llm.stream_complete(messages, max_tokens=1024, temperature=0.5):
                 full_response += chunk
                 buffer.feed(chunk)
 

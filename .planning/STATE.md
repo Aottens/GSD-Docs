@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Engineers can create, manage, and review FDS/SDS projects through a visual web interface that guides them through the full document lifecycle
-**Current focus:** Phase 10.1 in progress (Discussion Behavior Rework)
+**Current focus:** Phase 10.1 blocked — architectural rework needed (backend must drive LLM, not the other way around)
 
 ## Current Position
 
@@ -133,15 +133,15 @@ Recent decisions affecting v2.0:
 
 ## Blockers
 
-(None)
+- **Discussion engine architecture** (10.1): Current pattern has LLM driving conversation behavior via big system prompt. Must flip to "backend drives, LLM generates scoped content" to be model-agnostic and faithful to v1.0. State machine infrastructure is correct; orchestration in send_message() needs rework. See .continue-here.md for full analysis.
 
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed Phase 10.1 Plan 04
-Resume file: .planning/phases/10.1-discussion-behavior-rework/10.1-04-SUMMARY.md
+Stopped at: Phase 10.1 Plan 05 code-complete but human verification exposed architectural flaw
+Resume file: .planning/phases/10.1-discussion-behavior-rework/.continue-here.md
 
-**Next step:** Execute Phase 10.1 Plan 05 (Frontend Discussion Behavior Integration)
+**Next step:** Plan architectural rework of discussion engine — "backend drives, LLM generates scoped content". This is either new plans in 10.1 or a new phase 10.2. The .continue-here.md has the full analysis: what to keep, what to change, v1.0 reference files, and the specific design direction.
 
 ---
 *Last updated: 2026-02-16*
