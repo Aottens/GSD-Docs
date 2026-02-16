@@ -9,9 +9,7 @@ import { ConversationHistory } from './ConversationHistory'
 import { ChatInput } from './ChatInput'
 import { useDiscussionStream } from '../hooks/useDiscussionStream'
 import { useConversation } from '../hooks/useConversationHistory'
-import { api } from '@/lib/api'
 import { toast } from 'sonner'
-import type { Decision } from '../types/conversation'
 
 interface ChatPanelProps {
   projectId: string
@@ -28,7 +26,6 @@ export function ChatPanel({
 }: ChatPanelProps) {
   const [activeTab, setActiveTab] = useState('chat')
   const [viewMode, setViewMode] = useState<'active' | 'readonly'>('active')
-  const [decisions, setDecisions] = useState<Decision[]>([])
   const [deferredCount] = useState(0)
 
   const {
@@ -36,8 +33,14 @@ export function ChatPanel({
     isStreaming,
     currentStreamedContent,
     error,
+    decisions,
+    completionData,
+    currentTopic,
     startDiscussion,
     sendMessage,
+    confirmDecision,
+    rejectDecision,
+    addDecisionNote,
   } = useDiscussionStream()
 
   // Load conversation if conversationId provided
@@ -67,10 +70,6 @@ export function ChatPanel({
     }
   }, [conversationData])
 
-  const handleAnswer = (answer: string) => {
-    sendMessage(answer)
-  }
-
   const handleSummaryAction = (action: 'confirm' | 'edit' | 'add', data?: string) => {
     if (action === 'confirm') {
       sendMessage('Bevestig de samenvatting')
@@ -78,26 +77,6 @@ export function ChatPanel({
       sendMessage(`Pas de beslissing aan: ${data}`)
     } else if (action === 'add' && data) {
       sendMessage(`Voeg beslissing toe: ${data}`)
-    }
-  }
-
-  const handleDecisionEdit = async (index: number, newDecision: string) => {
-    if (!conversationId) return
-
-    try {
-      await api.patch(
-        `/projects/${projectId}/discussions/${conversationId}/decisions/${index}`,
-        { decision: newDecision }
-      )
-      // Optimistic update
-      setDecisions((prev) =>
-        prev.map((d, i) => (i === index ? { ...d, decision: newDecision } : d))
-      )
-      toast.success('Beslissing bijgewerkt')
-    } catch (err) {
-      toast.error('Kon beslissing niet bijwerken', {
-        description: err instanceof Error ? err.message : 'Onbekende fout',
-      })
     }
   }
 
@@ -124,11 +103,21 @@ export function ChatPanel({
             {phaseNumber && (
               <Badge variant="outline">Fase {phaseNumber}</Badge>
             )}
+            {currentTopic && (
+              <Badge variant="secondary" className="ml-1">
+                {currentTopic}
+              </Badge>
+            )}
           </div>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
+        {completionData && (
+          <div className="mt-2 text-sm text-muted-foreground">
+            {completionData.message}
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -156,7 +145,7 @@ export function ChatPanel({
               messages={messages}
               isStreaming={isStreaming}
               currentStreamedContent={currentStreamedContent}
-              onAnswer={handleAnswer}
+              onAnswer={sendMessage}
               onSummaryAction={handleSummaryAction}
             />
             <ChatInput
@@ -170,12 +159,14 @@ export function ChatPanel({
             />
           </div>
 
-          {/* Summary Panel (visible during active discussion) */}
-          {!isReadOnly && decisions.length > 0 && (
+          {/* Summary Panel (visible whenever there are decisions) */}
+          {decisions.length > 0 && (
             <SummaryPanel
               decisions={decisions}
               deferredCount={deferredCount}
-              onEdit={handleDecisionEdit}
+              onConfirm={confirmDecision}
+              onReject={rejectDecision}
+              onAddNote={addDecisionNote}
             />
           )}
         </TabsContent>
