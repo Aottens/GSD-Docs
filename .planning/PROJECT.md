@@ -88,6 +88,7 @@ Engineers can create, manage, and review FDS/SDS projects through a visual web i
 - **LLM abstraction**: Provider interface must support future swap to local models (v3.0)
 - **CLI compatibility**: Project file format must remain compatible with v1.0 `/doc:*` commands
 - **Domain knowledge reuse**: v1.0 templates, section structures, and prompt patterns are the SSOT for document generation logic
+- **v1.0 fidelity (HARD RULE)**: v2.0 must faithfully reproduce all v1.0 behavior and domain content. Plans MUST reference specific v1.0 source files (path + section) for any domain content — never paraphrase or simplify. Executors MUST read the referenced v1.0 files before implementing. Verifiers MUST cross-check against v1.0 originals. Key v1.0 sources: `gsd-docs-industrial/SPECIFICATION.md` (SSOT), `gsd-docs-industrial/templates/`, `gsd-docs-industrial/references/`
 - **Standards opt-in**: PackML/ISA-88 loaded conditionally, never hardcoded
 
 ## Key Decisions
@@ -110,6 +111,7 @@ Engineers can create, manage, and review FDS/SDS projects through a visual web i
 | LLM provider abstraction | Enables local model support in v3.0 without rewriting orchestration | -- Pending |
 | SQLite for metadata | Lightweight, zero-config, sufficient for single-server deployment | -- Pending |
 | VM deployment (no Docker) | Company policy; systemd + Nginx is proven and maintainable | -- Pending |
+| Mock + Ollama for dev, no paid API | Zero cost during development; MockLLMProvider for canned responses + Ollama/LiteLLM for local models (DeepSeek, Llama). Paid API only at production deploy | -- Pending |
 
 ---
 *Last updated: 2026-02-14 after v2.0 milestone started*
