@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 ## Current Position
 
 - Phase: 10.1 of 17 (Discussion Behavior Rework)
-- Plan: 3 of 5 in current phase (3 plans complete)
+- Plan: 4 of 5 in current phase (4 plans complete)
 - Status: Phase 10.1 in progress
-- Last activity: 2026-02-16 - Completed Phase 10.1 Plan 03
+- Last activity: 2026-02-16 - Completed Phase 10.1 Plan 04
 
 ## Progress
 
@@ -29,13 +29,13 @@ v2.0 milestone: 10 phases, 21 plans - Phase 10 complete
 - 89/89 requirements satisfied
 
 **v2.0 (in progress):**
-- Plans completed: 12 of 21
+- Plans completed: 13 of 21
 - Phase 8: 3/3 plans complete ✓
 - Phase 9: 2/2 plans complete ✓
 - Phase 10: 4/4 plans complete ✓
-- Phase 10.1: 3/5 plans complete (in progress)
+- Phase 10.1: 4/5 plans complete (in progress)
 - Files created: ~151
-- Last completed: Phase 10.1 Plan 03 (Backend Discussion Engine Integration)
+- Last completed: Phase 10.1 Plan 04 (Backend Completion Workflow)
 
 ## Accumulated Context
 
@@ -122,6 +122,10 @@ Recent decisions affecting v2.0:
 - **Verbatim decision extraction is rule-based** (10.1-03): NEVER calls LLM, uses rule-based filler removal to preserve engineer's exact words (honors "no interpretation" requirement)
 - **4-question rhythm enforced by state machine** (10.1-03): increment_question() returns True at >= 4 questions, triggers check-in phase transition
 - **Foundation phase auto-detected** (10.1-03): phase_number == 1 OR phase_goal contains foundation/intake/scope keywords, creates open-ended greeting instead of topic selection
+- **CONTEXT.md compression uses 3-tier priority** (10.1-04): Priority 1 (prescriptive keywords: should, must, will, not) > Priority 2 (numeric values with units) > Priority 3 (general notes get compressed)
+- **Preview endpoint has no side effects** (10.1-04): Returns CONTEXT.md content without saving to disk or changing conversation status
+- **Finalize workflow suggests next step, no auto-advance** (10.1-04): Saves CONTEXT.md, marks conversation completed, returns "next_step: planning" message (engineer manually starts planning)
+- **Completion detection works for both phase types** (10.1-04): Structured phases use all_topics_complete() trigger, Foundation phases use LLM completion_signal XML tag
 
 ### Roadmap Evolution
 
@@ -134,10 +138,10 @@ Recent decisions affecting v2.0:
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed Phase 10.1 Plan 03
-Resume file: .planning/phases/10.1-discussion-behavior-rework/10.1-03-SUMMARY.md
+Stopped at: Completed Phase 10.1 Plan 04
+Resume file: .planning/phases/10.1-discussion-behavior-rework/10.1-04-SUMMARY.md
 
-**Next step:** Execute Phase 10.1 Plan 04 (Frontend Discussion Behavior Integration)
+**Next step:** Execute Phase 10.1 Plan 05 (Frontend Discussion Behavior Integration)
 
 ---
 *Last updated: 2026-02-16*
