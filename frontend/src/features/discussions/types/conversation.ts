@@ -16,7 +16,7 @@ export interface Message {
   conversation_id: number
   role: 'system' | 'user' | 'assistant' | 'summary'
   content: string
-  message_type: 'text' | 'question_card' | 'summary_card' | 'topic_selection' | 'decision_edit' | 'completion_card' | 'topic_boundary' | 'check_in'
+  message_type: 'text' | 'question_card' | 'summary_card' | 'topic_selection' | 'decision_edit' | 'completion_card' | 'topic_boundary' | 'check_in' | 'decision_captured'
   metadata_json: MessageMetadata | null
   timestamp: string
 }

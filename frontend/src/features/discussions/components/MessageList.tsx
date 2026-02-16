@@ -12,6 +12,8 @@ interface MessageListProps {
   isLoading?: boolean
   onAnswer?: (answer: string) => void
   onSummaryAction?: (action: 'confirm' | 'edit' | 'add', data?: string) => void
+  onCompletionConfirm?: () => void
+  onCompletionAddMore?: () => void
 }
 
 export function MessageList({
@@ -21,6 +23,8 @@ export function MessageList({
   isLoading,
   onAnswer,
   onSummaryAction,
+  onCompletionConfirm,
+  onCompletionAddMore,
 }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -89,6 +93,8 @@ export function MessageList({
             message={msg}
             onAnswer={onAnswer}
             onSummaryAction={onSummaryAction}
+            onCompletionConfirm={onCompletionConfirm}
+            onCompletionAddMore={onCompletionAddMore}
           />
         ))}
 

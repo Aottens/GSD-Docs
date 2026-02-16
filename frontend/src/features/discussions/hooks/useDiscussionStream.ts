@@ -10,11 +10,17 @@ interface UseDiscussionStreamReturn {
   decisions: Decision[]
   completionData: CompletionData | null
   currentTopic: string | null
+  contextPreview: { content: string; lineCount: number } | null
+  isPreviewMode: boolean
   startDiscussion: (projectId: string, phaseNumber: number) => Promise<void>
   sendMessage: (content: string, attachments?: string[]) => Promise<void>
   confirmDecision: (index: number) => void
   rejectDecision: (index: number) => void
   addDecisionNote: (index: number, note: string) => void
+  previewContext: () => Promise<void>
+  finalizeDiscussion: (editedContent?: string) => Promise<void>
+  addMoreTopics: () => void
+  exitPreviewMode: () => void
 }
 
 export function useDiscussionStream(): UseDiscussionStreamReturn {
@@ -26,6 +32,8 @@ export function useDiscussionStream(): UseDiscussionStreamReturn {
   const [decisions, setDecisions] = useState<Decision[]>([])
   const [completionData, setCompletionData] = useState<CompletionData | null>(null)
   const [currentTopic, setCurrentTopic] = useState<string | null>(null)
+  const [contextPreview, setContextPreview] = useState<{ content: string; lineCount: number } | null>(null)
+  const [isPreviewMode, setIsPreviewMode] = useState(false)
   const projectIdRef = useRef<string | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
 
@@ -280,6 +288,82 @@ export function useDiscussionStream(): UseDiscussionStreamReturn {
     )
   }, [])
 
+  const previewContext = useCallback(async () => {
+    if (!conversationId || !projectIdRef.current) {
+      setError('No active conversation')
+      return
+    }
+
+    try {
+      setError(null)
+      const response = await api.post<{ content: string; line_count: number }>(
+        `/projects/${projectIdRef.current}/discussions/${conversationId}/preview-context`,
+        {}
+      )
+      setContextPreview({
+        content: response.content,
+        lineCount: response.line_count,
+      })
+      setIsPreviewMode(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to preview context')
+    }
+  }, [conversationId])
+
+  const finalizeDiscussion = useCallback(async (editedContent?: string) => {
+    if (!conversationId || !projectIdRef.current) {
+      setError('No active conversation')
+      return
+    }
+
+    try {
+      setError(null)
+      await api.post(
+        `/projects/${projectIdRef.current}/discussions/${conversationId}/finalize`,
+        editedContent ? { edited_content: editedContent } : {}
+      )
+
+      // Add final system message
+      const finalMessage: Message = {
+        id: Date.now(),
+        conversation_id: conversationId,
+        role: 'system',
+        content: 'Bespreking afgerond. CONTEXT.md opgeslagen.',
+        message_type: 'text',
+        metadata_json: null,
+        timestamp: new Date().toISOString(),
+      }
+      setMessages((prev) => [...prev, finalMessage])
+
+      // Exit preview mode and show readonly view
+      setIsPreviewMode(false)
+      setContextPreview(null)
+
+      // Show toast with next step suggestion
+      const { toast } = await import('sonner')
+      toast.success('Bespreking afgerond', {
+        description: 'Volgende stap: Planning',
+        action: {
+          label: 'Start planning',
+          onClick: () => {
+            // This will be handled by the ChatPanel component
+            console.log('Navigate to planning')
+          },
+        },
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to finalize discussion')
+    }
+  }, [conversationId])
+
+  const addMoreTopics = useCallback(() => {
+    sendMessage('Meer toevoegen')
+  }, [sendMessage])
+
+  const exitPreviewMode = useCallback(() => {
+    setIsPreviewMode(false)
+  }, [])
+
   return {
     messages,
     isStreaming,
@@ -288,10 +372,16 @@ export function useDiscussionStream(): UseDiscussionStreamReturn {
     decisions,
     completionData,
     currentTopic,
+    contextPreview,
+    isPreviewMode,
     startDiscussion,
     sendMessage,
     confirmDecision,
     rejectDecision,
     addDecisionNote,
+    previewContext,
+    finalizeDiscussion,
+    addMoreTopics,
+    exitPreviewMode,
   }
 }

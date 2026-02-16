@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
-import { Bot, X } from 'lucide-react'
+import { Bot, X, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { MessageList } from './MessageList'
 import { SummaryPanel } from './SummaryPanel'
 import { ConversationHistory } from './ConversationHistory'
 import { ChatInput } from './ChatInput'
+import { ContextPreview } from './ContextPreview'
 import { useDiscussionStream } from '../hooks/useDiscussionStream'
 import { useConversation } from '../hooks/useConversationHistory'
 import { toast } from 'sonner'
@@ -36,11 +38,17 @@ export function ChatPanel({
     decisions,
     completionData,
     currentTopic,
+    contextPreview,
+    isPreviewMode,
     startDiscussion,
     sendMessage,
     confirmDecision,
     rejectDecision,
     addDecisionNote,
+    previewContext,
+    finalizeDiscussion,
+    addMoreTopics,
+    exitPreviewMode,
   } = useDiscussionStream()
 
   // Load conversation if conversationId provided
@@ -69,6 +77,12 @@ export function ChatPanel({
       // TODO: Load messages and decisions from conversationData
     }
   }, [conversationData])
+
+  // Handle finalization completion
+  const handleFinalize = async (editedContent?: string) => {
+    await finalizeDiscussion(editedContent)
+    setViewMode('readonly')
+  }
 
   const handleSummaryAction = (action: 'confirm' | 'edit' | 'add', data?: string) => {
     if (action === 'confirm') {
@@ -140,34 +154,56 @@ export function ChatPanel({
 
         {/* Chat Tab */}
         <TabsContent value="chat" className="flex-1 flex overflow-hidden mt-0">
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <MessageList
-              messages={messages}
-              isStreaming={isStreaming}
-              currentStreamedContent={currentStreamedContent}
-              onAnswer={sendMessage}
-              onSummaryAction={handleSummaryAction}
+          {isPreviewMode && contextPreview ? (
+            <ContextPreview
+              content={contextPreview.content}
+              lineCount={contextPreview.lineCount}
+              onEdit={() => {}} // Edit is handled locally in ContextPreview
+              onFinalize={handleFinalize}
+              onBack={exitPreviewMode}
             />
-            <ChatInput
-              onSend={sendMessage}
-              disabled={isReadOnly || isStreaming}
-              placeholder={
-                isReadOnly
-                  ? 'Alleen-lezen modus'
-                  : 'Typ uw antwoord...'
-              }
-            />
-          </div>
+          ) : (
+            <>
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <MessageList
+                  messages={messages}
+                  isStreaming={isStreaming}
+                  currentStreamedContent={currentStreamedContent}
+                  onAnswer={sendMessage}
+                  onSummaryAction={handleSummaryAction}
+                  onCompletionConfirm={previewContext}
+                  onCompletionAddMore={addMoreTopics}
+                />
+                {isReadOnly ? (
+                  <Alert className="m-4">
+                    <ArrowRight className="h-4 w-4" />
+                    <AlertDescription>
+                      Volgende stap: Planning
+                      <Button variant="link" className="ml-2 p-0 h-auto">
+                        Start planning
+                      </Button>
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <ChatInput
+                    onSend={sendMessage}
+                    disabled={isStreaming}
+                    placeholder="Typ uw antwoord..."
+                  />
+                )}
+              </div>
 
-          {/* Summary Panel (visible whenever there are decisions) */}
-          {decisions.length > 0 && (
-            <SummaryPanel
-              decisions={decisions}
-              deferredCount={deferredCount}
-              onConfirm={confirmDecision}
-              onReject={rejectDecision}
-              onAddNote={addDecisionNote}
-            />
+              {/* Summary Panel (visible whenever there are decisions) */}
+              {decisions.length > 0 && (
+                <SummaryPanel
+                  decisions={decisions}
+                  deferredCount={deferredCount}
+                  onConfirm={confirmDecision}
+                  onReject={rejectDecision}
+                  onAddNote={addDecisionNote}
+                />
+              )}
+            </>
           )}
         </TabsContent>
 
