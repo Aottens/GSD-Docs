@@ -35,6 +35,8 @@ export interface MessageMetadata {
   question?: string
   options?: string[]
   selected_topics?: string[]
+  topics?: Array<{ id: string; name: string; description: string }>
+  include_discretion_option?: boolean
   decision?: Decision
   attachments?: string[]
   topic_boundary?: TopicBoundaryData

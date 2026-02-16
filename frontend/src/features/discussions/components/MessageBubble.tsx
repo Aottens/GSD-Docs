@@ -2,6 +2,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Check } from 'lucide-react'
 import type { Message } from '../types/conversation'
+import { TopicSelectionCard } from './TopicSelectionCard'
 import { QuestionCard } from './QuestionCard'
 import { SummaryCard } from './SummaryCard'
 import { CompletionCard } from './CompletionCard'
@@ -26,6 +27,24 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const isUser = message.role === 'user'
   const isSystem = message.role === 'system'
+
+  // Render TopicSelectionCard
+  if (message.message_type === 'topic_selection' && message.metadata_json?.topics && onAnswer) {
+    return (
+      <div className="flex justify-start">
+        <TopicSelectionCard
+          topics={message.metadata_json.topics}
+          onConfirm={(selected, discretion) => {
+            const parts = selected.join(', ')
+            const msg = discretion.length > 0
+              ? `${parts} [beoordeling: ${discretion.join(', ')}]`
+              : parts
+            onAnswer(msg)
+          }}
+        />
+      </div>
+    )
+  }
 
   // Render CompletionCard
   if (message.message_type === 'completion_card' && message.metadata_json?.completion) {

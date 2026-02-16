@@ -23,7 +23,7 @@ def get_llm_provider() -> LLMProvider:
 
     # Currently only LiteLLM is supported, but this structure
     # makes it easy to add other providers in the future
-    if settings.LLM_PROVIDER in ["anthropic", "openai", "litellm"]:
+    if settings.LLM_PROVIDER in ["anthropic", "openai", "litellm", "ollama"]:
         return LiteLLMProvider(
             model=settings.LLM_MODEL,
             api_key=settings.ANTHROPIC_API_KEY or None

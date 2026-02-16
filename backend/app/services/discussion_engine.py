@@ -246,7 +246,7 @@ class DiscussionEngine:
                 # Yield topic_boundary event
                 yield {
                     "event": "topic_boundary",
-                    "data": {"topic": first_topic, "status": "starting"}
+                    "data": {"topic_boundary": {"topic": first_topic, "status": "starting"}}
                 }
 
         elif state.phase == ConversationPhase.discussion:
@@ -260,7 +260,7 @@ class DiscussionEngine:
                     # Yield decision_captured event
                     yield {
                         "event": "decision_captured",
-                        "data": decision
+                        "data": {"decision": decision}
                     }
                     # Add to state
                     state.decisions.append(decision)
@@ -282,7 +282,7 @@ class DiscussionEngine:
                 if completed_topic:
                     yield {
                         "event": "topic_boundary",
-                        "data": {"topic": completed_topic, "status": "complete"}
+                        "data": {"topic_boundary": {"topic": completed_topic, "status": "complete"}}
                     }
 
                 next_topic = state.next_topic()
@@ -291,7 +291,7 @@ class DiscussionEngine:
                     # Yield topic_boundary for starting next
                     yield {
                         "event": "topic_boundary",
-                        "data": {"topic": next_topic, "status": "starting"}
+                        "data": {"topic_boundary": {"topic": next_topic, "status": "starting"}}
                     }
                 elif state.all_topics_complete():
                     # All topics done, transition to completion
@@ -300,9 +300,11 @@ class DiscussionEngine:
                     yield {
                         "event": "completion_card",
                         "data": {
-                            "message": "Alle geselecteerde onderwerpen zijn besproken.",
-                            "decisions_count": len(state.decisions),
-                            "topics_covered": state.completed_topics
+                            "completion": {
+                                "message": "Alle geselecteerde onderwerpen zijn besproken.",
+                                "decisions_count": len(state.decisions),
+                                "topics_covered": state.completed_topics
+                            }
                         }
                     }
             else:
@@ -360,9 +362,11 @@ class DiscussionEngine:
                 yield {
                     "event": "completion_card",
                     "data": {
-                        "message": "Foundation bespreking is afgerond. De AI heeft genoeg informatie verzameld.",
-                        "decisions_count": len(state.decisions),
-                        "topics_covered": ["Foundation"]
+                        "completion": {
+                            "message": "Foundation bespreking is afgerond. De AI heeft genoeg informatie verzameld.",
+                            "decisions_count": len(state.decisions),
+                            "topics_covered": ["Foundation"]
+                        }
                     }
                 }
 
