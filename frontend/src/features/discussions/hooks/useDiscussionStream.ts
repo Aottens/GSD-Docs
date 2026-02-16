@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import type { Message, StreamEvent } from '../types/conversation'
+import type { Message, StreamEvent, Decision, CompletionData } from '../types/conversation'
 import { api } from '@/lib/api'
 
 interface UseDiscussionStreamReturn {
@@ -7,8 +7,14 @@ interface UseDiscussionStreamReturn {
   isStreaming: boolean
   currentStreamedContent: string
   error: string | null
+  decisions: Decision[]
+  completionData: CompletionData | null
+  currentTopic: string | null
   startDiscussion: (projectId: string, phaseNumber: number) => Promise<void>
   sendMessage: (content: string, attachments?: string[]) => Promise<void>
+  confirmDecision: (index: number) => void
+  rejectDecision: (index: number) => void
+  addDecisionNote: (index: number, note: string) => void
 }
 
 export function useDiscussionStream(): UseDiscussionStreamReturn {
@@ -17,6 +23,9 @@ export function useDiscussionStream(): UseDiscussionStreamReturn {
   const [currentStreamedContent, setCurrentStreamedContent] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [conversationId, setConversationId] = useState<number | null>(null)
+  const [decisions, setDecisions] = useState<Decision[]>([])
+  const [completionData, setCompletionData] = useState<CompletionData | null>(null)
+  const [currentTopic, setCurrentTopic] = useState<string | null>(null)
   const projectIdRef = useRef<string | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
 
@@ -161,6 +170,70 @@ export function useDiscussionStream(): UseDiscussionStreamReturn {
                   timestamp: new Date().toISOString(),
                 }
                 setMessages((prev) => [...prev, summaryMessage])
+              } else if (event.event === 'decision_captured') {
+                // Add decision to decisions state
+                if (event.data.decision) {
+                  setDecisions((prev) => [...prev, event.data.decision!])
+                  // Also add a summary_card message to chat
+                  const summaryMessage: Message = {
+                    id: Date.now(),
+                    conversation_id: conversationId,
+                    role: 'assistant',
+                    content: `Beslissing vastgelegd: ${event.data.decision.decision}`,
+                    message_type: 'summary_card',
+                    metadata_json: {
+                      decision: event.data.decision,
+                    },
+                    timestamp: new Date().toISOString(),
+                  }
+                  setMessages((prev) => [...prev, summaryMessage])
+                }
+              } else if (event.event === 'topic_boundary') {
+                // Update current topic and add visual boundary message
+                if (event.data.topic_boundary) {
+                  setCurrentTopic(event.data.topic_boundary.topic)
+                  const boundaryMessage: Message = {
+                    id: Date.now(),
+                    conversation_id: conversationId,
+                    role: 'assistant',
+                    content: `${event.data.topic_boundary.status === 'starting' ? 'Start' : 'Afgerond'}: ${event.data.topic_boundary.topic}`,
+                    message_type: 'topic_boundary',
+                    metadata_json: {
+                      topic_boundary: event.data.topic_boundary,
+                    },
+                    timestamp: new Date().toISOString(),
+                  }
+                  setMessages((prev) => [...prev, boundaryMessage])
+                }
+              } else if (event.event === 'completion_card') {
+                // Set completion data and add completion card message
+                if (event.data.completion) {
+                  setCompletionData(event.data.completion)
+                  const completionMessage: Message = {
+                    id: Date.now(),
+                    conversation_id: conversationId,
+                    role: 'assistant',
+                    content: event.data.completion.message,
+                    message_type: 'completion_card',
+                    metadata_json: {
+                      completion: event.data.completion,
+                    },
+                    timestamp: new Date().toISOString(),
+                  }
+                  setMessages((prev) => [...prev, completionMessage])
+                }
+              } else if (event.event === 'check_in') {
+                // Add check-in message to chat
+                const checkInMessage: Message = {
+                  id: Date.now(),
+                  conversation_id: conversationId,
+                  role: 'assistant',
+                  content: event.data.final || 'Hoe gaat het tot nu toe?',
+                  message_type: 'check_in',
+                  metadata_json: null,
+                  timestamp: new Date().toISOString(),
+                }
+                setMessages((prev) => [...prev, checkInMessage])
               } else if (event.event === 'error') {
                 setError(event.data.error || 'Unknown error')
                 setIsStreaming(false)
@@ -185,12 +258,40 @@ export function useDiscussionStream(): UseDiscussionStreamReturn {
     }
   }, [conversationId])
 
+  const confirmDecision = useCallback((index: number) => {
+    setDecisions((prev) =>
+      prev.map((d, i) => (i === index ? { ...d, confirmed: true } : d))
+    )
+  }, [])
+
+  const rejectDecision = useCallback((index: number) => {
+    const rejectedDecision = decisions[index]
+    if (rejectedDecision) {
+      // Remove decision from list
+      setDecisions((prev) => prev.filter((_, i) => i !== index))
+      // Send message to reopen the question
+      sendMessage(`[Beslissing afgewezen] ${rejectedDecision.question}`)
+    }
+  }, [decisions, sendMessage])
+
+  const addDecisionNote = useCallback((index: number, note: string) => {
+    setDecisions((prev) =>
+      prev.map((d, i) => (i === index ? { ...d, notes: note } : d))
+    )
+  }, [])
+
   return {
     messages,
     isStreaming,
     currentStreamedContent,
     error,
+    decisions,
+    completionData,
+    currentTopic,
     startDiscussion,
     sendMessage,
+    confirmDecision,
+    rejectDecision,
+    addDecisionNote,
   }
 }

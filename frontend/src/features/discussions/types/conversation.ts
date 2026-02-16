@@ -16,14 +16,18 @@ export interface Message {
   conversation_id: number
   role: 'system' | 'user' | 'assistant' | 'summary'
   content: string
-  message_type: 'text' | 'question_card' | 'summary_card' | 'topic_selection' | 'decision_edit'
+  message_type: 'text' | 'question_card' | 'summary_card' | 'topic_selection' | 'decision_edit' | 'completion_card' | 'topic_boundary' | 'check_in'
   metadata_json: MessageMetadata | null
   timestamp: string
 }
 
 export interface Decision {
   topic: string
-  decision: string
+  question: string       // the question that produced this decision
+  decision: string       // verbatim engineer text
+  confirmed: boolean     // engineer confirmed this extraction
+  notes?: string         // optional context/notes added by engineer
+  timestamp: string
   reasoning?: string
 }
 
@@ -33,10 +37,35 @@ export interface MessageMetadata {
   selected_topics?: string[]
   decision?: Decision
   attachments?: string[]
+  topic_boundary?: TopicBoundaryData
+  completion?: CompletionData
+}
+
+export type StreamEventType =
+  | 'message_delta'
+  | 'message_complete'
+  | 'question_card'
+  | 'summary_card'
+  | 'decision_captured'
+  | 'topic_boundary'
+  | 'completion_card'
+  | 'check_in'
+  | 'error'
+  | 'done'
+
+export interface CompletionData {
+  message: string
+  decisions_count: number
+  topics_covered: string[]
+}
+
+export interface TopicBoundaryData {
+  topic: string
+  status: 'starting' | 'complete'
 }
 
 export interface StreamEvent {
-  event: 'message_delta' | 'message_complete' | 'question_card' | 'summary_card' | 'error' | 'done'
+  event: StreamEventType
   data: {
     delta?: string
     accumulated?: string
@@ -44,6 +73,8 @@ export interface StreamEvent {
     question?: string
     options?: string[]
     decision?: Decision
+    topic_boundary?: TopicBoundaryData
+    completion?: CompletionData
     error?: string
   }
 }
