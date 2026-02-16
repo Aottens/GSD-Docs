@@ -78,3 +78,35 @@ class StreamEvent(BaseModel):
     """Schema for SSE stream events."""
     event: StreamEventType = Field(..., description="Event type")
     data: dict[str, Any] = Field(default_factory=dict, description="Event data")
+
+
+class QuestionCardEvent(BaseModel):
+    """Schema for question card SSE events."""
+    question: str = Field(..., description="Question text")
+    options: list[str] = Field(default_factory=list, description="Option chips for quick answers")
+
+
+class DecisionCapturedEvent(BaseModel):
+    """Schema for decision captured SSE events."""
+    topic: str = Field(..., description="Discussion topic")
+    question: str = Field(..., description="Question that was asked")
+    decision: str = Field(..., description="Verbatim decision text from engineer")
+    confirmed: bool = Field(default=False, description="Whether user confirmed this decision")
+    timestamp: str = Field(..., description="ISO timestamp of capture")
+
+
+class TopicBoundaryEvent(BaseModel):
+    """Schema for topic boundary SSE events."""
+    topic: str = Field(..., description="Topic name")
+    status: str = Field(..., description="Boundary status: 'complete' or 'starting'")
+
+
+class CompletionSignalEvent(BaseModel):
+    """Schema for completion signal SSE events."""
+    message: str = Field(..., description="Completion message from LLM")
+
+
+class CheckInEvent(BaseModel):
+    """Schema for check-in SSE events (after ~4 questions on a topic)."""
+    topic: str = Field(..., description="Current topic")
+    questions_asked: int = Field(..., description="Number of questions asked on this topic")
