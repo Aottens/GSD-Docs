@@ -278,10 +278,11 @@ class DiscussionEngine:
                 # Complete current topic, move to next
                 state.complete_topic()
                 # Yield topic_boundary for completed topic
-                if state.current_topic:
+                completed_topic = state.current_topic
+                if completed_topic:
                     yield {
                         "event": "topic_boundary",
-                        "data": {"topic": state.current_topic, "status": "complete"}
+                        "data": {"topic": completed_topic, "status": "complete"}
                     }
 
                 next_topic = state.next_topic()
@@ -295,9 +296,30 @@ class DiscussionEngine:
                 elif state.all_topics_complete():
                     # All topics done, transition to completion
                     state.start_completion()
+                    # Yield completion_card event
+                    yield {
+                        "event": "completion_card",
+                        "data": {
+                            "message": "Alle geselecteerde onderwerpen zijn besproken.",
+                            "decisions_count": len(state.decisions),
+                            "topics_covered": state.completed_topics
+                        }
+                    }
             else:
                 # Continue with more questions on current topic
                 state.phase = ConversationPhase.discussion
+
+        elif state.phase == ConversationPhase.completion:
+            # Handle completion phase interactions
+            normalized = content.strip().lower()
+            if "meer" in normalized or "add more" in normalized.lower():
+                # Transition back to discussion (allow freeform questions)
+                state.phase = ConversationPhase.discussion
+                state.current_topic = "Additional Topics"
+            elif "bevestig" in normalized or "confirm" in normalized.lower():
+                # Frontend will call preview-context endpoint
+                # No action needed here, just acknowledge
+                pass
 
         # Build state-aware prompt
         messages = await self._build_message_history(conversation_id)
@@ -308,6 +330,7 @@ class DiscussionEngine:
         # Stream LLM response with XML parsing
         full_response = ""
         buffer = StreamingXMLBuffer()
+        completion_signal_detected = False
 
         try:
             async for chunk in self.llm.stream_complete(messages, max_tokens=4096, temperature=0.7):
@@ -317,6 +340,9 @@ class DiscussionEngine:
                 # Extract any structured events
                 for event in buffer.extract_events():
                     yield event
+                    # Check if this is a completion_signal event (Foundation phase)
+                    if event.get("event") == "completion_signal" or event.get("type") == "completion_signal":
+                        completion_signal_detected = True
 
                 # Yield text content as message_delta (without XML tags)
                 text_content = buffer.get_text_content()
@@ -326,6 +352,19 @@ class DiscussionEngine:
                         "event": "message_delta",
                         "data": {"delta": chunk}
                     }
+
+            # Foundation phase completion detection
+            if state.is_foundation and completion_signal_detected:
+                # LLM determined intake is thorough enough
+                state.start_completion()
+                yield {
+                    "event": "completion_card",
+                    "data": {
+                        "message": "Foundation bespreking is afgerond. De AI heeft genoeg informatie verzameld.",
+                        "decisions_count": len(state.decisions),
+                        "topics_covered": ["Foundation"]
+                    }
+                }
 
             # Yield complete event
             yield {

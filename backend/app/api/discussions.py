@@ -2,6 +2,7 @@
 
 import json
 from typing import Optional
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -328,14 +329,17 @@ async def update_decision(
     return {"success": True, "message": "Decision updated"}
 
 
-@router.post("/{conversation_id}/complete")
-async def complete_discussion(
+@router.post("/{conversation_id}/preview-context")
+async def preview_context(
     project_id: int,
     conversation_id: int,
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Complete a discussion, generating CONTEXT.md.
+    Generate CONTEXT.md preview from current conversation decisions.
+
+    Returns content without saving to disk or changing conversation status.
+    Used by frontend to show engineer what CONTEXT.md will contain before finalizing.
 
     Args:
         project_id: Project ID
@@ -343,8 +347,16 @@ async def complete_discussion(
         db: Database session
 
     Returns:
-        Summary data for CONTEXT.md generation
+        {
+            "content": str,
+            "line_count": int,
+            "decisions_count": int,
+            "unconfirmed_count": int
+        }
     """
+    from app.services.context_generator import ContextGenerator
+    from app.models.project import Project
+
     # Verify conversation exists and belongs to project
     conv_result = await db.execute(
         select(Conversation)
@@ -356,15 +368,139 @@ async def complete_discussion(
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
-    # Create discussion engine and complete
-    settings = get_settings()
-    llm = get_llm_provider()
-    engine = DiscussionEngine(db, llm, settings)
+    # Load project to get type
+    project_result = await db.execute(
+        select(Project).where(Project.id == project_id)
+    )
+    project = project_result.scalar_one_or_none()
 
-    summary_data = await engine.complete_discussion(conversation_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Generate preview
+    generator = ContextGenerator()
+    content = generator.generate_preview(
+        conversation.summary_data or {},
+        project.type.value
+    )
+
+    # Count decisions
+    decisions = conversation.summary_data.get("decisions", [])
+    confirmed_count = sum(1 for d in decisions if isinstance(d, dict) and d.get("confirmed", False))
+    unconfirmed_count = sum(1 for d in decisions if isinstance(d, dict) and not d.get("confirmed", False))
+
+    return {
+        "content": content,
+        "line_count": len(content.split("\n")),
+        "decisions_count": confirmed_count,
+        "unconfirmed_count": unconfirmed_count,
+    }
+
+
+@router.post("/{conversation_id}/finalize")
+async def finalize_discussion(
+    project_id: int,
+    conversation_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Finalize discussion: generate and save CONTEXT.md, mark conversation completed.
+
+    Steps:
+    1. Validate all decisions are confirmed (or warn about unconfirmed)
+    2. Generate final CONTEXT.md via context_generator
+    3. Save CONTEXT.md to project's phase directory
+    4. Mark conversation as completed (status = "completed")
+    5. Return next step guidance (suggests planning, does NOT auto-advance)
+
+    Per user decision: "suggest next workflow step (planning), do NOT auto-advance"
+    Per user decision: "Clear context window between workflow steps" -- conversation marked completed, new session for planning
+
+    Args:
+        project_id: Project ID
+        conversation_id: Conversation ID
+        db: Database session
+
+    Returns:
+        {
+            "success": True,
+            "context_file": str,
+            "next_step": "planning",
+            "message": "Discussion complete. Run /gsd:plan-phase to plan this phase."
+        }
+    """
+    from app.services.context_generator import ContextGenerator
+    from app.models.project import Project
+
+    # Verify conversation exists and belongs to project
+    conv_result = await db.execute(
+        select(Conversation)
+        .where(Conversation.id == conversation_id)
+        .where(Conversation.project_id == project_id)
+    )
+    conversation = conv_result.scalar_one_or_none()
+
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    # Load project to get type
+    project_result = await db.execute(
+        select(Project).where(Project.id == project_id)
+    )
+    project = project_result.scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Check for unconfirmed decisions
+    decisions = conversation.summary_data.get("decisions", [])
+    unconfirmed_count = sum(1 for d in decisions if isinstance(d, dict) and not d.get("confirmed", False))
+
+    warnings = []
+    if unconfirmed_count > 0:
+        warnings.append(f"{unconfirmed_count} unconfirmed decision(s) will be marked as 'Pending Review' in CONTEXT.md")
+
+    # Generate CONTEXT.md
+    generator = ContextGenerator()
+    content = generator.generate(conversation, project.type.value)
+
+    # Save CONTEXT.md to project's phase directory
+    phase_number = conversation.phase_number
+    context_file = generator.save(project_id, phase_number, content)
+
+    # Mark conversation as completed
+    conversation.status = ConversationStatus.completed.value
+    conversation.updated_at = datetime.utcnow()
+
+    await db.commit()
 
     return {
         "success": True,
-        "message": "Discussion completed",
-        "summary_data": summary_data,
+        "context_file": context_file,
+        "next_step": "planning",
+        "message": "Discussion complete. Run /gsd:plan-phase to plan this phase.",
+        "warnings": warnings if warnings else None,
     }
+
+
+@router.post("/{conversation_id}/complete")
+async def complete_discussion(
+    project_id: int,
+    conversation_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Complete a discussion, generating CONTEXT.md.
+
+    DEPRECATED: Use /finalize endpoint instead.
+    This endpoint is kept for backwards compatibility.
+
+    Args:
+        project_id: Project ID
+        conversation_id: Conversation ID
+        db: Database session
+
+    Returns:
+        Redirect to finalize endpoint
+    """
+    return await finalize_discussion(project_id, conversation_id, db)
