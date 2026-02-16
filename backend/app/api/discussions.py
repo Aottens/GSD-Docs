@@ -233,7 +233,8 @@ async def stream_message(
     Send a message and stream AI response via SSE.
 
     Uses EventSourceResponse from sse-starlette.
-    Events: message_delta, message_complete, question_card, summary_card, error, done.
+    Events: message_delta, message_complete, question_card, decision_captured,
+            topic_boundary, check_in, completion_signal, error, done.
 
     Args:
         project_id: Project ID
