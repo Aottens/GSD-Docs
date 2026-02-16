@@ -90,14 +90,27 @@ Plans:
 
 #### Phase 10.1: Discussion behavior rework (INSERTED)
 
-**Goal**: Deeper discussion UX design and behavior rework for the chat interface.
+**Goal**: Rework the discussion chat behavior to follow the proven v1.0 discuss-phase flow: AI-driven topic progression, structured question cards with option chips, faithful verbatim decision capture, Foundation intake conversation, and clear completion with CONTEXT.md generation.
 
 **Depends on**: Phase 10
 
-**Plans**: TBD
+**Requirements**: DISC-01, DISC-02, DISC-03, DISC-04
+
+**Success Criteria** (what must be TRUE):
+  1. AI drives discussion with structured topic progression (4 questions per area, then check-in)
+  2. Question cards display option chips that trigger follow-up questions (chips are starting points, not final answers)
+  3. Decisions captured verbatim from engineer's exact words (no AI interpretation)
+  4. Foundation phase uses open-ended intake conversation, not structured topic cards
+  5. Completion workflow generates CONTEXT.md preview for review/edit before finalizing
+  6. After finalizing, discussion conversation closes and suggests planning (no auto-advance)
+
+**Plans**: 4 plans
 
 Plans:
-- [ ] 10.1-01: TBD
+- [ ] 10.1-01-PLAN.md — Backend: conversation state machine, XML output parser, Foundation phase prompt
+- [ ] 10.1-02-PLAN.md — Frontend: SSE event handling, chip-follow-up question cards, decision confirm/reject UX
+- [ ] 10.1-03-PLAN.md — Backend: enhanced discussion engine with topic progression, verbatim extraction, reference file reading
+- [ ] 10.1-04-PLAN.md — Full-stack: completion workflow, CONTEXT.md preview/finalize, end-to-end verification
 
 #### Phase 11: Planning Workflow & Section Organization
 
@@ -248,7 +261,7 @@ Plans:
 | 8. Core Infrastructure | v2.0 | 3/3 | Complete | 2026-02-15 |
 | 9. File Management | v2.0 | 2/2 | Complete | 2026-02-15 |
 | 10. Discussion Workflow | v2.0 | 4/4 | Complete | 2026-02-15 |
-| 10.1 Discussion behavior rework | v2.0 | 0/1 | Not started | - |
+| 10.1 Discussion behavior rework | v2.0 | 0/4 | Planned | - |
 | 11. Planning Workflow | v2.0 | 0/2 | Not started | - |
 | 12. Writing Workflow | v2.0 | 0/3 | Not started | - |
 | 13. Verification | v2.0 | 0/2 | Not started | - |
@@ -259,13 +272,5 @@ Plans:
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-15 -- Phase 10 complete*
+*Last updated: 2026-02-16 -- Phase 10.1 planned*
 
-### Phase 10.1: Discussion behavior rework (INSERTED)
-
-**Goal:** [Urgent work - to be planned]
-**Depends on:** Phase 10
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (run /gsd:plan-phase 10.1 to break down)
