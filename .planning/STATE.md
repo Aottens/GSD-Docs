@@ -9,10 +9,10 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 
 ## Current Position
 
-- Phase: 10.1 of 17 (Discussion Behavior Rework)
-- Plan: 8 of 9 in current phase (8 plans complete, 1 remaining)
-- Status: Phase 10.1 UAT gap fixes in progress — Plan 08 complete, Plan 09 pending
-- Last activity: 2026-02-17 - Plan 08 complete (UAT fixes 1A + 1B + 1C)
+- Phase: 10.1 of 17 (Discussion Behavior Rework) — COMPLETE
+- Plan: 9 of 9 in current phase (all 9 plans complete)
+- Status: Phase 10.1 complete — all 5 UAT issues resolved (Plans 08 + 09)
+- Last activity: 2026-02-17 - Plan 09 complete (UAT fixes 1D + 1E: Gesprekken tab + chat history)
 
 ## Progress
 
@@ -33,9 +33,9 @@ v2.0 milestone: 10 phases, 21 plans - Phase 10 complete
 - Phase 8: 3/3 plans complete ✓
 - Phase 9: 2/2 plans complete ✓
 - Phase 10: 4/4 plans complete ✓
-- Phase 10.1: 8/9 plans complete (Plan 09 remaining)
-- Files created: ~151
-- Last completed: Phase 10.1 Plan 08 (UAT fixes: question loop, silent decisions, Foundation options)
+- Phase 10.1: 9/9 plans complete ✓
+- Files created: ~155
+- Last completed: Phase 10.1 Plan 09 (UAT fixes: Gesprekken tab + chat history)
 
 ## Accumulated Context
 
@@ -129,6 +129,9 @@ Recent decisions affecting v2.0:
 - **Silent decision accumulation + check-in reveal** (10.1-08): No decision_captured SSE events during discussion; check-in event carries decisions + all_decisions payload for Beslissingen tab
 - **Foundation area detection with fallback** (10.1-08): detect_covered_area_with_fallback() keyword matches first, cycles uncovered areas after 2+ questions when keywords don't match
 - **Foundation questions with option chips** (10.1-08): GENERATE_FOUNDATION_QUESTION_PROMPT now generates options field matching regular topic JSON format
+- **loadConversation pattern** (10.1-09): Fetches conversation + messages sequentially, filters system messages, populates all state atomically; extracted from hook as named function for direct calling
+- **Completion detection via completionData state** (10.1-09): loadConversation sets completionData for completed convs; ChatPanel useEffect watches completionData to set viewMode='readonly'
+- **Check-in card uses ReactMarkdown** (10.1-09): Backend _build_checkin_message() returns markdown bullets; check-in card renders via ReactMarkdown for correct display
 
 ### Roadmap Evolution
 
@@ -136,20 +139,20 @@ Recent decisions affecting v2.0:
 
 ## Blockers
 
-- **UAT gaps in Phase 10.1** — 5 issues found during human testing (2 resolved, 2 pending):
-  - 1A: Question loop / repetition (blocker) — FIXED in Plan 08 (hard cap + anti-repetition)
-  - 1B: Decision summary timing (major) — FIXED in Plan 08 (silent accumulation + check-in payload)
-  - 1C: Foundation question format (minor) — FIXED in Plan 08 (options field in prompt)
-  - 1D: Gesprekken tab not clickable (major) — pending Plan 09
-  - 1E: Chat history lost on reopen (blocker) — pending Plan 09
+None — Phase 10.1 UAT issues fully resolved:
+- 1A: Question loop / repetition (blocker) — FIXED in Plan 08 (hard cap + anti-repetition)
+- 1B: Decision summary timing (major) — FIXED in Plans 08 + 09 (silent accumulation + check-in payload + frontend batch reveal)
+- 1C: Foundation question format (minor) — FIXED in Plan 08 (options field in prompt)
+- 1D: Gesprekken tab not clickable (major) — FIXED in Plan 09 (loadConversation + tab switch)
+- 1E: Chat history lost on reopen (blocker) — FIXED in Plan 09 (loadConversation fetches full history)
 
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Phase 10.1 Plan 08 complete (UAT fixes 1A + 1B + 1C)
+Stopped at: Phase 10.1 Plan 09 complete (UAT fixes 1D + 1E: Gesprekken tab + chat history)
 Resume file: .planning/phases/10.1-discussion-behavior-rework/.continue-here.md
 
-**Next step:** Execute Plan 09 (Gesprekken tab click handler + chat history reload — UAT issues 1D + 1E).
+**Next step:** Phase 10.1 complete. Run UAT re-verification, then proceed to next phase.
 
 ---
 *Last updated: 2026-02-17*
