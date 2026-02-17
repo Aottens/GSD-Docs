@@ -340,9 +340,24 @@ class DiscussionEngine:
             # Transition to check_in phase
             state.phase = ConversationPhase.check_in
             checkin_msg = self._build_checkin_message(state, language)
-            yield {"event": "check_in", "data": {"message": checkin_msg}}
+
+            # Collect topic decisions for the Beslissingen tab (shown at check-in time)
+            topic_decisions = [
+                d for d in state.decisions
+                if isinstance(d, dict) and d.get("topic", "").lower() == (state.current_topic or "").lower()
+            ]
+
+            yield {
+                "event": "check_in",
+                "data": {
+                    "message": checkin_msg,
+                    "decisions": topic_decisions,
+                    "all_decisions": state.decisions,
+                }
+            }
             await self._persist_message(
                 conversation.id, MessageType.check_in, checkin_msg,
+                {"decisions": topic_decisions, "all_decisions": state.decisions},
             )
         else:
             # Ask next question
