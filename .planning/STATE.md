@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 ## Current Position
 
 - Phase: 10.1 of 17 (Discussion Behavior Rework)
-- Plan: 7 of 7 in current phase (7 plans complete, UAT found gaps)
-- Status: Phase 10.1 UAT gaps — 5 issues need fixing
-- Last activity: 2026-02-17 - UAT testing revealed 5 issues (2 blockers, 2 major, 1 minor)
+- Plan: 8 of 9 in current phase (8 plans complete, 1 remaining)
+- Status: Phase 10.1 UAT gap fixes in progress — Plan 08 complete, Plan 09 pending
+- Last activity: 2026-02-17 - Plan 08 complete (UAT fixes 1A + 1B + 1C)
 
 ## Progress
 
@@ -33,9 +33,9 @@ v2.0 milestone: 10 phases, 21 plans - Phase 10 complete
 - Phase 8: 3/3 plans complete ✓
 - Phase 9: 2/2 plans complete ✓
 - Phase 10: 4/4 plans complete ✓
-- Phase 10.1: 7/7 plans complete (pending verification)
+- Phase 10.1: 8/9 plans complete (Plan 09 remaining)
 - Files created: ~151
-- Last completed: Phase 10.1 Plan 07 (Fix discussion circles + probe tracking)
+- Last completed: Phase 10.1 Plan 08 (UAT fixes: question loop, silent decisions, Foundation options)
 
 ## Accumulated Context
 
@@ -120,12 +120,15 @@ Recent decisions affecting v2.0:
 - **Reject reopens question in chat** (10.1-02): Rejecting a decision removes it and sends message to reopen discussion (no inline editing)
 - **Freeform input always visible** (10.1-02): Text input always shown below chips for simpler interface (engineer can always type detailed answer)
 - **Verbatim decision extraction is rule-based** (10.1-03): NEVER calls LLM, uses rule-based filler removal to preserve engineer's exact words (honors "no interpretation" requirement)
-- **4-question rhythm enforced by state machine** (10.1-03): increment_question() returns True at >= 4 questions, triggers check-in phase transition
+- **4-question rhythm enforced by state machine** (10.1-03): increment_question() returns string ('continue'/'check_in'/'force_check_in') with hard cap at 12 questions
 - **Foundation phase auto-detected** (10.1-03): phase_number == 1 OR phase_goal contains foundation/intake/scope keywords, creates open-ended greeting instead of topic selection
 - **CONTEXT.md compression uses 3-tier priority** (10.1-04): Priority 1 (prescriptive keywords: should, must, will, not) > Priority 2 (numeric values with units) > Priority 3 (general notes get compressed)
 - **Preview endpoint has no side effects** (10.1-04): Returns CONTEXT.md content without saving to disk or changing conversation status
 - **Finalize workflow suggests next step, no auto-advance** (10.1-04): Saves CONTEXT.md, marks conversation completed, returns "next_step: planning" message (engineer manually starts planning)
 - **Completion detection works for both phase types** (10.1-04): Structured phases use all_topics_complete() trigger, Foundation phases use LLM completion_signal XML tag
+- **Silent decision accumulation + check-in reveal** (10.1-08): No decision_captured SSE events during discussion; check-in event carries decisions + all_decisions payload for Beslissingen tab
+- **Foundation area detection with fallback** (10.1-08): detect_covered_area_with_fallback() keyword matches first, cycles uncovered areas after 2+ questions when keywords don't match
+- **Foundation questions with option chips** (10.1-08): GENERATE_FOUNDATION_QUESTION_PROMPT now generates options field matching regular topic JSON format
 
 ### Roadmap Evolution
 
@@ -133,20 +136,20 @@ Recent decisions affecting v2.0:
 
 ## Blockers
 
-- **UAT gaps in Phase 10.1** — 5 issues found during human testing:
-  - 1A: Question loop / repetition (blocker) — Plan 07 uncommitted, Foundation area detection may need fixes
-  - 1B: Decision summary timing (major) — should show after all questions, not during
-  - 1C: Foundation question format (minor) — plain chat messages instead of question cards
-  - 1D: Gesprekken tab not clickable (major) — missing click handler
-  - 1E: Chat history lost on reopen (blocker) — messages in DB but never loaded by frontend
+- **UAT gaps in Phase 10.1** — 5 issues found during human testing (2 resolved, 2 pending):
+  - 1A: Question loop / repetition (blocker) — FIXED in Plan 08 (hard cap + anti-repetition)
+  - 1B: Decision summary timing (major) — FIXED in Plan 08 (silent accumulation + check-in payload)
+  - 1C: Foundation question format (minor) — FIXED in Plan 08 (options field in prompt)
+  - 1D: Gesprekken tab not clickable (major) — pending Plan 09
+  - 1E: Chat history lost on reopen (blocker) — pending Plan 09
 
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Phase 10.1 UAT — 5 issues found, need discuss → plan → fix cycle
+Stopped at: Phase 10.1 Plan 08 complete (UAT fixes 1A + 1B + 1C)
 Resume file: .planning/phases/10.1-discussion-behavior-rework/.continue-here.md
 
-**Next step:** `/clear` then `/gsd:discuss-phase 10.1` to discuss fixes for the 5 UAT issues. Then plan and execute fixes. Plan 07 changes are still uncommitted.
+**Next step:** Execute Plan 09 (Gesprekken tab click handler + chat history reload — UAT issues 1D + 1E).
 
 ---
-*Last updated: 2026-02-16*
+*Last updated: 2026-02-17*
