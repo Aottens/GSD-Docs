@@ -104,14 +104,18 @@ Plans:
   5. Completion workflow generates CONTEXT.md preview for review/edit before finalizing
   6. After finalizing, discussion conversation closes and suggests planning (no auto-advance)
 
-**Plans**: 5 plans
+**Plans**: 9 plans
 
 Plans:
-- [ ] 10.1-01-PLAN.md — Backend: conversation state machine, XML output parser, Foundation phase prompt
-- [ ] 10.1-02-PLAN.md — Frontend: SSE event handling, chip-follow-up question cards, decision confirm/reject UX
-- [ ] 10.1-03-PLAN.md — Backend: enhanced discussion engine with topic progression, verbatim extraction, reference file reading
-- [ ] 10.1-04-PLAN.md — Backend: completion workflow, CONTEXT.md generation, preview/finalize endpoints
-- [ ] 10.1-05-PLAN.md — Frontend: CompletionCard, ContextPreview, completion flow integration, end-to-end verification
+- [x] 10.1-01-PLAN.md — Backend: conversation state machine, XML output parser, Foundation phase prompt
+- [x] 10.1-02-PLAN.md — Frontend: SSE event handling, chip-follow-up question cards, decision confirm/reject UX
+- [x] 10.1-03-PLAN.md — Backend: enhanced discussion engine with topic progression, verbatim extraction, reference file reading
+- [x] 10.1-04-PLAN.md — Backend: completion workflow, CONTEXT.md generation, preview/finalize endpoints
+- [x] 10.1-05-PLAN.md — Frontend: CompletionCard, ContextPreview, completion flow integration, end-to-end verification
+- [x] Plan 06 (no file) — Architectural rework: scoped LLM calls, backend drives conversation flow
+- [x] Plan 07 (no file) — Fix discussion circles: probe tracking, topic Q&A context, decision summary in check-in
+- [ ] 10.1-08-PLAN.md — Backend: fix question loop (hard cap + anti-repetition), silent decision accumulation, Foundation option chips
+- [ ] 10.1-09-PLAN.md — Frontend: chat history loading, Gesprekken tab click navigation, decision timing UI
 
 #### Phase 11: Planning Workflow & Section Organization
 
@@ -262,7 +266,7 @@ Plans:
 | 8. Core Infrastructure | v2.0 | 3/3 | Complete | 2026-02-15 |
 | 9. File Management | v2.0 | 2/2 | Complete | 2026-02-15 |
 | 10. Discussion Workflow | v2.0 | 4/4 | Complete | 2026-02-15 |
-| 10.1 Discussion behavior rework | v2.0 | 0/5 | Planned | - |
+| 10.1 Discussion behavior rework | v2.0 | 7/9 | Gap closure | - |
 | 11. Planning Workflow | v2.0 | 0/2 | Not started | - |
 | 12. Writing Workflow | v2.0 | 0/3 | Not started | - |
 | 13. Verification | v2.0 | 0/2 | Not started | - |
