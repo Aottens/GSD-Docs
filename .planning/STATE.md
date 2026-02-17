@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Engineers can create, manage, and review FDS/SDS projects through a visual web interface that guides them through the full document lifecycle
-**Current focus:** Phase 10.1 blocked — architectural rework needed (backend must drive LLM, not the other way around)
+**Current focus:** Phase 10.1 UAT found 5 issues (2 blockers, 2 major, 1 minor) — needs discuss → plan → fix cycle
 
 ## Current Position
 
 - Phase: 10.1 of 17 (Discussion Behavior Rework)
-- Plan: 4 of 5 in current phase (4 plans complete)
-- Status: Phase 10.1 in progress
-- Last activity: 2026-02-16 - Completed Phase 10.1 Plan 04
+- Plan: 7 of 7 in current phase (7 plans complete, UAT found gaps)
+- Status: Phase 10.1 UAT gaps — 5 issues need fixing
+- Last activity: 2026-02-17 - UAT testing revealed 5 issues (2 blockers, 2 major, 1 minor)
 
 ## Progress
 
@@ -33,9 +33,9 @@ v2.0 milestone: 10 phases, 21 plans - Phase 10 complete
 - Phase 8: 3/3 plans complete ✓
 - Phase 9: 2/2 plans complete ✓
 - Phase 10: 4/4 plans complete ✓
-- Phase 10.1: 4/5 plans complete (in progress)
+- Phase 10.1: 7/7 plans complete (pending verification)
 - Files created: ~151
-- Last completed: Phase 10.1 Plan 04 (Backend Completion Workflow)
+- Last completed: Phase 10.1 Plan 07 (Fix discussion circles + probe tracking)
 
 ## Accumulated Context
 
@@ -133,15 +133,20 @@ Recent decisions affecting v2.0:
 
 ## Blockers
 
-- **Discussion engine architecture** (10.1): Current pattern has LLM driving conversation behavior via big system prompt. Must flip to "backend drives, LLM generates scoped content" to be model-agnostic and faithful to v1.0. State machine infrastructure is correct; orchestration in send_message() needs rework. See .continue-here.md for full analysis.
+- **UAT gaps in Phase 10.1** — 5 issues found during human testing:
+  - 1A: Question loop / repetition (blocker) — Plan 07 uncommitted, Foundation area detection may need fixes
+  - 1B: Decision summary timing (major) — should show after all questions, not during
+  - 1C: Foundation question format (minor) — plain chat messages instead of question cards
+  - 1D: Gesprekken tab not clickable (major) — missing click handler
+  - 1E: Chat history lost on reopen (blocker) — messages in DB but never loaded by frontend
 
 ## Session Continuity
 
-Last session: 2026-02-16
-Stopped at: Phase 10.1 Plan 05 code-complete but human verification exposed architectural flaw
+Last session: 2026-02-17
+Stopped at: Phase 10.1 UAT — 5 issues found, need discuss → plan → fix cycle
 Resume file: .planning/phases/10.1-discussion-behavior-rework/.continue-here.md
 
-**Next step:** Plan architectural rework of discussion engine — "backend drives, LLM generates scoped content". This is either new plans in 10.1 or a new phase 10.2. The .continue-here.md has the full analysis: what to keep, what to change, v1.0 reference files, and the specific design direction.
+**Next step:** `/clear` then `/gsd:discuss-phase 10.1` to discuss fixes for the 5 UAT issues. Then plan and execute fixes. Plan 07 changes are still uncommitted.
 
 ---
 *Last updated: 2026-02-16*
