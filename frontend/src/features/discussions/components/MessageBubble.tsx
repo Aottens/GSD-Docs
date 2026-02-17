@@ -88,9 +88,9 @@ export function MessageBubble({
     return (
       <div className="flex justify-start">
         <Card className="p-4 space-y-3 max-w-2xl bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
-          <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-            {message.content}
-          </p>
+          <div className="text-sm font-medium text-blue-900 dark:text-blue-100 prose prose-sm dark:prose-invert max-w-none">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+          </div>
           <div className="flex gap-2">
             <Button
               variant="outline"

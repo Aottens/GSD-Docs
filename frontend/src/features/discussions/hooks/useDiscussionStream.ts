@@ -231,23 +231,8 @@ export function useDiscussionStream(): UseDiscussionStreamReturn {
                 }
                 setMessages((prev) => [...prev, summaryMessage])
               } else if (event.event === 'decision_captured') {
-                // Add decision to decisions state
-                if (event.data.decision) {
-                  setDecisions((prev) => [...prev, event.data.decision!])
-                  // Also add a summary_card message to chat
-                  const summaryMessage: Message = {
-                    id: Date.now(),
-                    conversation_id: conversationId,
-                    role: 'assistant',
-                    content: `Beslissing vastgelegd: ${event.data.decision.decision}`,
-                    message_type: 'summary_card',
-                    metadata_json: {
-                      decision: event.data.decision,
-                    },
-                    timestamp: new Date().toISOString(),
-                  }
-                  setMessages((prev) => [...prev, summaryMessage])
-                }
+                // Decisions accumulate silently — do nothing here.
+                // They will be delivered in batch at check-in via all_decisions.
               } else if (event.event === 'topic_boundary') {
                 // Update current topic and add visual boundary message
                 if (event.data.topic_boundary) {
@@ -283,17 +268,25 @@ export function useDiscussionStream(): UseDiscussionStreamReturn {
                   setMessages((prev) => [...prev, completionMessage])
                 }
               } else if (event.event === 'check_in') {
-                // Add check-in message to chat
+                // Add check-in message to chat (with decision summary as content)
                 const checkInMessage: Message = {
                   id: Date.now(),
                   conversation_id: conversationId,
                   role: 'assistant',
-                  content: event.data.final || 'Hoe gaat het tot nu toe?',
+                  content: event.data.message || event.data.final || 'Samenvatting van dit onderwerp',
                   message_type: 'check_in',
-                  metadata_json: null,
+                  metadata_json: {
+                    decisions: event.data.decisions || [],
+                    all_decisions: event.data.all_decisions || [],
+                  },
                   timestamp: new Date().toISOString(),
                 }
                 setMessages((prev) => [...prev, checkInMessage])
+
+                // Populate Beslissingen tab with ALL decisions so far
+                if (event.data.all_decisions && event.data.all_decisions.length > 0) {
+                  setDecisions(event.data.all_decisions)
+                }
               } else if (event.event === 'error') {
                 setError(event.data.error || 'Unknown error')
                 setIsStreaming(false)
