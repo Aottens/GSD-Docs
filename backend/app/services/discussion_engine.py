@@ -573,6 +573,9 @@ class DiscussionEngine:
             raw = await self.llm.complete(messages, max_tokens=256, temperature=0.5)
             result = self._parse_question_json(raw)
 
+            if result is None:
+                return self._fallback_question(state, language)
+
             # Mark the first uncovered probe as covered
             if not state.is_foundation and next_idx is not None:
                 state.probes_covered.append(next_idx)
@@ -758,49 +761,76 @@ class DiscussionEngine:
 
     def _parse_question_json(self, raw: str) -> dict:
         """Parse JSON from LLM response, with fallback."""
-        # Try to find JSON in the response
         raw = raw.strip()
+        data = None
 
         # Try direct parse
         try:
             data = json.loads(raw)
-            return {
-                "question": data.get("question", raw),
-                "options": data.get("options", []),
-            }
         except json.JSONDecodeError:
             pass
 
         # Try to extract JSON from markdown code block
-        json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', raw, re.DOTALL)
-        if json_match:
-            try:
-                data = json.loads(json_match.group(1))
-                return {
-                    "question": data.get("question", raw),
-                    "options": data.get("options", []),
-                }
-            except json.JSONDecodeError:
-                pass
+        if not data:
+            json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', raw, re.DOTALL)
+            if json_match:
+                try:
+                    data = json.loads(json_match.group(1))
+                except json.JSONDecodeError:
+                    pass
 
         # Try to find any JSON object in the text
-        json_match = re.search(r'\{[^{}]*"question"[^{}]*\}', raw, re.DOTALL)
-        if json_match:
-            try:
-                data = json.loads(json_match.group(0))
-                return {
-                    "question": data.get("question", raw),
-                    "options": data.get("options", []),
-                }
-            except json.JSONDecodeError:
-                pass
+        if not data:
+            json_match = re.search(r'\{[^{}]*"question"[^{}]*\}', raw, re.DOTALL)
+            if json_match:
+                try:
+                    data = json.loads(json_match.group(0))
+                except json.JSONDecodeError:
+                    pass
+
+        if data:
+            question = data.get("question", raw)
+            options = data.get("options", [])
+
+            # Validate: reject if question contains CJK characters (model leaked reasoning)
+            if re.search(r'[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff]', question):
+                logger.warning("Question contains CJK characters, rejecting: %s", question[:80])
+                return None  # caller will use fallback
+
+            return {"question": question, "options": options}
 
         # Fallback: use raw text as question
         logger.warning("Could not parse question JSON, using raw text: %s", raw[:100])
-        return {"question": raw, "options": []}
+        return None  # caller will use fallback
 
     def _fallback_question(self, state: ConversationState, language: str) -> dict:
         """Generate a fallback question when LLM fails."""
+        if state.is_foundation:
+            # Use area-specific fallback for Foundation
+            area_order = ["system_overview", "scope", "reference_docs", "equipment", "terminology"]
+            current_area = next(
+                (a for a in area_order if a not in state.foundation_areas_covered),
+                None,
+            )
+            fallback_nl = {
+                "system_overview": ("Wat is het systeem dat we gaan documenteren? Beschrijf het proces en de belangrijkste apparatuur.", ["Verpakkingslijn", "Productielijn", "Waterzuivering", "Transportsysteem"]),
+                "scope": ("Wat valt binnen de scope van dit FDS? En wat valt er expliciet buiten?", ["PLC + HMI", "Alleen software", "Volledige installatie"]),
+                "reference_docs": ("Welke referentiedocumentatie is beschikbaar? Denk aan P&ID's, leveranciershandleidingen of bestaande FDS-documenten.", ["P&ID's beschikbaar", "Leveranciersmanuals", "Bestaand FDS", "Nog niets"]),
+                "equipment": ("Hoe is de apparatuur gegroepeerd? Per lijn, per functie, per gebied?", ["Per productielijn", "Per functioneel blok", "Per gebied/zone"]),
+                "terminology": ("Welke afkortingen en naamgevingsconventies worden in dit project gebruikt?", ["Volgens IEC standaard", "Klantspecifiek", "ISA-88/PackML"]),
+            }
+            fallback_en = {
+                "system_overview": ("What is the system we're documenting? Describe the process and main equipment.", ["Packaging line", "Production line", "Water treatment", "Transport system"]),
+                "scope": ("What is IN scope for this FDS? And what is explicitly OUT of scope?", ["PLC + HMI", "Software only", "Full installation"]),
+                "reference_docs": ("What reference documentation is available? Think P&IDs, vendor manuals, existing FDS.", ["P&IDs available", "Vendor manuals", "Existing FDS", "Nothing yet"]),
+                "equipment": ("How is the equipment grouped? By line, by function, by area?", ["By production line", "By functional block", "By area/zone"]),
+                "terminology": ("What abbreviations and naming conventions are used in this project?", ["IEC standard", "Client-specific", "ISA-88/PackML"]),
+            }
+            fallbacks = fallback_nl if language == "nl" else fallback_en
+            if current_area and current_area in fallbacks:
+                q, opts = fallbacks[current_area]
+                return {"question": q, "options": opts}
+
         topic = state.current_topic or "this topic"
         if language == "nl":
             return {"question": f"Kunt u meer vertellen over {topic}?", "options": []}
