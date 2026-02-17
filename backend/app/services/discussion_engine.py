@@ -108,6 +108,9 @@ class DiscussionEngine:
                 "phase_goal": phase_goal,
                 "content_types": content_types,
                 "gray_areas": [area["topic"] for area in gray_areas],
+                "project_name": project_data.get("name", ""),
+                "project_type": project_type,
+                "project_description": project_data.get("description", ""),
                 **state.to_summary_data(),
             },
         )
@@ -125,15 +128,29 @@ class DiscussionEngine:
 
         # Initial assistant message
         if is_foundation:
+            project_name = project_data.get("name", "")
+            project_desc = project_data.get("description", "")
             if project_language == "nl":
                 greeting = (
-                    f"Welkom bij de Foundation bespreking voor dit {project_type} project! "
-                    "Laten we beginnen met het vastleggen van de basis informatie over het systeem en de scope."
+                    f"Welkom bij de Foundation bespreking voor **{project_name}** (Type {project_type}).\n\n"
+                )
+                if project_desc:
+                    greeting += f"*{project_desc}*\n\n"
+                greeting += (
+                    "We gaan de basis vastleggen: wat is het systeem, wat is de scope, "
+                    "welke referentiedocumentatie is beschikbaar, en hoe is de apparatuur gegroepeerd.\n\n"
+                    "**Vertel eerst: wat is het systeem dat we gaan documenteren?**"
                 )
             else:
                 greeting = (
-                    f"Welcome to the Foundation discussion for this Type {project_type} project! "
-                    "Let's start by capturing the fundamental information about the system and scope."
+                    f"Welcome to the Foundation discussion for **{project_name}** (Type {project_type}).\n\n"
+                )
+                if project_desc:
+                    greeting += f"*{project_desc}*\n\n"
+                greeting += (
+                    "We'll establish the fundamentals: what the system is, project scope, "
+                    "available reference documentation, and equipment grouping.\n\n"
+                    "**First: what is the system we're documenting?**"
                 )
 
             assistant_message = Message(
@@ -499,7 +516,13 @@ class DiscussionEngine:
         topic_qa = await self._get_topic_qa(conversation.id)
 
         if state.is_foundation:
+            project_name = conversation.summary_data.get("project_name", "")
+            project_type = conversation.summary_data.get("project_type", "B")
+            project_desc = conversation.summary_data.get("project_description", "")
             prompt = GENERATE_FOUNDATION_QUESTION_PROMPT.format(
+                project_name=project_name,
+                project_type=project_type,
+                project_description=project_desc or "not provided",
                 covered_areas=", ".join(state.foundation_areas_covered) if state.foundation_areas_covered else "none yet",
                 topic_qa=topic_qa,
                 language=language,
@@ -840,10 +863,12 @@ class DiscussionEngine:
         )
         project = result.scalar_one_or_none()
         if not project:
-            return {"type": "B", "language": "nl"}
+            return {"type": "B", "language": "nl", "name": "", "description": ""}
         return {
             "type": project.type.value,
             "language": project.language.value,
+            "name": project.name or "",
+            "description": project.description or "",
         }
 
     def _load_baseline_summary(self, project_id: int) -> Optional[str]:
