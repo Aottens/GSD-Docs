@@ -10,7 +10,6 @@ import { ConversationHistory } from './ConversationHistory'
 import { ChatInput } from './ChatInput'
 import { ContextPreview } from './ContextPreview'
 import { useDiscussionStream } from '../hooks/useDiscussionStream'
-import { useConversation } from '../hooks/useConversationHistory'
 import { toast } from 'sonner'
 
 interface ChatPanelProps {
@@ -41,6 +40,7 @@ export function ChatPanel({
     contextPreview,
     isPreviewMode,
     startDiscussion,
+    loadConversation,
     sendMessage,
     confirmDecision,
     rejectDecision,
@@ -51,32 +51,32 @@ export function ChatPanel({
     exitPreviewMode,
   } = useDiscussionStream()
 
-  // Load conversation if conversationId provided
-  const { data: conversationData } = useConversation(
-    projectId,
-    conversationId || 0
-  )
-
   useEffect(() => {
     if (error) {
       toast.error('Fout tijdens gesprek', { description: error })
     }
   }, [error])
 
-  // Start new discussion if phaseNumber provided
+  // Start new discussion if phaseNumber provided (no existing conversation)
   useEffect(() => {
     if (phaseNumber && !conversationId) {
       startDiscussion(projectId, phaseNumber)
     }
   }, [phaseNumber, conversationId, projectId, startDiscussion])
 
-  // Load conversation data if viewing existing conversation
+  // Load existing conversation when conversationId provided
   useEffect(() => {
-    if (conversationData) {
-      setViewMode('readonly')
-      // TODO: Load messages and decisions from conversationData
+    if (conversationId && projectId) {
+      loadConversation(projectId, conversationId)
     }
-  }, [conversationData])
+  }, [conversationId, projectId, loadConversation])
+
+  // Update viewMode based on completionData (set by loadConversation for completed conversations)
+  useEffect(() => {
+    if (completionData) {
+      setViewMode('readonly')
+    }
+  }, [completionData])
 
   // Handle finalization completion
   const handleFinalize = async (editedContent?: string) => {
@@ -95,8 +95,8 @@ export function ChatPanel({
   }
 
   const handleViewConversation = (id: number) => {
-    // TODO: Implement view conversation
-    console.log('View conversation:', id)
+    loadConversation(projectId, id)
+    setActiveTab('chat') // Switch to chat tab to show the loaded conversation
   }
 
   const handleStartRevision = (id: number) => {

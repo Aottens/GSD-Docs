@@ -13,6 +13,7 @@ interface UseDiscussionStreamReturn {
   contextPreview: { content: string; lineCount: number } | null
   isPreviewMode: boolean
   startDiscussion: (projectId: string, phaseNumber: number) => Promise<void>
+  loadConversation: (projectId: string, convId: number) => Promise<void>
   sendMessage: (content: string, attachments?: string[]) => Promise<void>
   confirmDecision: (index: number) => void
   rejectDecision: (index: number) => void
@@ -56,6 +57,57 @@ export function useDiscussionStream(): UseDiscussionStreamReturn {
       setMessages(msgs.filter((m: Message) => m.role !== 'system'))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start discussion')
+    }
+  }, [])
+
+  const loadConversation = useCallback(async (projectId: string, convId: number) => {
+    try {
+      setError(null)
+      projectIdRef.current = projectId
+      setConversationId(convId)
+
+      // Fetch conversation details for status and summary_data
+      const conversation = await api.get<{ id: number; status: string; summary_data: { decisions?: Decision[] } | null }>(
+        `/projects/${projectId}/discussions/${convId}`
+      )
+
+      // Fetch all messages (up to 500 to load full history)
+      const msgs = await api.get<Message[]>(
+        `/projects/${projectId}/discussions/${convId}/messages?limit=500`
+      )
+
+      // Filter out system messages
+      const visibleMessages = msgs.filter((m: Message) => m.role !== 'system')
+      setMessages(visibleMessages)
+
+      // Extract decisions from summary_data (persisted state from backend)
+      const allDecisions: Decision[] = []
+      if (conversation.summary_data?.decisions) {
+        allDecisions.push(...conversation.summary_data.decisions)
+      }
+      setDecisions(allDecisions)
+
+      // Find current topic from last topic_boundary with status "starting"
+      const lastBoundary = [...visibleMessages]
+        .reverse()
+        .find(m => m.message_type === 'topic_boundary' && m.metadata_json?.topic_boundary?.status === 'starting')
+      if (lastBoundary?.metadata_json?.topic_boundary) {
+        setCurrentTopic(lastBoundary.metadata_json.topic_boundary.topic)
+      }
+
+      // Check for completion
+      const hasCompletion = visibleMessages.some(m => m.message_type === 'completion_card')
+      if (hasCompletion || conversation.status === 'completed') {
+        setCompletionData({
+          message: 'Bespreking afgerond',
+          decisions_count: allDecisions.length,
+          topics_covered: [],
+        })
+      } else {
+        setCompletionData(null)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load conversation')
     }
   }, [])
 
@@ -375,6 +427,7 @@ export function useDiscussionStream(): UseDiscussionStreamReturn {
     contextPreview,
     isPreviewMode,
     startDiscussion,
+    loadConversation,
     sendMessage,
     confirmDecision,
     rejectDecision,

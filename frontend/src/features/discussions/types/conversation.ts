@@ -4,7 +4,7 @@ export interface Conversation {
   phase_number: number
   status: 'active' | 'completed' | 'archived'
   title: string | null
-  summary_data: Decision[] | null
+  summary_data: { decisions?: Decision[] } | null
   parent_id: number | null
   created_at: string
   updated_at: string
@@ -41,6 +41,8 @@ export interface MessageMetadata {
   attachments?: string[]
   topic_boundary?: TopicBoundaryData
   completion?: CompletionData
+  decisions?: Decision[]     // topic decisions in check-in message
+  all_decisions?: Decision[] // all decisions so far in check-in message
 }
 
 export type StreamEventType =
@@ -78,5 +80,8 @@ export interface StreamEvent {
     topic_boundary?: TopicBoundaryData
     completion?: CompletionData
     error?: string
+    message?: string          // for check_in events
+    decisions?: Decision[]    // topic decisions at check-in
+    all_decisions?: Decision[] // all decisions so far
   }
 }
