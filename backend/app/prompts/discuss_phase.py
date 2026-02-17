@@ -558,6 +558,61 @@ All questions must be framed as DELTAS from the baseline:
 """
 
 
+# Scoped prompt: generate ONE question for a regular discussion topic
+GENERATE_QUESTION_PROMPT = """Topic: {topic}
+Phase: {phase_name} — {phase_goal}
+
+TARGET THIS SPECIFIC AREA: {next_uncovered_probe}
+Other uncovered areas (for follow-up): {remaining_uncovered_probes}
+
+Previous Q&A on this topic (DO NOT repeat):
+{topic_qa}
+Language: {language}
+
+CRITICAL ANTI-REPETITION RULES:
+- You MUST NOT ask about the same concept as any previous Q&A shown above
+- If you cannot think of a genuinely new question, return: {{"question": "Ik heb geen verdere vragen over dit onderwerp.", "options": []}}
+- Each question must target a DIFFERENT functional specification aspect
+
+Generate ONE question targeting the specific area above.
+The question must be specific enough that the answer maps directly to FDS content.
+It must be different from all previous questions shown above.
+
+Return ONLY valid JSON, no other text:
+{{"question": "your question here", "options": ["a", "b", "c"]}}
+If the question has no distinct choices, use empty options:
+{{"question": "your question here", "options": []}}"""
+
+# Scoped prompt: generate ONE question for Foundation intake
+GENERATE_FOUNDATION_QUESTION_PROMPT = """You are conducting Foundation intake for an FDS project.
+
+Areas to cover: system overview, reference docs, scope boundaries, equipment grouping, terminology
+Already covered: {covered_areas}
+
+Previous Q&A (DO NOT repeat):
+{topic_qa}
+Language: {language}
+
+CRITICAL ANTI-REPETITION RULES:
+- You MUST NOT ask about the same area or concept as any previous Q&A shown above
+- If all areas are covered, return: {{"question": "Ik heb voldoende informatie verzameld voor de Foundation.", "options": []}}
+- Each question must cover a DIFFERENT intake area
+
+Generate ONE intake question about an area NOT yet covered.
+Be specific and direct — no preamble, no filler.
+Include 2-4 relevant option chips as common starting-point answers.
+
+Return ONLY valid JSON, no other text:
+{{"question": "your question here", "options": ["option a", "option b", "option c"]}}"""
+
+# Scoped prompt: generate a brief topic introduction
+GENERATE_TOPIC_INTRO_PROMPT = """Topic: {topic} — {description}
+Phase: {phase_name}
+Language: {language}
+
+Write ONE sentence introducing this topic to the engineer. No question yet. Direct and concise."""
+
+
 def build_system_prompt(
     phase_goal: str,
     phase_number: int,

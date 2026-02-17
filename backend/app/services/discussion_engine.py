@@ -1,7 +1,13 @@
-"""Discussion engine service for orchestrating discussion workflow."""
+"""Discussion engine service for orchestrating discussion workflow.
 
-import os
-from pathlib import Path
+Implements the v1.0 pattern: the backend drives the conversation with
+small, scoped LLM calls per step (one question, one intro). The state
+machine controls flow; the LLM generates content.
+"""
+
+import json
+import logging
+import re
 from typing import AsyncGenerator, Optional
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,42 +17,37 @@ from app.config import Settings
 from app.llm.provider import LLMProvider
 from app.models.conversation import Conversation, Message, ConversationStatus, MessageRole, MessageType
 from app.models.project import Project
-from app.models.file import File, FileScope
 from app.prompts.discuss_phase import (
     detect_content_types,
     get_gray_areas,
     build_system_prompt,
     PROJECT_TYPE_PHASES,
+    GRAY_AREA_PATTERNS,
+    GENERATE_QUESTION_PROMPT,
+    GENERATE_FOUNDATION_QUESTION_PROMPT,
+    GENERATE_TOPIC_INTRO_PROMPT,
 )
 from app.services.conversation_state import ConversationState, ConversationPhase, detect_foundation_phase
-from app.services.structured_output_parser import StreamingXMLBuffer, parse_question_card
 from app.services.decision_extractor import extract_verbatim_decision, is_meta_message
+
+logger = logging.getLogger(__name__)
 
 
 class DiscussionEngine:
     """
-    Orchestrates discussion workflow using v1.0 patterns with backend guardrails.
+    Orchestrates discussion workflow using v1.0 patterns.
 
-    Implements the discuss-phase workflow:
-    1. Content type detection from phase goal
-    2. Gray area generation for detected content types
-    3. Chat-optimized system prompt building
-    4. Streaming LLM responses with structured content parsing
-    5. Decision tracking in conversation summary_data
+    The state machine drives conversation flow. Each turn makes at most
+    one small, scoped LLM call (for a question or topic intro). Check-ins
+    and completion cards are pure Python — no LLM needed.
     """
 
     def __init__(self, db: AsyncSession, llm: LLMProvider, settings: Settings):
-        """
-        Initialize discussion engine.
-
-        Args:
-            db: Database session
-            llm: LLM provider for generating responses
-            settings: Application settings
-        """
         self.db = db
         self.llm = llm
         self.settings = settings
+
+    # ── start_discussion (unchanged from Plans 01-05) ───────────────
 
     async def start_discussion(self, project_id: int, phase_number: int) -> Conversation:
         """
@@ -61,39 +62,23 @@ class DiscussionEngine:
         6. If Foundation: skip topic selection, create intake greeting
         7. If NOT Foundation: create topic selection card
         8. Build system prompt and create conversation
-
-        Args:
-            project_id: Project ID
-            phase_number: Phase number
-
-        Returns:
-            Created conversation with initial messages
         """
-        # Load project to get type and language
         project_data = await self._load_project(project_id)
         project_type = project_data.get("type", "B")
         project_language = project_data.get("language", "nl")
 
-        # Get phase info from project type definition
         phase_info = self._parse_roadmap_for_phase(project_type, phase_number)
         phase_goal = phase_info["goal"]
         phase_name = phase_info["name"]
 
-        # Detect if Foundation phase
         is_foundation = detect_foundation_phase(phase_number, phase_goal)
-
-        # Detect content types
         content_types = detect_content_types(phase_goal)
-
-        # Generate gray areas (skip if Foundation)
         gray_areas = [] if is_foundation else get_gray_areas(content_types)
 
-        # Load baseline summary for Type C/D
         baseline_summary = None
         if project_type in ["C", "D"]:
             baseline_summary = self._load_baseline_summary(project_id)
 
-        # Build system prompt
         system_prompt = build_system_prompt(
             phase_goal=phase_goal,
             phase_number=phase_number,
@@ -105,17 +90,13 @@ class DiscussionEngine:
             baseline_summary=baseline_summary,
         )
 
-        # Initialize conversation state
         state = ConversationState(is_foundation=is_foundation)
         if is_foundation:
-            # Foundation phase goes directly to discussion (no topic selection)
             state.phase = ConversationPhase.discussion
             state.current_topic = "Foundation"
         else:
-            # Regular phase starts with topic selection
             state.phase = ConversationPhase.topic_selection
 
-        # Create conversation with state
         conversation = Conversation(
             project_id=project_id,
             phase_number=phase_number,
@@ -124,6 +105,7 @@ class DiscussionEngine:
             summary_data={
                 "phase_number": phase_number,
                 "phase_name": phase_name,
+                "phase_goal": phase_goal,
                 "content_types": content_types,
                 "gray_areas": [area["topic"] for area in gray_areas],
                 **state.to_summary_data(),
@@ -132,7 +114,7 @@ class DiscussionEngine:
         self.db.add(conversation)
         await self.db.flush()
 
-        # Create system message
+        # System message
         system_message = Message(
             conversation_id=conversation.id,
             role=MessageRole.system.value,
@@ -141,13 +123,18 @@ class DiscussionEngine:
         )
         self.db.add(system_message)
 
-        # Create initial assistant message
+        # Initial assistant message
         if is_foundation:
-            # Foundation: open-ended intake greeting
             if project_language == "nl":
-                greeting = f"Welkom bij de Foundation bespreking voor dit {project_type} project! Laten we beginnen met het vastleggen van de basis informatie over het systeem en de scope."
+                greeting = (
+                    f"Welkom bij de Foundation bespreking voor dit {project_type} project! "
+                    "Laten we beginnen met het vastleggen van de basis informatie over het systeem en de scope."
+                )
             else:
-                greeting = f"Welcome to the Foundation discussion for this Type {project_type} project! Let's start by capturing the fundamental information about the system and scope."
+                greeting = (
+                    f"Welcome to the Foundation discussion for this Type {project_type} project! "
+                    "Let's start by capturing the fundamental information about the system and scope."
+                )
 
             assistant_message = Message(
                 conversation_id=conversation.id,
@@ -156,7 +143,6 @@ class DiscussionEngine:
                 message_type=MessageType.text.value,
             )
         else:
-            # Regular phase: topic selection card
             topic_selection_text = self._build_topic_selection_message(
                 phase_name, gray_areas, project_language
             )
@@ -179,11 +165,12 @@ class DiscussionEngine:
             )
 
         self.db.add(assistant_message)
-
         await self.db.commit()
         await self.db.refresh(conversation)
 
         return conversation
+
+    # ── send_message (REWRITTEN — scoped LLM calls) ────────────────
 
     async def send_message(
         self,
@@ -192,35 +179,28 @@ class DiscussionEngine:
         attachments: Optional[list[str]] = None,
     ) -> AsyncGenerator[dict, None]:
         """
-        Process user message and stream AI response with state-aware orchestration.
+        Process user message and generate response with state-aware orchestration.
 
-        Steps:
-        1. Load conversation and state
-        2. Extract decision from user answer (unless meta-message)
-        3. Update state based on phase (topic_selection, discussion, check_in)
-        4. Build state-aware LLM prompt
-        5. Stream LLM response with XML parsing for structured events
-        6. Persist messages and updated state
-
-        Args:
-            conversation_id: Conversation ID
-            content: User message content
-            attachments: Optional list of file paths
+        Instead of one big LLM call with full history and XML parsing, each
+        phase makes at most one small, scoped LLM call. Check-ins and
+        completion cards are pure Python.
 
         Yields:
-            SSE event dictionaries: message_delta, question_card, decision_captured,
-            topic_boundary, check_in, message_complete, done
+            SSE event dicts: message_delta, message_complete, question_card,
+            decision_captured, topic_boundary, check_in, completion_card, done
         """
-        # Load conversation
+        # Step 1: Load conversation + state
         result = await self.db.execute(
             select(Conversation).where(Conversation.id == conversation_id)
         )
         conversation = result.scalar_one()
-
-        # Load conversation state
         state = ConversationState.from_summary_data(conversation.summary_data)
 
-        # Persist user message
+        # Load project data for language/phase info
+        project_data = await self._load_project(conversation.project_id)
+        language = project_data.get("language", "nl")
+
+        # Step 2: Persist user message
         user_message = Message(
             conversation_id=conversation_id,
             role=MessageRole.user.value,
@@ -231,203 +211,563 @@ class DiscussionEngine:
         self.db.add(user_message)
         await self.db.commit()
 
-        # Process based on current phase
-        if state.phase == ConversationPhase.topic_selection:
-            # Parse topic selection
-            selected_topics, discretion_topics = self._parse_topic_selection(
-                content, conversation.summary_data.get("gray_areas", [])
-            )
-            state.confirm_topics(selected_topics, discretion_topics)
+        # Step 3+4: Process phase transitions + generate response
+        try:
+            if state.phase == ConversationPhase.topic_selection:
+                async for event in self._handle_topic_selection(state, conversation, content, language):
+                    yield event
 
-            # Start first topic
-            first_topic = state.next_topic()
-            if first_topic:
-                state.start_topic(first_topic)
-                # Yield topic_boundary event
+            elif state.phase == ConversationPhase.discussion:
+                async for event in self._handle_discussion(state, conversation, content, language):
+                    yield event
+
+            elif state.phase == ConversationPhase.check_in:
+                async for event in self._handle_check_in(state, conversation, content, language):
+                    yield event
+
+            elif state.phase == ConversationPhase.completion:
+                async for event in self._handle_completion(state, conversation, content, language):
+                    yield event
+
+            # Step 6: Update state + commit
+            conversation.summary_data.update(state.to_summary_data())
+            conversation.updated_at = datetime.utcnow()
+            await self.db.commit()
+
+            # Step 7: Done
+            yield {"event": "done", "data": {}}
+
+        except Exception as e:
+            logger.exception("Error in send_message")
+            yield {"event": "error", "data": {"error": str(e)}}
+            raise
+
+    # ── Phase handlers ──────────────────────────────────────────────
+
+    async def _handle_topic_selection(
+        self, state: ConversationState, conversation: Conversation, content: str, language: str
+    ) -> AsyncGenerator[dict, None]:
+        """Handle topic_selection phase: parse selection, start first topic."""
+        selected_topics, discretion_topics = self._parse_topic_selection(
+            content, conversation.summary_data.get("gray_areas", [])
+        )
+        state.confirm_topics(selected_topics, discretion_topics)
+
+        first_topic = state.next_topic()
+        if first_topic:
+            state.start_topic(first_topic)
+
+            # Emit topic_boundary(starting)
+            yield {
+                "event": "topic_boundary",
+                "data": {"topic_boundary": {"topic": first_topic, "status": "starting"}}
+            }
+            await self._persist_message(
+                conversation.id, MessageType.topic_boundary,
+                f"Starting topic: {first_topic}",
+                {"topic_boundary": {"topic": first_topic, "status": "starting"}},
+            )
+
+            # Generate topic intro
+            intro = await self._generate_topic_intro(
+                first_topic,
+                self._get_topic_description(first_topic, conversation.summary_data),
+                language,
+            )
+            if intro:
+                yield {"event": "message_delta", "data": {"delta": intro}}
+                yield {"event": "message_complete", "data": {"final": intro}}
+                await self._persist_message(conversation.id, MessageType.text, intro)
+
+            # Generate first question
+            question_data = await self._generate_question(state, conversation, language)
+            yield {"event": "question_card", "data": question_data}
+            await self._persist_message(
+                conversation.id, MessageType.question_card,
+                question_data.get("question", ""),
+                question_data,
+            )
+
+    async def _handle_discussion(
+        self, state: ConversationState, conversation: Conversation, content: str, language: str
+    ) -> AsyncGenerator[dict, None]:
+        """Handle discussion phase: extract decision, ask next question or check-in."""
+        # Extract decision from user's answer (silently accumulate — no SSE event)
+        if not is_meta_message(content) and state.current_topic:
+            last_question = await self._get_last_question(conversation.id)
+            decision = extract_verbatim_decision(content, state.current_topic, last_question)
+
+            if decision:
+                state.decisions.append(decision)
+
+            # Foundation: track covered areas using fallback detection
+            if state.is_foundation:
+                area = state.detect_covered_area_with_fallback(last_question, content)
+                if area and area not in state.foundation_areas_covered:
+                    state.foundation_areas_covered.append(area)
+
+        # Increment question counter, check for check-in
+        checkin_result = state.increment_question()
+        needs_checkin = checkin_result in ("check_in", "force_check_in")
+
+        # Also trigger check-in when all probes for this topic are covered
+        if not state.is_foundation and not needs_checkin:
+            all_probes = self._get_probe_list(state.current_topic)
+            if all_probes and len(state.probes_covered) >= len(all_probes):
+                needs_checkin = True
+
+        # Foundation sufficiency check
+        if state.is_foundation and self._check_foundation_sufficiency(state):
+            state.start_completion()
+            completion_msg = self._build_completion_message(state, language)
+            yield {
+                "event": "completion_card",
+                "data": {
+                    "completion": {
+                        "message": completion_msg,
+                        "decisions_count": len(state.decisions),
+                        "topics_covered": ["Foundation"],
+                    }
+                }
+            }
+            await self._persist_message(
+                conversation.id, MessageType.completion_card, completion_msg,
+                {"completion": {"message": completion_msg, "decisions_count": len(state.decisions), "topics_covered": ["Foundation"]}},
+            )
+            return
+
+        if needs_checkin and not state.is_foundation:
+            # Transition to check_in phase
+            state.phase = ConversationPhase.check_in
+            checkin_msg = self._build_checkin_message(state, language)
+            yield {"event": "check_in", "data": {"message": checkin_msg}}
+            await self._persist_message(
+                conversation.id, MessageType.check_in, checkin_msg,
+            )
+        else:
+            # Ask next question
+            question_data = await self._generate_question(state, conversation, language)
+            yield {"event": "question_card", "data": question_data}
+            await self._persist_message(
+                conversation.id, MessageType.question_card,
+                question_data.get("question", ""),
+                question_data,
+            )
+
+    async def _handle_check_in(
+        self, state: ConversationState, conversation: Conversation, content: str, language: str
+    ) -> AsyncGenerator[dict, None]:
+        """Handle check_in phase: continue or move to next topic."""
+        normalized = content.strip().lower()
+
+        if "next" in normalized or "volgende" in normalized:
+            # Complete current topic
+            completed_topic = state.current_topic
+            state.complete_topic()
+
+            if completed_topic:
                 yield {
                     "event": "topic_boundary",
-                    "data": {"topic_boundary": {"topic": first_topic, "status": "starting"}}
+                    "data": {"topic_boundary": {"topic": completed_topic, "status": "complete"}}
                 }
+                await self._persist_message(
+                    conversation.id, MessageType.topic_boundary,
+                    f"Completed topic: {completed_topic}",
+                    {"topic_boundary": {"topic": completed_topic, "status": "complete"}},
+                )
 
-        elif state.phase == ConversationPhase.discussion:
-            # Extract decision from user's answer (unless meta-message)
-            if not is_meta_message(content) and state.current_topic:
-                # Get last assistant question from message history
-                last_question = await self._get_last_question(conversation_id)
-                decision = extract_verbatim_decision(content, state.current_topic, last_question)
+            next_topic = state.next_topic()
+            if next_topic:
+                state.start_topic(next_topic)
+                yield {
+                    "event": "topic_boundary",
+                    "data": {"topic_boundary": {"topic": next_topic, "status": "starting"}}
+                }
+                await self._persist_message(
+                    conversation.id, MessageType.topic_boundary,
+                    f"Starting topic: {next_topic}",
+                    {"topic_boundary": {"topic": next_topic, "status": "starting"}},
+                )
 
-                if decision:
-                    # Yield decision_captured event
-                    yield {
-                        "event": "decision_captured",
-                        "data": {"decision": decision}
-                    }
-                    # Add to state
-                    state.decisions.append(decision)
+                # Topic intro
+                intro = await self._generate_topic_intro(
+                    next_topic,
+                    self._get_topic_description(next_topic, conversation.summary_data),
+                    language,
+                )
+                if intro:
+                    yield {"event": "message_delta", "data": {"delta": intro}}
+                    yield {"event": "message_complete", "data": {"final": intro}}
+                    await self._persist_message(conversation.id, MessageType.text, intro)
 
-            # Increment question counter
-            needs_checkin = state.increment_question()
-            if needs_checkin:
-                # Transition to check_in phase
-                state.phase = ConversationPhase.check_in
+                # First question for new topic
+                question_data = await self._generate_question(state, conversation, language)
+                yield {"event": "question_card", "data": question_data}
+                await self._persist_message(
+                    conversation.id, MessageType.question_card,
+                    question_data.get("question", ""),
+                    question_data,
+                )
 
-        elif state.phase == ConversationPhase.check_in:
-            # Parse check-in response
-            normalized = content.strip().lower()
-            if "next" in normalized or "volgende" in normalized:
-                # Complete current topic, move to next
-                state.complete_topic()
-                # Yield topic_boundary for completed topic
-                completed_topic = state.current_topic
-                if completed_topic:
-                    yield {
-                        "event": "topic_boundary",
-                        "data": {"topic_boundary": {"topic": completed_topic, "status": "complete"}}
-                    }
-
-                next_topic = state.next_topic()
-                if next_topic:
-                    state.start_topic(next_topic)
-                    # Yield topic_boundary for starting next
-                    yield {
-                        "event": "topic_boundary",
-                        "data": {"topic_boundary": {"topic": next_topic, "status": "starting"}}
-                    }
-                elif state.all_topics_complete():
-                    # All topics done, transition to completion
-                    state.start_completion()
-                    # Yield completion_card event
-                    yield {
-                        "event": "completion_card",
-                        "data": {
-                            "completion": {
-                                "message": "Alle geselecteerde onderwerpen zijn besproken.",
-                                "decisions_count": len(state.decisions),
-                                "topics_covered": state.completed_topics
-                            }
-                        }
-                    }
-            else:
-                # Continue with more questions on current topic
-                state.phase = ConversationPhase.discussion
-
-        elif state.phase == ConversationPhase.completion:
-            # Handle completion phase interactions
-            normalized = content.strip().lower()
-            if "meer" in normalized or "add more" in normalized.lower():
-                # Transition back to discussion (allow freeform questions)
-                state.phase = ConversationPhase.discussion
-                state.current_topic = "Additional Topics"
-            elif "bevestig" in normalized or "confirm" in normalized.lower():
-                # Frontend will call preview-context endpoint
-                # No action needed here, just acknowledge
-                pass
-
-        # Build state-aware prompt
-        messages = await self._build_message_history(conversation_id)
-        state_context = self._build_state_aware_prompt(state, content, conversation.project_id)
-        if state_context:
-            messages.append({"role": "system", "content": state_context})
-
-        # Stream LLM response with XML parsing
-        full_response = ""
-        buffer = StreamingXMLBuffer()
-        completion_signal_detected = False
-
-        try:
-            async for chunk in self.llm.stream_complete(messages, max_tokens=1024, temperature=0.5):
-                full_response += chunk
-                buffer.feed(chunk)
-
-                # Extract any structured events
-                for event in buffer.extract_events():
-                    yield event
-                    # Check if this is a completion_signal event (Foundation phase)
-                    if event.get("event") == "completion_signal" or event.get("type") == "completion_signal":
-                        completion_signal_detected = True
-
-                # Yield text content as message_delta (without XML tags)
-                text_content = buffer.get_text_content()
-                if text_content and text_content != full_response:
-                    # Only yield new text since last extraction
-                    yield {
-                        "event": "message_delta",
-                        "data": {"delta": chunk}
-                    }
-
-            # Foundation phase completion detection
-            if state.is_foundation and completion_signal_detected:
-                # LLM determined intake is thorough enough
+            elif state.all_topics_complete():
+                # All topics done
                 state.start_completion()
+                completion_msg = self._build_completion_message(state, language)
                 yield {
                     "event": "completion_card",
                     "data": {
                         "completion": {
-                            "message": "Foundation bespreking is afgerond. De AI heeft genoeg informatie verzameld.",
+                            "message": completion_msg,
                             "decisions_count": len(state.decisions),
-                            "topics_covered": ["Foundation"]
+                            "topics_covered": state.completed_topics,
                         }
                     }
                 }
+                await self._persist_message(
+                    conversation.id, MessageType.completion_card, completion_msg,
+                    {"completion": {"message": completion_msg, "decisions_count": len(state.decisions), "topics_covered": state.completed_topics}},
+                )
+        else:
+            # Continue with more questions on current topic
+            state.phase = ConversationPhase.discussion
+            state.questions_in_current_topic = 0  # Reset counter for next batch
 
-            # Yield complete event
-            yield {
-                "event": "message_complete",
-                "data": {"final": full_response}
-            }
-
-            # Persist assistant message
-            assistant_message = Message(
-                conversation_id=conversation_id,
-                role=MessageRole.assistant.value,
-                content=full_response,
-                message_type=MessageType.text.value,
+            question_data = await self._generate_question(state, conversation, language)
+            yield {"event": "question_card", "data": question_data}
+            await self._persist_message(
+                conversation.id, MessageType.question_card,
+                question_data.get("question", ""),
+                question_data,
             )
-            self.db.add(assistant_message)
 
-            # Update conversation with new state
-            conversation.summary_data.update(state.to_summary_data())
-            conversation.updated_at = datetime.utcnow()
+    async def _handle_completion(
+        self, state: ConversationState, conversation: Conversation, content: str, language: str
+    ) -> AsyncGenerator[dict, None]:
+        """Handle completion phase: add more or confirm done."""
+        normalized = content.strip().lower()
 
-            await self.db.commit()
+        if "meer" in normalized or "add more" in normalized or "more" in normalized:
+            # Back to discussion with freeform topic
+            state.phase = ConversationPhase.discussion
+            state.current_topic = "Additional Topics"
+            state.questions_in_current_topic = 0
 
-            # Yield done event
-            yield {
-                "event": "done",
-                "data": {}
-            }
+            question_data = await self._generate_question(state, conversation, language)
+            yield {"event": "question_card", "data": question_data}
+            await self._persist_message(
+                conversation.id, MessageType.question_card,
+                question_data.get("question", ""),
+                question_data,
+            )
 
+        elif "bevestig" in normalized or "confirm" in normalized:
+            # Acknowledge — frontend will call preview-context endpoint
+            if language == "nl":
+                msg = "Discussie afgerond. U kunt nu de CONTEXT.md bekijken en bevestigen."
+            else:
+                msg = "Discussion complete. You can now preview and confirm the CONTEXT.md."
+            yield {"event": "message_delta", "data": {"delta": msg}}
+            yield {"event": "message_complete", "data": {"final": msg}}
+            await self._persist_message(conversation.id, MessageType.text, msg)
+
+    # ── Scoped LLM call helpers ─────────────────────────────────────
+
+    async def _generate_question(
+        self, state: ConversationState, conversation: Conversation, language: str
+    ) -> dict:
+        """
+        Generate ONE question via a scoped LLM call.
+
+        For Foundation: uses GENERATE_FOUNDATION_QUESTION_PROMPT
+        For regular: uses GENERATE_QUESTION_PROMPT targeting the first uncovered probe
+        """
+        topic_qa = await self._get_topic_qa(conversation.id)
+
+        if state.is_foundation:
+            prompt = GENERATE_FOUNDATION_QUESTION_PROMPT.format(
+                covered_areas=", ".join(state.foundation_areas_covered) if state.foundation_areas_covered else "none yet",
+                topic_qa=topic_qa,
+                language=language,
+            )
+        else:
+            phase_name = conversation.summary_data.get("phase_name", "")
+            phase_goal = conversation.summary_data.get("phase_goal", "")
+
+            # Get uncovered probes only
+            all_probes = self._get_probe_list(state.current_topic)
+            uncovered = [
+                (i, q) for i, q in enumerate(all_probes)
+                if i not in state.probes_covered
+            ]
+
+            if uncovered:
+                next_idx, next_probe = uncovered[0]
+                remaining = [q for _, q in uncovered[1:]]
+            else:
+                next_probe = f"General follow-up about {state.current_topic}"
+                remaining = []
+                next_idx = None
+
+            prompt = GENERATE_QUESTION_PROMPT.format(
+                topic=state.current_topic or "",
+                phase_name=phase_name,
+                phase_goal=phase_goal,
+                next_uncovered_probe=next_probe,
+                remaining_uncovered_probes="\n".join(f"- {q}" for q in remaining) if remaining else "(none)",
+                topic_qa=topic_qa,
+                language=language,
+            )
+
+        messages = [{"role": "user", "content": prompt}]
+
+        try:
+            raw = await self.llm.complete(messages, max_tokens=256, temperature=0.5)
+            result = self._parse_question_json(raw)
+
+            # Mark the first uncovered probe as covered
+            if not state.is_foundation and next_idx is not None:
+                state.probes_covered.append(next_idx)
+
+            return result
         except Exception as e:
-            # Yield error event
-            yield {
-                "event": "error",
-                "data": {"error": str(e)}
+            logger.warning("LLM question generation failed: %s", e)
+            return self._fallback_question(state, language)
+
+    async def _generate_topic_intro(
+        self, topic: str, description: str, language: str
+    ) -> str:
+        """Generate a brief topic introduction via scoped LLM call."""
+        prompt = GENERATE_TOPIC_INTRO_PROMPT.format(
+            topic=topic,
+            description=description or topic,
+            phase_name="",
+            language=language,
+        )
+        messages = [{"role": "user", "content": prompt}]
+
+        try:
+            return await self.llm.complete(messages, max_tokens=128, temperature=0.5)
+        except Exception as e:
+            logger.warning("LLM topic intro failed: %s", e)
+            if language == "nl":
+                return f"Laten we het hebben over: {topic}."
+            return f"Let's discuss: {topic}."
+
+    def _build_checkin_message(self, state: ConversationState, language: str) -> str:
+        """Build check-in message with decision summary (v1.0 Step 5.3)."""
+        topic = state.current_topic or "dit onderwerp"
+
+        # Filter decisions for current topic
+        topic_decisions = [
+            d for d in state.decisions
+            if isinstance(d, dict) and d.get("topic", "").lower() == (state.current_topic or "").lower()
+        ]
+
+        if topic_decisions:
+            bullets = "\n".join(f"- {d.get('decision', d.get('value', str(d)))}" for d in topic_decisions)
+            if language == "nl":
+                return (
+                    f"Vastgelegd voor {topic}:\n"
+                    f"{bullets}\n\n"
+                    "Nog iets voor dit onderwerp, of door naar het volgende?"
+                )
+            return (
+                f"Captured for {topic}:\n"
+                f"{bullets}\n\n"
+                "Anything else for this topic, or move to the next?"
+            )
+        else:
+            if language == "nl":
+                return (
+                    f"We hebben {topic} besproken.\n\n"
+                    "Nog iets voor dit onderwerp, of door naar het volgende?"
+                )
+            return (
+                f"We've discussed {topic}.\n\n"
+                "Anything else for this topic, or move to the next?"
+            )
+
+    def _build_completion_message(self, state: ConversationState, language: str) -> str:
+        """Build completion message. Pure Python, no LLM call."""
+        if language == "nl":
+            return "Alle geselecteerde onderwerpen zijn besproken."
+        return "All selected topics have been discussed."
+
+    def _check_foundation_sufficiency(self, state: ConversationState) -> bool:
+        """
+        Check if Foundation intake has gathered enough information.
+
+        Pure Python heuristic:
+        - After 8+ questions AND 4+ of 5 areas covered → sufficient
+        - Hard cap: 12 questions → always sufficient
+        """
+        q_count = state.questions_in_current_topic
+        areas_count = len(state.foundation_areas_covered)
+
+        if q_count >= 12:
+            return True
+        if q_count >= 8 and areas_count >= 4:
+            return True
+        return False
+
+    # ── DB/data helpers ─────────────────────────────────────────────
+
+    async def _persist_message(
+        self,
+        conversation_id: int,
+        message_type: MessageType,
+        content: str,
+        metadata: Optional[dict] = None,
+    ) -> None:
+        """Persist an assistant message with correct message_type."""
+        msg = Message(
+            conversation_id=conversation_id,
+            role=MessageRole.assistant.value,
+            content=content,
+            message_type=message_type.value,
+            metadata_json=metadata,
+        )
+        self.db.add(msg)
+        await self.db.flush()
+
+    async def _get_topic_qa(self, conversation_id: int) -> str:
+        """Get all Q&A pairs for the current topic (since last topic_boundary)."""
+        # Find the most recent topic_boundary message
+        boundary_result = await self.db.execute(
+            select(Message)
+            .where(Message.conversation_id == conversation_id)
+            .where(Message.message_type == MessageType.topic_boundary.value)
+            .order_by(Message.timestamp.desc())
+            .limit(1)
+        )
+        boundary_msg = boundary_result.scalar_one_or_none()
+
+        # Build query for messages after the boundary (or all if no boundary)
+        query = (
+            select(Message)
+            .where(Message.conversation_id == conversation_id)
+            .where(Message.role.in_([MessageRole.user.value, MessageRole.assistant.value]))
+        )
+        if boundary_msg:
+            query = query.where(Message.timestamp > boundary_msg.timestamp)
+        query = query.order_by(Message.timestamp.asc())
+
+        result = await self.db.execute(query)
+        messages = list(result.scalars().all())
+
+        if not messages:
+            return "(no previous Q&A)"
+
+        lines = []
+        for msg in messages:
+            role = "Q" if msg.role == MessageRole.assistant.value else "A"
+            lines.append(f"{role}: {msg.content or ''}")
+
+        return "\n".join(lines)
+
+    async def _get_last_question(self, conversation_id: int) -> str:
+        """Get the last question asked by the assistant."""
+        result = await self.db.execute(
+            select(Message)
+            .where(Message.conversation_id == conversation_id)
+            .where(Message.role == MessageRole.assistant.value)
+            .order_by(Message.timestamp.desc())
+            .limit(1)
+        )
+        last_message = result.scalar_one_or_none()
+
+        if not last_message:
+            return ""
+
+        # If question_card, extract question from metadata
+        if last_message.metadata_json and "question" in last_message.metadata_json:
+            return last_message.metadata_json["question"]
+
+        return last_message.content[:200]
+
+    def _get_probe_list(self, topic: Optional[str]) -> list[str]:
+        """Get probe questions for a topic as a list."""
+        if not topic:
+            return []
+
+        for content_type_areas in GRAY_AREA_PATTERNS.values():
+            for area in content_type_areas:
+                if area["topic"].lower() == topic.lower():
+                    return area.get("probe_questions", [])
+
+        return []
+
+    def _get_topic_description(self, topic: str, summary_data: dict) -> str:
+        """Get topic description from gray area patterns."""
+        for content_type_areas in GRAY_AREA_PATTERNS.values():
+            for area in content_type_areas:
+                if area["topic"].lower() == topic.lower():
+                    return area.get("description", "")
+        return ""
+
+    # ── JSON parsing ────────────────────────────────────────────────
+
+    def _parse_question_json(self, raw: str) -> dict:
+        """Parse JSON from LLM response, with fallback."""
+        # Try to find JSON in the response
+        raw = raw.strip()
+
+        # Try direct parse
+        try:
+            data = json.loads(raw)
+            return {
+                "question": data.get("question", raw),
+                "options": data.get("options", []),
             }
-            raise
+        except json.JSONDecodeError:
+            pass
+
+        # Try to extract JSON from markdown code block
+        json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', raw, re.DOTALL)
+        if json_match:
+            try:
+                data = json.loads(json_match.group(1))
+                return {
+                    "question": data.get("question", raw),
+                    "options": data.get("options", []),
+                }
+            except json.JSONDecodeError:
+                pass
+
+        # Try to find any JSON object in the text
+        json_match = re.search(r'\{[^{}]*"question"[^{}]*\}', raw, re.DOTALL)
+        if json_match:
+            try:
+                data = json.loads(json_match.group(0))
+                return {
+                    "question": data.get("question", raw),
+                    "options": data.get("options", []),
+                }
+            except json.JSONDecodeError:
+                pass
+
+        # Fallback: use raw text as question
+        logger.warning("Could not parse question JSON, using raw text: %s", raw[:100])
+        return {"question": raw, "options": []}
+
+    def _fallback_question(self, state: ConversationState, language: str) -> dict:
+        """Generate a fallback question when LLM fails."""
+        topic = state.current_topic or "this topic"
+        if language == "nl":
+            return {"question": f"Kunt u meer vertellen over {topic}?", "options": []}
+        return {"question": f"Can you tell me more about {topic}?", "options": []}
+
+    # ── Unchanged methods ───────────────────────────────────────────
 
     async def update_decision(
         self, conversation_id: int, decision_index: int, new_value: str
     ) -> None:
-        """
-        Update a decision in the summary panel.
-
-        Steps:
-        1. Load conversation
-        2. Update summary_data at decision_index
-        3. Append system message: "Decision updated: [old] -> [new]"
-        4. Persist changes
-
-        Args:
-            conversation_id: Conversation ID
-            decision_index: Index of decision to update
-            new_value: New decision value
-        """
+        """Update a decision in the summary panel."""
         result = await self.db.execute(
             select(Conversation).where(Conversation.id == conversation_id)
         )
         conversation = result.scalar_one()
 
-        # Update decision in summary_data
         decisions = conversation.summary_data.get("decisions", [])
         if decision_index < len(decisions):
             old_value = decisions[decision_index]
@@ -436,7 +776,6 @@ class DiscussionEngine:
             conversation.summary_data["decisions"] = decisions
             conversation.updated_at = datetime.utcnow()
 
-            # Add system message about update
             system_message = Message(
                 conversation_id=conversation_id,
                 role=MessageRole.system.value,
@@ -448,19 +787,7 @@ class DiscussionEngine:
             await self.db.commit()
 
     async def complete_discussion(self, conversation_id: int) -> dict:
-        """
-        Complete discussion and prepare CONTEXT.md data.
-
-        Steps:
-        1. Mark conversation as completed
-        2. Return summary_data for CONTEXT.md generation
-
-        Args:
-            conversation_id: Conversation ID
-
-        Returns:
-            Summary data dictionary for CONTEXT.md generation
-        """
+        """Complete discussion and prepare CONTEXT.md data."""
         result = await self.db.execute(
             select(Conversation).where(Conversation.id == conversation_id)
         )
@@ -472,6 +799,8 @@ class DiscussionEngine:
         await self.db.commit()
 
         return conversation.summary_data
+
+    # ── Internal helpers (unchanged) ────────────────────────────────
 
     def _parse_roadmap_for_phase(self, project_type: str, phase_number: int) -> dict:
         """Get phase info from PROJECT_TYPE_PHASES for this project type."""
@@ -503,32 +832,14 @@ class DiscussionEngine:
         }
 
     def _load_baseline_summary(self, project_id: int) -> Optional[str]:
-        """
-        Load baseline summary for Type C/D projects.
-
-        Args:
-            project_id: Project ID
-
-        Returns:
-            Baseline summary text or None
-        """
+        """Load baseline summary for Type C/D projects."""
         # TODO: Implement BASELINE.md loading
         return None
 
     def _build_topic_selection_message(
         self, phase_name: str, gray_areas: list[dict], language: str
     ) -> str:
-        """
-        Build initial topic selection message.
-
-        Args:
-            phase_name: Phase name
-            gray_areas: Gray area topics
-            language: Project language (nl or en)
-
-        Returns:
-            Formatted message text
-        """
+        """Build initial topic selection message."""
         if language == "nl":
             header = f"Welkom bij de bespreking van {phase_name}!"
             prompt = "Welke onderwerpen wilt u bespreken?"
@@ -552,166 +863,20 @@ class DiscussionEngine:
 - {discretion}
 """
 
-    async def _build_message_history(self, conversation_id: int) -> list[dict]:
-        """
-        Build message history for LLM.
-
-        Args:
-            conversation_id: Conversation ID
-
-        Returns:
-            List of message dictionaries for LLM
-        """
-        result = await self.db.execute(
-            select(Message)
-            .where(Message.conversation_id == conversation_id)
-            .order_by(Message.timestamp)
-        )
-        messages = result.scalars().all()
-
-        return [
-            {"role": msg.role, "content": msg.content}
-            for msg in messages
-            if msg.role in [MessageRole.system.value, MessageRole.user.value, MessageRole.assistant.value]
-        ]
-
-    def _build_state_aware_prompt(
-        self, state: ConversationState, user_message: str, project_id: int
-    ) -> Optional[str]:
-        """
-        Build additional context for LLM based on current conversation state.
-
-        Includes: current topic, remaining topics, questions asked so far,
-        check-in instruction if applicable, reference file summaries for Foundation.
-
-        Args:
-            state: Current conversation state
-            user_message: User's latest message
-            project_id: Project ID for loading reference files
-
-        Returns:
-            Context string to inject, or None if no additional context needed
-        """
-        context_parts = []
-
-        # Current topic context
-        if state.current_topic:
-            context_parts.append(f"Current topic: {state.current_topic}")
-            context_parts.append(f"Questions asked on this topic: {state.questions_in_current_topic}")
-
-        # Remaining topics
-        if state.selected_topics:
-            remaining = [t for t in state.selected_topics if t not in state.completed_topics]
-            if remaining:
-                context_parts.append(f"Remaining topics: {', '.join(remaining)}")
-
-        # Check-in instruction
-        if state.phase == ConversationPhase.check_in:
-            context_parts.append(
-                "Check-in time: Ask if the engineer wants more questions on this topic or to move to the next."
-            )
-
-        # Reference files for Foundation phase
-        if state.is_foundation:
-            ref_summary = self._load_reference_files(project_id)
-            if ref_summary:
-                context_parts.append(f"Reference files available:\n{ref_summary}")
-
-        if not context_parts:
-            return None
-
-        return "\n\n".join(context_parts)
-
-    def _load_reference_files(self, project_id: int) -> Optional[str]:
-        """
-        Load uploaded reference files for the project from file system.
-
-        Returns a summary string of available files and their content previews
-        (first 500 chars each). Max 3000 chars total to avoid prompt bloat.
-
-        This content gets injected into Foundation phase prompts so AI can ask:
-        "I see from [document] that... is this still current?"
-
-        Args:
-            project_id: Project ID
-
-        Returns:
-            Summary string of files and content, or None if no files
-        """
-        # Note: This is a synchronous call in an async function
-        # For now, return None as file loading implementation requires
-        # reading from filesystem which should be done properly
-        # TODO: Implement proper async file reading
-        return None
-
     def _parse_topic_selection(
         self, content: str, available_topics: list[str]
     ) -> tuple[list[str], list[str]]:
-        """
-        Parse which topics were selected vs discretion from user message.
-
-        Handles both structured (JSON from TopicSelectionCard) and freeform
-        ("I want to discuss topics 1, 3, 5") responses.
-
-        Args:
-            content: User message content
-            available_topics: List of available topic names
-
-        Returns:
-            Tuple of (selected_topics, discretion_topics)
-        """
-        # Simple parsing: assume user message contains topic names or numbers
-        # More sophisticated parsing can be added based on frontend format
-
+        """Parse which topics were selected vs discretion from user message."""
         selected = []
         discretion = []
 
-        # Check if "discretion" or "beoordeling" mentioned
         normalized = content.lower()
         has_discretion = "discretion" in normalized or "beoordeling" in normalized
 
-        # For now, assume all topics are selected unless discretion mentioned
         if has_discretion:
-            # User wants to delegate some topics
-            # Simple heuristic: if they mention specific topics, those are selected
-            # Otherwise, mark all as selected for now (can be refined)
             selected = available_topics[:3] if len(available_topics) > 3 else available_topics
             discretion = available_topics[3:] if len(available_topics) > 3 else []
         else:
-            # All topics selected
             selected = available_topics
 
         return selected, discretion
-
-    async def _get_last_question(self, conversation_id: int) -> str:
-        """
-        Get the last question asked by the assistant.
-
-        Used for decision extraction context.
-
-        Args:
-            conversation_id: Conversation ID
-
-        Returns:
-            Last assistant question text, or empty string if not found
-        """
-        result = await self.db.execute(
-            select(Message)
-            .where(Message.conversation_id == conversation_id)
-            .where(Message.role == MessageRole.assistant.value)
-            .order_by(Message.timestamp.desc())
-            .limit(1)
-        )
-        last_message = result.scalar_one_or_none()
-
-        if not last_message:
-            return ""
-
-        # Try to extract question from content
-        # If message contains <question> tag, extract it
-        parsed = parse_question_card(last_message.content)
-        if parsed:
-            return parsed["question"]
-
-        # Otherwise return the full content (truncated if needed)
-        return last_message.content[:200]

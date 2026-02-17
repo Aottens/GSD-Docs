@@ -33,6 +33,49 @@ class ConversationState:
     deferred_ideas: list[dict] = field(default_factory=list)
     is_foundation: bool = False
     discretion_topics: list[str] = field(default_factory=list)
+    foundation_areas_covered: list[str] = field(default_factory=list)
+    probes_covered: list[int] = field(default_factory=list)
+
+    # Keywords for Foundation intake area detection (not serialized)
+    _FOUNDATION_AREA_KEYWORDS: dict = field(default=None, repr=False, init=False)
+
+    def __post_init__(self):
+        self._FOUNDATION_AREA_KEYWORDS = {
+            "system_overview": [
+                "system", "overview", "process", "installation", "plant",
+                "machine", "line", "equipment", "what does", "wat is",
+                "beschrijf", "describe", "systeem", "installatie",
+            ],
+            "reference_docs": [
+                "reference", "document", "p&id", "manual", "standard",
+                "fds", "specification", "referentie", "documentatie",
+                "handleiding", "norm", "standaard",
+            ],
+            "scope": [
+                "scope", "boundary", "in scope", "out of scope",
+                "grens", "binnen scope", "buiten scope", "begrenzing",
+            ],
+            "equipment": [
+                "equipment", "grouping", "hierarchy", "area",
+                "apparatuur", "groepering", "hiërarchie", "indeling",
+                "module", "unit", "station",
+            ],
+            "terminology": [
+                "terminology", "abbreviation", "term", "definition",
+                "terminologie", "afkorting", "definitie", "begrip",
+                "naming", "convention", "naamgeving",
+            ],
+        }
+
+    def detect_covered_area(self, question: str, answer: str) -> Optional[str]:
+        """Keyword-match Q&A to a foundation intake area."""
+        combined = (question + " " + answer).lower()
+        for area, keywords in self._FOUNDATION_AREA_KEYWORDS.items():
+            if area in self.foundation_areas_covered:
+                continue
+            if any(kw in combined for kw in keywords):
+                return area
+        return None
 
     def start_topic_selection(self) -> None:
         """Transition to topic_selection phase."""
@@ -63,17 +106,51 @@ class ConversationState:
         """
         self.current_topic = topic
         self.questions_in_current_topic = 0
+        self.probes_covered = []
         self.phase = ConversationPhase.discussion
 
-    def increment_question(self) -> bool:
+    def increment_question(self) -> str:
         """
         Increment question counter for current topic.
 
         Returns:
-            True if check-in time (>= 4 questions), False otherwise
+            'continue' if more questions are needed,
+            'check_in' if normal 4-question rhythm reached,
+            'force_check_in' if hard cap of 12 questions reached
         """
         self.questions_in_current_topic += 1
-        return self.questions_in_current_topic >= 4
+        if self.questions_in_current_topic >= 12:
+            return "force_check_in"
+        if self.questions_in_current_topic >= 4:
+            return "check_in"
+        return "continue"
+
+    def detect_covered_area_with_fallback(self, question: str, answer: str) -> Optional[str]:
+        """
+        Keyword-match Q&A to a Foundation intake area, with question-count fallback.
+
+        Tries keyword matching first. If no match is found and >= 2 questions have
+        been asked, cycles through uncovered areas in order and marks the next one
+        as covered — ensuring progress even when keywords don't match.
+
+        Args:
+            question: The last question asked
+            answer: The user's answer
+
+        Returns:
+            Area name if matched/cycled, None otherwise
+        """
+        # Try keyword match first
+        area = self.detect_covered_area(question, answer)
+        if area:
+            return area
+        # Fallback: after 2+ questions, cycle through uncovered areas
+        if self.questions_in_current_topic >= 2:
+            all_areas = list(self._FOUNDATION_AREA_KEYWORDS.keys())
+            for a in all_areas:
+                if a not in self.foundation_areas_covered:
+                    return a
+        return None
 
     def complete_topic(self) -> None:
         """Complete current topic and reset for next topic."""
@@ -122,12 +199,14 @@ class ConversationState:
                 "current_topic": self.current_topic,
                 "questions_in_current_topic": self.questions_in_current_topic,
                 "is_foundation": self.is_foundation,
+                "probes_covered": self.probes_covered,
             },
             "selected_topics": self.selected_topics,
             "completed_topics": self.completed_topics,
             "discretion_topics": self.discretion_topics,
             "decisions": self.decisions,
             "deferred_ideas": self.deferred_ideas,
+            "foundation_areas_covered": self.foundation_areas_covered,
         }
 
     @classmethod
@@ -152,6 +231,8 @@ class ConversationState:
             deferred_ideas=data.get("deferred_ideas", []),
             is_foundation=current_state.get("is_foundation", False),
             discretion_topics=data.get("discretion_topics", []),
+            foundation_areas_covered=data.get("foundation_areas_covered", []),
+            probes_covered=current_state.get("probes_covered", []),
         )
 
 
