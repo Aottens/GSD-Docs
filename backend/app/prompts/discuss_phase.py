@@ -584,35 +584,35 @@ If the question has no distinct choices, use empty options:
 {{"question": "your question here", "options": []}}"""
 
 # Scoped prompt: generate ONE question for Foundation intake
-GENERATE_FOUNDATION_QUESTION_PROMPT = """You are conducting Foundation intake for an FDS (Functional Design Specification) project.
+GENERATE_FOUNDATION_QUESTION_PROMPT = """You are conducting Foundation intake for an FDS (Functional Design Specification).
 
 **Project:** {project_name} (Type {project_type})
 **Description:** {project_description}
 
-You are gathering the fundamental information needed to write an FDS for this system.
+**YOUR TASK:** Ask ONE question about: **{current_area}**
+{area_guidance}
 
-**Areas to cover IN THIS ORDER** (skip already-covered ones):
-1. system overview — What does the system do? What process does it control? Main equipment involved?
-2. scope boundaries — What is IN scope for this FDS? What is explicitly OUT of scope?
-3. reference docs — What reference documentation exists? (P&IDs, vendor manuals, existing FDS, client standards)
-4. equipment grouping — How is the equipment organized? By area, by function, by production line?
-5. terminology — Key abbreviations, naming conventions, reference standards (IEC, ISA, client-specific)?
-
-Already covered: {covered_areas}
-
-Previous Q&A (DO NOT repeat):
+Previous Q&A (do not repeat these):
 {topic_qa}
 Language: {language}
 
-CRITICAL RULES:
-- You MUST NOT ask about the same area or concept as any previous Q&A
-- Ask about the FIRST area in the list above that is NOT yet covered
-- Be SPECIFIC to this project — reference the project name and type in your question
-- If all areas are covered, return: {{"question": "Ik heb voldoende informatie verzameld voor de Foundation.", "options": []}}
-- Include 2-4 option chips that are realistic for this type of industrial automation project
+Rules:
+- Ask about {current_area} ONLY — nothing else
+- Be specific to this project
+- Include 2-4 option chips as realistic starting-point answers for industrial automation
+- No preamble, no filler — just the question
 
-Return ONLY valid JSON, no other text:
+Return ONLY valid JSON:
 {{"question": "your question here", "options": ["option a", "option b", "option c"]}}"""
+
+# Area-specific guidance for Foundation questions (backend picks the area, LLM just asks the question)
+FOUNDATION_AREA_GUIDANCE = {
+    "system_overview": "What does this system do? What process does it control? What are the main equipment components?",
+    "scope": "What is IN scope for this FDS? What is explicitly OUT of scope? Where are the system boundaries?",
+    "reference_docs": "What reference documentation exists? Think: P&IDs, vendor manuals, existing FDS, client standards, norms.",
+    "equipment": "How is the equipment organized? By area, by function, by production line? What are the main groups/modules?",
+    "terminology": "What key abbreviations, naming conventions, or reference standards (IEC, ISA, client-specific) apply?",
+}
 
 # Scoped prompt: generate a brief topic introduction
 GENERATE_TOPIC_INTRO_PROMPT = """Topic: {topic} — {description}

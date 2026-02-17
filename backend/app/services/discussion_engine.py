@@ -25,6 +25,7 @@ from app.prompts.discuss_phase import (
     GRAY_AREA_PATTERNS,
     GENERATE_QUESTION_PROMPT,
     GENERATE_FOUNDATION_QUESTION_PROMPT,
+    FOUNDATION_AREA_GUIDANCE,
     GENERATE_TOPIC_INTRO_PROMPT,
 )
 from app.services.conversation_state import ConversationState, ConversationPhase, detect_foundation_phase
@@ -519,11 +520,21 @@ class DiscussionEngine:
             project_name = conversation.summary_data.get("project_name", "")
             project_type = conversation.summary_data.get("project_type", "B")
             project_desc = conversation.summary_data.get("project_description", "")
+
+            # Backend picks the next area — don't let LLM choose
+            area_order = ["system_overview", "scope", "reference_docs", "equipment", "terminology"]
+            current_area = next(
+                (a for a in area_order if a not in state.foundation_areas_covered),
+                "system_overview",  # fallback
+            )
+            area_guidance = FOUNDATION_AREA_GUIDANCE.get(current_area, "")
+
             prompt = GENERATE_FOUNDATION_QUESTION_PROMPT.format(
                 project_name=project_name,
                 project_type=project_type,
                 project_description=project_desc or "not provided",
-                covered_areas=", ".join(state.foundation_areas_covered) if state.foundation_areas_covered else "none yet",
+                current_area=current_area.replace("_", " "),
+                area_guidance=area_guidance,
                 topic_qa=topic_qa,
                 language=language,
             )
