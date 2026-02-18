@@ -525,9 +525,16 @@ class DiscussionEngine:
             area_order = ["system_overview", "scope", "reference_docs", "equipment", "terminology"]
             current_area = next(
                 (a for a in area_order if a not in state.foundation_areas_covered),
-                "system_overview",  # fallback
+                None,
             )
+            if current_area is None:
+                # All areas covered — this shouldn't happen (sufficiency check should trigger first)
+                current_area = "system_overview"
             area_guidance = FOUNDATION_AREA_GUIDANCE.get(current_area, "")
+
+            # Mark area as covered NOW — we're asking about it, don't wait for keyword detection
+            if current_area not in state.foundation_areas_covered:
+                state.foundation_areas_covered.append(current_area)
 
             prompt = GENERATE_FOUNDATION_QUESTION_PROMPT.format(
                 project_name=project_name,
