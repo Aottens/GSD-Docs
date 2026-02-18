@@ -248,7 +248,10 @@ class DiscussionEngine:
                     yield event
 
             # Step 6: Update state + commit
-            conversation.summary_data.update(state.to_summary_data())
+            # CRITICAL: SQLAlchemy doesn't detect in-place mutations to JSON columns.
+            # We must reassign the entire dict so SQLAlchemy marks it as dirty.
+            updated = {**conversation.summary_data, **state.to_summary_data()}
+            conversation.summary_data = updated
             conversation.updated_at = datetime.utcnow()
             await self.db.commit()
 
@@ -859,7 +862,8 @@ class DiscussionEngine:
             old_value = decisions[decision_index]
             decisions[decision_index] = new_value
 
-            conversation.summary_data["decisions"] = decisions
+            # Reassign entire dict — SQLAlchemy doesn't detect in-place JSON mutations
+            conversation.summary_data = {**conversation.summary_data, "decisions": decisions}
             conversation.updated_at = datetime.utcnow()
 
             system_message = Message(
