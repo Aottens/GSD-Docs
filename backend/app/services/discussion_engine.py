@@ -659,16 +659,19 @@ class DiscussionEngine:
         """
         Check if Foundation intake has gathered enough information.
 
-        Pure Python heuristic:
-        - After 8+ questions AND 4+ of 5 areas covered → sufficient
+        Heuristics (first match wins):
+        - All 5 areas covered → sufficient (no point asking about covered areas again)
+        - 4+ areas AND 5+ questions → sufficient
         - Hard cap: 12 questions → always sufficient
         """
         q_count = state.questions_in_current_topic
         areas_count = len(state.foundation_areas_covered)
 
+        if areas_count >= 5:
+            return True
         if q_count >= 12:
             return True
-        if q_count >= 8 and areas_count >= 4:
+        if q_count >= 5 and areas_count >= 4:
             return True
         return False
 
