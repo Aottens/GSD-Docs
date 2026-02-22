@@ -139,20 +139,17 @@ Recent decisions affecting v2.0:
 
 ## Blockers
 
-None — Phase 10.1 UAT issues fully resolved:
-- 1A: Question loop / repetition (blocker) — FIXED in Plan 08 (hard cap + anti-repetition)
-- 1B: Decision summary timing (major) — FIXED in Plans 08 + 09 (silent accumulation + check-in payload + frontend batch reveal)
-- 1C: Foundation question format (minor) — FIXED in Plan 08 (options field in prompt)
-- 1D: Gesprekken tab not clickable (major) — FIXED in Plan 09 (loadConversation + tab switch)
-- 1E: Chat history lost on reopen (blocker) — FIXED in Plan 09 (loadConversation fetches full history)
+- **Plan 05 checkpoint verification incomplete** — Foundation flow improved but needs re-test after sufficiency fix. Non-Foundation flow untested.
+- **SQLAlchemy JSON mutation bug** (91f2871) — was root cause of ALL conversation circles. Fixed by dict reassignment. May affect other JSON columns in project.
+- **Local model quality** — qwen2.5:14b leaks CJK reasoning, ignores anti-repetition. Mitigated but not eliminated.
 
 ## Session Continuity
 
-Last session: 2026-02-17
-Stopped at: Phase 10.1 Plan 09 complete (UAT fixes 1D + 1E: Gesprekken tab + chat history)
+Last session: 2026-02-22
+Stopped at: Phase 10.1 Plan 05 Task 2 checkpoint — Foundation testing revealed issues, 6 hotfixes applied, needs re-verification
 Resume file: .planning/phases/10.1-discussion-behavior-rework/.continue-here.md
 
-**Next step:** Phase 10.1 complete. Run UAT re-verification, then proceed to next phase.
+**Next step:** `/clear` then `/gsd:execute-phase 10.1` to resume checkpoint verification. Test Foundation + non-Foundation flows, then approve or report issues.
 
 ---
-*Last updated: 2026-02-17*
+*Last updated: 2026-02-22*
