@@ -64,7 +64,7 @@ if ($Uninstall) {
             cmd /c "rmdir `"$($link.Target)`"" 2>$null
             Write-Status "  Removed" $link.Target
         } elseif (Test-Path $link.Target) {
-            Write-Status "  Skipped" "$($link.Target) (not a junction — won't delete)"
+            Write-Status "  Skipped" "$($link.Target) (not a junction - won't delete)"
         } else {
             Write-Status "  Skipped" "$($link.Target) (not found)"
         }
