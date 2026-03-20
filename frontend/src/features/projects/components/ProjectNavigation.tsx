@@ -1,4 +1,4 @@
-import { LayoutDashboard, Calendar, FileText, FolderOpen, Settings, MessageSquare } from 'lucide-react'
+import { LayoutDashboard, Calendar, FileText, FolderOpen, Settings } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import type { Project } from '@/types/project'
@@ -12,7 +12,6 @@ interface ProjectNavigationProps {
 const navigationSections = [
   { id: 'overview', label: 'Overzicht', icon: LayoutDashboard },
   { id: 'fasering', label: 'Fases', icon: Calendar },
-  { id: 'conversations', label: 'Gesprekken', icon: MessageSquare },
   { id: 'documents', label: 'Documenten', icon: FileText },
   { id: 'references', label: 'Referenties', icon: FolderOpen },
   { id: 'settings', label: 'Instellingen', icon: Settings },
@@ -57,8 +56,7 @@ export function ProjectNavigation({
           const isEnabled =
             section.id === 'overview' ||
             section.id === 'references' ||
-            section.id === 'fasering' ||
-            section.id === 'conversations'
+            section.id === 'fasering'
 
           return (
             <button

@@ -1,15 +1,11 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Bot } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { ErrorMessage } from '@/components/common/ErrorMessage'
-import { toast } from 'sonner'
 import { ProjectNavigation } from './components/ProjectNavigation'
 import { ProjectOverview } from './components/ProjectOverview'
-import { ChatPanel } from '../discussions/components/ChatPanel'
-import { ConversationHistory } from '../discussions/components/ConversationHistory'
 import { ReferenceManager } from '../files/components/ReferenceManager'
 import { PhaseTimeline } from '../timeline/components/PhaseTimeline'
 import { FaseringTab } from '../timeline/components/FaseringTab'
@@ -19,40 +15,8 @@ export function ProjectWorkspace() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [activeSection, setActiveSection] = useState('overview')
-  const [chatOpen, setChatOpen] = useState(false)
-  const [discussionPhase, setDiscussionPhase] = useState<number | null>(null)
-  const [discussionConversationId, setDiscussionConversationId] = useState<number | null>(null)
 
   const { data: project, isLoading, error, refetch } = useProject(id || '')
-
-  // Handle phase action triggers
-  const handlePhaseAction = (action: string, phaseNumber: number) => {
-    if (action === 'discuss') {
-      // Open chat panel for discussion
-      setDiscussionPhase(phaseNumber)
-      setDiscussionConversationId(null)
-      setChatOpen(true)
-    } else if (action === 'view-discussion') {
-      // Open chat panel to view existing discussion
-      setDiscussionPhase(phaseNumber)
-      // TODO: Get conversationId from phase
-      setChatOpen(true)
-    } else {
-      // Placeholder for future actions
-      toast.info(`Actie "${action}" voor Fase ${phaseNumber} beschikbaar in een volgende fase`)
-    }
-  }
-
-  const handleViewConversation = (conversationId: number) => {
-    setDiscussionConversationId(conversationId)
-    setDiscussionPhase(null)
-    setChatOpen(true)
-  }
-
-  const handleStartRevision = (_conversationId: number) => {
-    // TODO: Start revision discussion
-    toast.info('Revisie starten wordt binnenkort beschikbaar')
-  }
 
   if (isLoading) {
     return (
@@ -89,47 +53,27 @@ export function ProjectWorkspace() {
       {/* Breadcrumb Header */}
       <div className="border-b bg-background shrink-0">
         <div className="px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/')}
-                className="h-auto p-0 hover:bg-transparent"
-              >
-                <span className="text-muted-foreground hover:text-foreground">Projecten</span>
-              </Button>
-              <span className="text-muted-foreground">/</span>
-              <span className="font-medium">{project.name}</span>
-            </div>
-
-            {/* Assistant Toggle */}
-            <Sheet open={chatOpen} onOpenChange={setChatOpen}>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Bot className="h-4 w-4" />
-                  Assistent
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[400px] sm:w-[540px] p-0">
-                <ChatPanel
-                  projectId={String(project.id)}
-                  phaseNumber={discussionPhase}
-                  conversationId={discussionConversationId}
-                  onClose={() => setChatOpen(false)}
-                />
-              </SheetContent>
-            </Sheet>
+          <div className="flex items-center gap-2 text-sm">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/')}
+              className="h-auto p-0 hover:bg-transparent"
+            >
+              <span className="text-muted-foreground hover:text-foreground">Projecten</span>
+            </Button>
+            <span className="text-muted-foreground">/</span>
+            <span className="font-medium">{project.name}</span>
           </div>
         </div>
       </div>
 
       {/* Phase Timeline Bar */}
-      <PhaseTimeline projectId={project.id} onAction={handlePhaseAction} />
+      <PhaseTimeline projectId={project.id} />
 
       {/* Two-Panel Layout: Fixed Sidebar + Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar — fixed width */}
+        {/* Left Sidebar */}
         <div className="w-64 shrink-0 border-r">
           <ProjectNavigation
             project={project}
@@ -138,22 +82,14 @@ export function ProjectWorkspace() {
           />
         </div>
 
-        {/* Center Content — fills remaining space */}
+        {/* Center Content */}
         <div className="flex-1 overflow-auto p-6">
           {activeSection === 'overview' && <ProjectOverview project={project} />}
           {activeSection === 'references' && <ReferenceManager projectId={project.id} />}
-          {activeSection === 'fasering' && <FaseringTab projectId={project.id} onAction={handlePhaseAction} />}
-          {activeSection === 'conversations' && (
-            <ConversationHistory
-              projectId={String(project.id)}
-              onViewConversation={handleViewConversation}
-              onStartRevision={handleStartRevision}
-            />
-          )}
+          {activeSection === 'fasering' && <FaseringTab projectId={project.id} />}
           {activeSection !== 'overview' &&
             activeSection !== 'references' &&
-            activeSection !== 'fasering' &&
-            activeSection !== 'conversations' && (
+            activeSection !== 'fasering' && (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center space-y-2">
                   <p className="text-muted-foreground">
