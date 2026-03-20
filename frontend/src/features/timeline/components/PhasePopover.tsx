@@ -1,45 +1,51 @@
-import { Check, MessageSquare, FileText, Pencil, CheckSquare, Eye } from 'lucide-react'
+import { useState } from 'react'
+import { Check, Copy, AlertTriangle, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { toast } from 'sonner'
 import type { PhaseStatus } from '../types/phase'
+import { usePhaseContextFiles } from '../hooks/usePhaseStatus'
 
 interface PhasePopoverProps {
   phase: PhaseStatus
-  onAction: (action: string, phaseNumber: number) => void
+  projectId: number
   children: React.ReactNode
 }
 
-/**
- * Inline popover showing phase status summary and action buttons
- * Only valid next actions are enabled based on available_actions
- */
-export function PhasePopover({ phase, onAction, children }: PhasePopoverProps) {
-  const actionConfig = {
-    discuss: {
-      label: 'Bespreken',
-      icon: MessageSquare,
-    },
-    plan: {
-      label: 'Plannen',
-      icon: FileText,
-    },
-    write: {
-      label: 'Schrijven',
-      icon: Pencil,
-    },
-    verify: {
-      label: 'Verifiëren',
-      icon: CheckSquare,
-    },
-    review: {
-      label: 'Beoordelen',
-      icon: Eye,
-    },
+function CliCommandBlock({ command }: { command: string }) {
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(command)
+    toast.success('Gekopieerd!')
   }
+
+  return (
+    <div className="flex items-center gap-2 bg-muted rounded px-3 py-2">
+      <code className="text-xs font-mono flex-1 text-foreground">{command}</code>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6 shrink-0"
+        onClick={handleCopy}
+        title="Kopieer naar klembord"
+      >
+        <Copy className="h-3 w-3" />
+      </Button>
+    </div>
+  )
+}
+
+export function PhasePopover({ phase, projectId, children }: PhasePopoverProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const { data: contextData } = usePhaseContextFiles(
+    projectId,
+    phase.number,
+    isOpen && (phase.has_context || phase.has_verification)
+  )
 
   const getStatusDisplay = () => {
     if (phase.sub_status) {
@@ -49,7 +55,7 @@ export function PhasePopover({ phase, onAction, children }: PhasePopoverProps) {
   }
 
   return (
-    <Popover>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         {children}
       </PopoverTrigger>
@@ -102,45 +108,49 @@ export function PhasePopover({ phase, onAction, children }: PhasePopoverProps) {
             </div>
           </div>
 
-          {/* Actions */}
-          {phase.available_actions.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-medium">Acties:</p>
-              <div className="flex flex-wrap gap-2">
-                {phase.available_actions.map((action) => {
-                  const config = actionConfig[action as keyof typeof actionConfig]
-                  if (!config) return null
+          {/* CLI Command */}
+          {phase.cli_command && (
+            <div>
+              <p className="text-xs font-medium mb-2">Volgende stap:</p>
+              <CliCommandBlock command={phase.cli_command} />
+            </div>
+          )}
 
-                  const Icon = config.icon
-                  const isFirstAction = phase.available_actions[0] === action
-
-                  return (
-                    <Button
-                      key={action}
-                      size="sm"
-                      variant={isFirstAction ? 'default' : 'outline'}
-                      onClick={() => onAction(action, phase.number)}
-                      className="gap-2"
-                    >
-                      <Icon className="h-3 w-3" />
-                      {config.label}
-                    </Button>
-                  )
-                })}
+          {/* Verification Score */}
+          {contextData?.has_verification && contextData.verification_score && (
+            <div>
+              <p className="text-xs font-medium mb-2">Verificatie:</p>
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-green-500" />
+                <span className="text-sm">{contextData.verification_score} niveaus geslaagd</span>
+                {contextData.verification_gaps != null && contextData.verification_gaps > 0 && (
+                  <Badge variant="outline" className="text-xs">
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    {contextData.verification_gaps} gap{contextData.verification_gaps !== 1 ? 's' : ''}
+                  </Badge>
+                )}
               </div>
             </div>
           )}
 
-          {/* View discussion link if exists */}
-          {phase.conversation_id && (
-            <Button
-              variant="link"
-              size="sm"
-              onClick={() => onAction('view-discussion', phase.number)}
-              className="w-full p-0 h-auto justify-start"
-            >
-              Bekijk bespreking
-            </Button>
+          {/* Context Decisions */}
+          {contextData?.has_context && contextData.decisions.length > 0 && (
+            <div>
+              <p className="text-xs font-medium mb-2">Beslissingen:</p>
+              <ul className="space-y-1 text-xs text-muted-foreground max-h-32 overflow-y-auto">
+                {contextData.decisions.slice(0, 5).map((decision, i) => (
+                  <li key={i} className="flex gap-2">
+                    <span className="shrink-0">-</span>
+                    <span>{decision}</span>
+                  </li>
+                ))}
+                {contextData.decisions.length > 5 && (
+                  <li className="text-muted-foreground/60">
+                    +{contextData.decisions.length - 5} meer...
+                  </li>
+                )}
+              </ul>
+            </div>
           )}
         </div>
       </PopoverContent>

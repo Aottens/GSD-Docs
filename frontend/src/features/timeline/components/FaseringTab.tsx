@@ -1,37 +1,48 @@
-import { CheckCircle2, Clock, Circle, Check, MessageSquare, FileText, Pencil, CheckSquare, Eye } from 'lucide-react'
+import { CheckCircle2, Circle, Check, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import { usePhaseTimeline } from '../hooks/usePhaseStatus'
 
 interface FaseringTabProps {
   projectId: number
-  onAction: (action: string, phaseNumber: number) => void
+}
+
+function CliCommandBlock({ command }: { command: string }) {
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(command)
+    toast.success('Gekopieerd!')
+  }
+
+  return (
+    <div className="flex items-center gap-2 bg-muted rounded px-3 py-2">
+      <code className="text-xs font-mono flex-1 text-foreground">{command}</code>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6 shrink-0"
+        onClick={handleCopy}
+        title="Kopieer naar klembord"
+      >
+        <Copy className="h-3 w-3" />
+      </Button>
+    </div>
+  )
 }
 
 /**
  * Full detailed phase view showing all phases with expanded details
- * Vertical timeline layout with progress checklists and action buttons
+ * Vertical card layout with progress checklists and CLI command display
  */
-export function FaseringTab({ projectId, onAction }: FaseringTabProps) {
+export function FaseringTab({ projectId }: FaseringTabProps) {
   const { data, isLoading, error } = usePhaseTimeline(projectId)
-
-  const actionConfig = {
-    discuss: { label: 'Bespreken', icon: MessageSquare },
-    plan: { label: 'Plannen', icon: FileText },
-    write: { label: 'Schrijven', icon: Pencil },
-    verify: { label: 'Verifiëren', icon: CheckSquare },
-    review: { label: 'Beoordelen', icon: Eye },
-  }
 
   const getStatusStyle = (status: string) => {
     if (status === 'completed') {
       return { color: 'text-green-500', bg: 'bg-green-500/10', Icon: CheckCircle2 }
-    }
-    if (['discussing', 'planning', 'writing', 'verifying', 'reviewing'].includes(status)) {
-      return { color: 'text-blue-500', bg: 'bg-blue-500/10', Icon: Clock }
     }
     if (['discussed', 'planned', 'written', 'verified', 'reviewed'].includes(status)) {
       return { color: 'text-amber-500', bg: 'bg-amber-500/10', Icon: CheckCircle2 }
@@ -62,7 +73,7 @@ export function FaseringTab({ projectId, onAction }: FaseringTabProps) {
       <div className="space-y-2">
         <h2 className="text-2xl font-bold">Fasering</h2>
         <p className="text-muted-foreground">
-          Overzicht van alle project fases met status en beschikbare acties
+          Overzicht van alle project fases met status
         </p>
       </div>
 
@@ -150,55 +161,11 @@ export function FaseringTab({ projectId, onAction }: FaseringTabProps) {
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                {phase.available_actions.length > 0 && (
+                {/* CLI Command */}
+                {phase.cli_command && (
                   <div>
-                    <p className="text-sm font-medium mb-2">Acties:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {phase.available_actions.map((action) => {
-                        const config = actionConfig[action as keyof typeof actionConfig]
-                        if (!config) return null
-
-                        const ActionIcon = config.icon
-                        const isFirstAction = phase.available_actions[0] === action
-
-                        return (
-                          <Button
-                            key={action}
-                            size="sm"
-                            variant={isFirstAction ? 'default' : 'outline'}
-                            onClick={() => onAction(action, phase.number)}
-                            className="gap-2"
-                          >
-                            <ActionIcon className="h-4 w-4" />
-                            {config.label}
-                          </Button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Discussion Link if exists */}
-                {phase.conversation_id && (
-                  <div className="flex gap-2">
-                    <Button
-                      variant="link"
-                      size="sm"
-                      onClick={() => onAction('view-discussion', phase.number)}
-                      className="p-0 h-auto"
-                    >
-                      Bekijk bespreking
-                    </Button>
-                    <span className="text-muted-foreground">•</span>
-                    <Button
-                      variant="link"
-                      size="sm"
-                      onClick={() => onAction('update-discussion', phase.number)}
-                      className="p-0 h-auto"
-                    >
-                      Bijwerken
-                    </Button>
+                    <p className="text-sm font-medium mb-2">Volgende stap:</p>
+                    <CliCommandBlock command={phase.cli_command} />
                   </div>
                 )}
               </CardContent>

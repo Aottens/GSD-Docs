@@ -5,14 +5,13 @@ import { usePhaseTimeline } from '../hooks/usePhaseStatus'
 
 interface PhaseTimelineProps {
   projectId: number
-  onAction: (action: string, phaseNumber: number) => void
 }
 
 /**
  * Horizontal timeline bar showing all project phases
  * Compact, always visible above workspace content
  */
-export function PhaseTimeline({ projectId, onAction }: PhaseTimelineProps) {
+export function PhaseTimeline({ projectId }: PhaseTimelineProps) {
   const { data, isLoading, error } = usePhaseTimeline(projectId)
 
   if (isLoading) {
@@ -42,11 +41,10 @@ export function PhaseTimeline({ projectId, onAction }: PhaseTimelineProps) {
       <div className="flex items-center gap-1 overflow-x-auto">
         {data.phases.map((phase, index) => (
           <div key={phase.number} className="flex items-center shrink-0">
-            <PhasePopover phase={phase} onAction={onAction}>
-              <PhaseNode phase={phase} onClick={() => {}} />
+            <PhasePopover phase={phase} projectId={projectId}>
+              <PhaseNode phase={phase} />
             </PhasePopover>
 
-            {/* Connector line between phases */}
             {index < data.phases.length - 1 && (
               <div className="h-px w-6 bg-border mx-1" />
             )}
