@@ -16,19 +16,10 @@ from app.schemas.file import (
     FolderCreate,
     FolderUpdate,
 )
-from app.schemas.conversation import (
-    ConversationCreate,
-    ConversationResponse,
-    ConversationListResponse,
-    MessageCreate,
-    MessageResponse,
-    SendMessageRequest,
-    StreamEvent,
-    StreamEventType,
-)
 from app.schemas.phase import (
     PhaseStatusResponse,
     PhaseTimelineResponse,
+    ContextFilesResponse,
 )
 
 __all__ = [
@@ -44,14 +35,7 @@ __all__ = [
     "FolderResponse",
     "FolderCreate",
     "FolderUpdate",
-    "ConversationCreate",
-    "ConversationResponse",
-    "ConversationListResponse",
-    "MessageCreate",
-    "MessageResponse",
-    "SendMessageRequest",
-    "StreamEvent",
-    "StreamEventType",
     "PhaseStatusResponse",
     "PhaseTimelineResponse",
+    "ContextFilesResponse",
 ]
