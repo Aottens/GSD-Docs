@@ -110,7 +110,7 @@ def _get_project_dir(project_id: int) -> Path:
     return Path(settings.PROJECT_ROOT).expanduser().resolve() / str(project_id)
 
 
-@router.get("/", response_model=PhaseTimelineResponse)
+@router.get("", response_model=PhaseTimelineResponse)
 async def get_phase_timeline(
     project_id: int,
     db: AsyncSession = Depends(get_db)
