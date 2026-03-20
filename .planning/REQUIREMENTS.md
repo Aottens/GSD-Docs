@@ -17,34 +17,30 @@ Requirements for v2.0 release. Each maps to roadmap phases.
 
 ### Workflow Navigation
 
-- [ ] **WORK-01**: Engineer can view phase timeline showing ROADMAP phases with completion status
-- [ ] **WORK-02**: Engineer can trigger phase operations (discuss/plan/write/verify/review) from the timeline
+- [x] **WORK-01**: Engineer can view phase timeline showing ROADMAP phases with completion status
+- [x] **WORK-02**: Engineer can view phase status and next recommended CLI command from the timeline
 - [ ] **WORK-03**: Engineer can view document outline tree with expandable/collapsible sections
 - [ ] **WORK-04**: Engineer can navigate to a specific section from the outline tree
 
 ### Discussion
 
-- [ ] **DISC-01**: Engineer can conduct discussion phases through an embedded chat panel
-- [ ] **DISC-02**: Chat panel displays AI-generated questions about gray areas in the phase
-- [ ] **DISC-03**: Engineer can view conversation history for completed discussions
-- [ ] **DISC-04**: Discussion decisions persist in CONTEXT.md for downstream phases
+~~DISC-01 through DISC-04 dropped — discussions handled by CLI (`/doc:discuss-phase`). GUI is a cockpit, not a conversation engine.~~
 
 ### Document Generation
 
-- [ ] **DOCG-01**: Engineer can trigger plan-phase to generate section plans with wave assignments
-- [ ] **DOCG-02**: Engineer can trigger write-phase to generate section content in parallel waves
-- [ ] **DOCG-03**: Engineer can see real-time progress during AI writing with section-level granularity
-- [ ] **DOCG-04**: Engineer can view which reference docs and context fed each section writer
+- [ ] **DOCG-01**: Engineer can view generated section plans with wave assignments in the GUI
+
+~~DOCG-02 through DOCG-04 dropped — writing triggered via CLI (`/doc:write-phase`). GUI displays results.~~
 
 ### Quality & Review
 
-- [ ] **QUAL-01**: Engineer can trigger verify-phase to run 5-level verification cascade
-- [ ] **QUAL-02**: Engineer can view verification results with gaps, severity, and recommendations
-- [ ] **QUAL-03**: Engineer can see gap closure cycles (verify → re-plan → re-write, max 2 iterations)
+- [ ] **QUAL-01**: Engineer can view verification results from CLI output in the GUI
+- [ ] **QUAL-02**: Engineer can view gaps, severity, and recommendations from verification
+- [ ] **QUAL-03**: Engineer can see gap closure cycle status (verify → re-plan → re-write)
 - [ ] **QUAL-04**: Engineer can approve or reject verification results before proceeding
 - [ ] **QUAL-05**: Engineer can conduct review-phase with approve/reject/request-changes per section
 - [ ] **QUAL-06**: Engineer can provide text feedback during review that feeds back into the workflow
-- [ ] **QUAL-07**: Engineer can enable opt-in PackML/ISA-88 standards compliance checking
+- [ ] **QUAL-07**: Engineer can view PackML/ISA-88 standards compliance results in the GUI
 - [ ] **QUAL-08**: Engineer can view standards violations with references to standard sections
 
 ### Reference Management
@@ -120,50 +116,50 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROJ-03 | Phase 9 | Pending |
 | PROJ-04 | Phase 8 | Pending |
 | PROJ-05 | Phase 8 | Pending |
-| WORK-01 | Phase 10 | Pending |
-| WORK-02 | Phase 10 | Pending |
+| WORK-01 | Phase 10 | Complete |
+| WORK-02 | Phase 10 | Complete |
 | WORK-03 | Phase 11 | Pending |
 | WORK-04 | Phase 11 | Pending |
-| DISC-01 | Phase 10 | Pending |
-| DISC-02 | Phase 10 | Pending |
-| DISC-03 | Phase 10 | Pending |
-| DISC-04 | Phase 10 | Pending |
+| DISC-01 | Dropped | CLI |
+| DISC-02 | Dropped | CLI |
+| DISC-03 | Dropped | CLI |
+| DISC-04 | Dropped | CLI |
 | DOCG-01 | Phase 11 | Pending |
-| DOCG-02 | Phase 12 | Pending |
-| DOCG-03 | Phase 12 | Pending |
-| DOCG-04 | Phase 12 | Pending |
-| QUAL-01 | Phase 13 | Pending |
-| QUAL-02 | Phase 13 | Pending |
-| QUAL-03 | Phase 13 | Pending |
-| QUAL-04 | Phase 13 | Pending |
-| QUAL-05 | Phase 14 | Pending |
-| QUAL-06 | Phase 14 | Pending |
-| QUAL-07 | Phase 13 | Pending |
-| QUAL-08 | Phase 13 | Pending |
+| DOCG-02 | Dropped | CLI |
+| DOCG-03 | Dropped | CLI |
+| DOCG-04 | Dropped | CLI |
+| QUAL-01 | Phase 12 | Pending |
+| QUAL-02 | Phase 12 | Pending |
+| QUAL-03 | Phase 12 | Pending |
+| QUAL-04 | Phase 12 | Pending |
+| QUAL-05 | Phase 12 | Pending |
+| QUAL-06 | Phase 12 | Pending |
+| QUAL-07 | Phase 12 | Pending |
+| QUAL-08 | Phase 12 | Pending |
 | REFM-01 | Phase 9 | Pending |
 | REFM-02 | Phase 9 | Pending |
 | REFM-03 | Phase 9 | Pending |
 | REFM-04 | Phase 9 | Pending |
 | REFM-05 | Phase 9 | Pending |
-| OUTP-01 | Phase 12 | Pending |
-| OUTP-02 | Phase 15 | Pending |
-| OUTP-03 | Phase 15 | Pending |
-| OUTP-04 | Phase 15 | Pending |
-| OUTP-05 | Phase 16 | Pending |
-| OUTP-06 | Phase 16 | Pending |
-| OUTP-07 | Phase 15 | Pending |
-| SYST-01 | Phase 17 | Pending |
-| SYST-02 | Phase 17 | Pending |
-| SYST-03 | Phase 17 | Pending |
+| OUTP-01 | Phase 11 | Pending |
+| OUTP-02 | Phase 13 | Pending |
+| OUTP-03 | Phase 13 | Pending |
+| OUTP-04 | Phase 13 | Pending |
+| OUTP-05 | Phase 13 | Pending |
+| OUTP-06 | Phase 13 | Pending |
+| OUTP-07 | Phase 13 | Pending |
+| SYST-01 | Phase 14 | Pending |
+| SYST-02 | Phase 14 | Pending |
+| SYST-03 | Phase 14 | Pending |
 | SYST-04 | Phase 8 | Pending |
 
 **Coverage:**
 - v1 requirements: 41 total
-- Mapped to phases: 41
-- Unmapped: 0 ✓
+- Mapped to phases: 34
+- Dropped (CLI handles): 7 (DISC-01–04, DOCG-02–04)
 
-**Coverage validation:** 100% - All v2.0 requirements mapped to phases 8-17
+**Coverage validation:** 100% — All GUI requirements mapped to phases 8-14. Dropped requirements handled by v1.0 CLI.
 
 ---
 *Requirements defined: 2026-02-14*
-*Last updated: 2026-02-14 after roadmap creation*
+*Last updated: 2026-03-20 -- Cockpit pivot: phases 10-14 confirmed, 7 requirements dropped*

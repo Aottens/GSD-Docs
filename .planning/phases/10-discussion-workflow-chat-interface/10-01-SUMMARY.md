@@ -1,170 +1,162 @@
 ---
 phase: 10-discussion-workflow-chat-interface
 plan: 01
-subsystem: discussion-workflow-data-layer
-tags: [database, models, schemas, migration, sse]
-dependencies:
-  requires:
-    - "08-01: Database infrastructure (SQLite + SQLAlchemy)"
-    - "08-01: Pydantic schemas pattern"
-  provides:
-    - "Conversation/Message SQLAlchemy models with migration applied"
-    - "PhaseInfo Pydantic model for phase status"
-    - "Conversation and phase timeline Pydantic schemas"
-    - "sse-starlette for Server-Sent Events streaming"
-    - "V1_DOCS_PATH config setting"
-  affects:
-    - "10-02: Discussion API routes (depends on models/schemas)"
-    - "10-03: Phase timeline service (depends on PhaseInfo model)"
-    - "10-04: Chat interface frontend (depends on schemas)"
-tech_stack:
-  added:
-    - sse-starlette>=2.2.0
+subsystem: api
+tags: [fastapi, python, alembic, sqlite, filesystem-status, phase-timeline]
+
+# Dependency graph
+requires:
+  - phase: 08-core-infrastructure
+    provides: FastAPI backend with project CRUD and SQLAlchemy models
+  - phase: 09-file-management
+    provides: File/Folder models and filesystem storage patterns
+provides:
+  - Filesystem-based phase status detection via _derive_phase_status()
+  - config_phases.py with PROJECT_TYPE_PHASES (A/B/C/D) and CLI command mapping
+  - Phase timeline API returning cli_command for next /doc:* step
+  - Context-files endpoint reading CONTEXT.md decisions and VERIFICATION.md score
+  - Alembic migration to drop conversations and messages tables
+  - Zero-LLM-dependency backend
+affects: [frontend-phase-timeline, 10-02-frontend-rework]
+
+# Tech tracking
+tech-stack:
+  added: []
   patterns:
-    - SQLAlchemy models with JSON columns for structured data
-    - Self-referential relationships (parent_id for revision chains)
-    - Pydantic models for non-DB data (PhaseInfo derived from filesystem)
-    - SSE event type enums for streaming API
-key_files:
+    - Filesystem artifact detection for phase status (CONTEXT.md/PLAN.md/SUMMARY.md/VERIFICATION.md/REVIEW.md)
+    - CLI command mapping from status string via STATUS_CLI_COMMANDS dict
+    - XML regex extraction for decisions from CONTEXT.md <decisions> blocks
+
+key-files:
   created:
-    - backend/app/models/conversation.py
-    - backend/app/models/phase.py
-    - backend/app/schemas/conversation.py
-    - backend/app/schemas/phase.py
-    - backend/alembic/versions/fb17f556ba07_add_conversations_and_messages_tables.py
+    - backend/app/config_phases.py
+    - backend/alembic/versions/a7b46367f8f0_drop_conversation_tables.py
   modified:
-    - backend/app/models/__init__.py
-    - backend/app/schemas/__init__.py
     - backend/app/config.py
+    - backend/app/schemas/phase.py
+    - backend/app/models/phase.py
+    - backend/app/models/__init__.py
+    - backend/app/api/phases.py
+    - backend/app/api/__init__.py
+    - backend/app/schemas/__init__.py
+    - backend/app/services/__init__.py
+    - backend/app/main.py
     - backend/requirements.txt
-decisions:
-  - JSON columns for summary_data and metadata_json (flexible structure)
-  - Self-referential parent_id for revision chains (continuing discussions)
-  - PhaseInfo as Pydantic model not SQLAlchemy (derived from filesystem, not stored)
-  - StreamEventType enum for SSE events (type safety for streaming API)
-  - V1_DOCS_PATH points to gsd-docs-industrial (source of domain knowledge)
-metrics:
-  duration_seconds: 178
-  tasks_completed: 2
-  files_created: 5
-  files_modified: 4
-  commits: 2
-  completed_at: "2026-02-15T20:36:08Z"
+
+key-decisions:
+  - "Filesystem status detection replaces conversation DB queries — phase status derived from CONTEXT.md, PLAN.md, SUMMARY.md, VERIFICATION.md, REVIEW.md presence"
+  - "PROJECT_TYPE_PHASES extracted from deleted prompts module into standalone config_phases.py"
+  - "STATUS_CLI_COMMANDS maps each phase status to its next /doc:* CLI command"
+  - "ContextFilesResponse extracts decisions from <decisions> XML blocks and verification score from VERIFICATION.md"
+  - ".env cleaned to remove deleted LLM_PROVIDER and LLM_MODEL settings"
+
+patterns-established:
+  - "config_phases.py: standalone module for project type definitions, no external dependencies"
+  - "Phase status hierarchy: reviewed > verified > written > planned > discussed > not_started"
+  - "_extract_decisions(): regex on <decisions> XML block, returns bullet items"
+  - "_extract_verification_summary(): regex for N/N levels passed and CRITICAL/MAJOR/MINOR severity table"
+
+requirements-completed: [WORK-01, WORK-02]
+
+# Metrics
+duration: 3min
+completed: 2026-03-20
 ---
 
-# Phase 10 Plan 01: Database Foundation Summary
+# Phase 10 Plan 01: Backend Cleanup and Rework Summary
 
-**One-liner:** Conversation/Message SQLAlchemy models with JSON columns, PhaseInfo Pydantic model, SSE schemas, and sse-starlette for streaming discussions.
+**Filesystem-based phase status API with CLI command mapping, replacing 12+ discussion/LLM files removed in cockpit pivot**
 
-## What Was Built
+## Performance
 
-Created the complete data layer for the discussion workflow:
+- **Duration:** ~3 min
+- **Started:** 2026-03-20T20:13:35Z
+- **Completed:** 2026-03-20T20:17:14Z
+- **Tasks:** 2
+- **Files modified:** 10 modified, 2 created, 12 deleted
 
-1. **Database Models:**
-   - `Conversation` model with project/phase tracking, status, summary_data (JSON), and parent_id for revision chains
-   - `Message` model with role/content/type, metadata_json (JSON), and conversation relationship
-   - Proper indexes on (project_id, phase_number) and (conversation_id, timestamp)
-   - Cascade delete-orphan for messages when conversation deleted
+## Accomplishments
 
-2. **Phase Status Model:**
-   - `PhaseInfo` Pydantic model for phase timeline (NOT a database model)
-   - Derived from filesystem artifacts (CONTEXT.md, PLAN.md, etc.)
-   - Tracks status, sub_status, available_actions, has_* flags, conversation_id
+- Surgically removed all discussion engine and LLM infrastructure: 12 files deleted (llm/, prompts/, conversations model/schema, 6 service files)
+- Created `config_phases.py` with `PROJECT_TYPE_PHASES` (A/B/C/D), `STATUS_CLI_COMMANDS`, and `get_cli_command()` helper
+- Rewired phase timeline API to derive status from filesystem artifacts instead of conversation DB records
+- Added `/context-files` endpoint that reads CONTEXT.md decisions and VERIFICATION.md score
+- Created Alembic migration `a7b46367f8f0` to drop messages and conversations tables
+- Backend starts clean with zero import errors and zero LLM dependencies
 
-3. **Pydantic Schemas:**
-   - Conversation CRUD: ConversationCreate, ConversationResponse, ConversationListResponse
-   - Message CRUD: MessageCreate, MessageResponse, SendMessageRequest
-   - SSE: StreamEvent, StreamEventType enum (message_delta, question_card, summary_card, etc.)
-   - Phase timeline: PhaseStatusResponse, PhaseTimelineResponse
+## Task Commits
 
-4. **Configuration & Dependencies:**
-   - V1_DOCS_PATH config setting pointing to gsd-docs-industrial
-   - sse-starlette>=2.2.0 installed for Server-Sent Events streaming
+Each task was committed atomically:
 
-5. **Database Migration:**
-   - Alembic migration fb17f556ba07 creates conversations and messages tables
-   - Applied migration to database
+1. **Task 1: Extract PROJECT_TYPE_PHASES, update schemas/models** - `f0fc05d` (feat)
+2. **Task 2: Rework phase API, delete LLM code, create migration** - `96adffd` (feat)
 
-## Task Breakdown
+## Files Created/Modified
 
-| Task | Name                                                                 | Commit  | Files                                                                                                    |
-| ---- | -------------------------------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------- |
-| 1    | Conversation/Message models, PhaseInfo model, and database migration | 7732c6c | conversation.py, phase.py, models/__init__.py, fb17f556ba07_add_conversations_and_messages_tables.py     |
-| 2    | Pydantic schemas, config update, and dependency installation         | c3c261d | conversation.py (schemas), phase.py (schemas), schemas/__init__.py, config.py, requirements.txt          |
+- `backend/app/config_phases.py` — PROJECT_TYPE_PHASES dict, STATUS_CLI_COMMANDS, get_cli_command()
+- `backend/app/config.py` — Removed LLM fields, added PROJECT_ROOT setting
+- `backend/app/schemas/phase.py` — PhaseStatusResponse with cli_command, context_decisions, verification fields; new ContextFilesResponse
+- `backend/app/models/phase.py` — PhaseInfo without conversation_id/available_actions, with cli_command
+- `backend/app/models/__init__.py` — Removed conversation model imports
+- `backend/app/api/phases.py` — Full rewrite: _derive_phase_status(), _extract_decisions(), _extract_verification_summary(), context-files endpoint
+- `backend/app/api/__init__.py` — Removed discussions and context imports
+- `backend/app/schemas/__init__.py` — Removed conversation schemas, added ContextFilesResponse
+- `backend/app/services/__init__.py` — Removed llm_service, kept only ProjectService
+- `backend/app/main.py` — Removed discussions.router and context.router registrations
+- `backend/requirements.txt` — Removed litellm and sse-starlette
+- `backend/alembic/versions/a7b46367f8f0_drop_conversation_tables.py` — Drops messages and conversations tables
+
+**Deleted:** backend/app/llm/ (3 files), backend/app/prompts/ (2 files), backend/app/api/discussions.py, backend/app/api/context.py, backend/app/models/conversation.py, backend/app/schemas/conversation.py, backend/app/services/llm_service.py, backend/app/services/discussion_engine.py, backend/app/services/conversation_state.py, backend/app/services/decision_extractor.py, backend/app/services/context_generator.py, backend/app/services/structured_output_parser.py
+
+## Decisions Made
+
+- Filesystem status detection: phase status hierarchy = reviewed > verified > written > planned > discussed > not_started, derived from presence of specific artifact files
+- Cleaned `.env` to remove deleted LLM_PROVIDER and LLM_MODEL settings (would have caused pydantic ValidationError with extra fields)
+- context-files endpoint routes BEFORE /{phase_number} to avoid FastAPI treating "context-files" as an integer path segment
 
 ## Deviations from Plan
 
 ### Auto-fixed Issues
 
-**1. [Rule 3 - Blocking Issue] Alembic database not stamped**
-- **Found during:** Task 1, creating migration
-- **Issue:** Database had tables from Phase 8/9 but Alembic version table was empty, causing "table already exists" errors
-- **Fix:** Ran `alembic stamp head` to mark database at current migration head (73e05ffb68dc)
-- **Files modified:** None (database state only)
-- **Commit:** Included in Task 1 commit (7732c6c)
+**1. [Rule 1 - Bug] Cleaned .env file of deleted LLM settings**
+- **Found during:** Task 1 verification
+- **Issue:** `.env` contained LLM_PROVIDER and LLM_MODEL which became "extra fields" after removing them from Settings, causing pydantic ValidationError on startup
+- **Fix:** Cleaned `.env` to remove the two deleted LLM variables
+- **Files modified:** backend/.env
+- **Verification:** `get_settings()` call succeeds without ValidationError
+- **Committed in:** f0fc05d (Task 1 commit)
 
-This was a critical blocking issue preventing migration creation. The fix was simple and non-destructive.
+---
 
-## Technical Decisions
+**Total deviations:** 1 auto-fixed (Rule 1 - Bug)
+**Impact on plan:** Necessary correctness fix, no scope creep.
 
-**JSON columns vs. relational tables:**
-- Used JSON for `summary_data` (accumulated decisions) and `metadata_json` (flexible message data)
-- Rationale: Flexible schema for evolving discussion structures, no rigid table design needed
-- Trade-off: Less queryable, but enables rapid iteration on discussion features
+## Issues Encountered
 
-**PhaseInfo as Pydantic model:**
-- NOT a SQLAlchemy model - derived from filesystem artifacts at runtime
-- Rationale: Phase status is already stored in CONTEXT.md, PLAN.md, etc. - don't duplicate
-- Pattern: Read .planning directory structure, detect artifacts, build PhaseInfo dynamically
+None beyond the .env auto-fix above.
 
-**Self-referential parent_id:**
-- Enables revision chains: new conversation can reference parent for context
-- Use case: "Continue discussing Phase 3" creates new conversation linked to original
-- Alternative considered: Separate ConversationRevision table (rejected - adds complexity)
+## User Setup Required
 
-**StreamEventType enum:**
-- Type-safe SSE event types for streaming API
-- Prevents typos in event strings, enables exhaustive switch/case
-- Maps to Server-Sent Events specification
+None — no external service configuration required. Alembic migration `a7b46367f8f0` should be run against the database when deploying to drop the old conversation tables.
 
-## Verification Results
+## Next Phase Readiness
 
-All success criteria met:
-
-- ✓ Conversation and Message tables exist in SQLite with proper indexes and foreign keys
-- ✓ PhaseInfo Pydantic model provides typed structure for phase status
-- ✓ All schemas validate for conversation CRUD, message streaming, and phase timeline
-- ✓ sse-starlette installed and importable
-- ✓ V1_DOCS_PATH configured in Settings
-- ✓ All imports pass
-
-Import verification:
-```python
-from app.models.conversation import Conversation, Message
-from app.models.phase import PhaseInfo
-from app.schemas.conversation import ConversationCreate, MessageResponse, SendMessageRequest
-from app.schemas.phase import PhaseStatusResponse, PhaseTimelineResponse
-from app.config import Settings
-import sse_starlette
-```
-
-All imports successful.
+- Backend is clean and starts without errors
+- Phase timeline API ready for frontend consumption with cli_command field
+- Context-files endpoint ready for frontend phase detail panels
+- Ready for Phase 10 Plan 02: Frontend rework of phase timeline component
 
 ## Self-Check: PASSED
 
-**Created files verified:**
-- ✓ backend/app/models/conversation.py exists
-- ✓ backend/app/models/phase.py exists
-- ✓ backend/app/schemas/conversation.py exists
-- ✓ backend/app/schemas/phase.py exists
-- ✓ backend/alembic/versions/fb17f556ba07_add_conversations_and_messages_tables.py exists
+- FOUND: backend/app/config_phases.py
+- FOUND: backend/alembic/versions/a7b46367f8f0_drop_conversation_tables.py
+- FOUND: .planning/phases/10-discussion-workflow-chat-interface/10-01-SUMMARY.md
+- VERIFIED: backend/app/api/discussions.py deleted
+- VERIFIED: backend/app/llm/ deleted
+- VERIFIED: backend/app/prompts/ deleted
+- FOUND: commit f0fc05d (Task 1)
+- FOUND: commit 96adffd (Task 2)
 
-**Commits verified:**
-- ✓ 7732c6c: feat(10-01): add Conversation/Message models, PhaseInfo model, and database migration
-- ✓ c3c261d: feat(10-01): add Pydantic schemas, V1_DOCS_PATH config, and sse-starlette
-
-**Database verified:**
-- ✓ Alembic migration fb17f556ba07 applied
-- ✓ Migration at head revision
-
-All checks passed.
+---
+*Phase: 10-discussion-workflow-chat-interface*
+*Completed: 2026-03-20*

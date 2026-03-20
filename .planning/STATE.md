@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: GUI
 status: unknown
-stopped_at: Phase 10 context gathered
-last_updated: "2026-03-20T19:49:14.005Z"
+stopped_at: Completed 10-discussion-workflow-chat-interface-01-PLAN.md
+last_updated: "2026-03-20T20:18:47.536Z"
 progress:
   total_phases: 7
-  completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
+  completed_phases: 2
+  total_plans: 7
+  completed_plans: 6
   percent: 64
 ---
 
@@ -20,18 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Engineers can create, manage, and review FDS/SDS projects through a visual web cockpit that handles status, preview, review, and export — AI operations stay in CLI
-**Current focus:** Cockpit pivot complete — roadmap restructured from 17 to 14 phases. Phase 10 (Workflow Status & Cleanup) is next.
+**Current focus:** Phase 10 — discussion-workflow-chat-interface
 
 ## Current Position
 
-- Phase: 10 of 14 (Workflow Status & Cleanup) — NOT STARTED
-- Milestone: v2.0 GUI — Phases 8-14
-- Status: Architectural pivot applied. Phases 10-17 restructured to 10-14 (cockpit model).
-- Last activity: 2026-03-20 - Cockpit pivot: ROADMAP, REQUIREMENTS, PROJECT, STATE updated
+Phase: 10 (discussion-workflow-chat-interface) — EXECUTING
+Plan: 2 of 2
 
 ## Progress
 
-Progress: [█████████████░░░░░░░] 64% (9 of 14 phases complete)
+Progress: [█████████░] 86% (10-01 complete)
 
 v1.0 milestone: 7 phases, 33 plans - Complete ✓
 v2.0 milestone: 7 phases — Phases 8, 9 complete. Old 10/10.1 superseded by cockpit pivot. New phases 10-14 not started.
@@ -156,6 +154,9 @@ Recent decisions affecting v2.0:
 - **loadConversation pattern** (10.1-09): Fetches conversation + messages sequentially, filters system messages, populates all state atomically; extracted from hook as named function for direct calling
 - **Completion detection via completionData state** (10.1-09): loadConversation sets completionData for completed convs; ChatPanel useEffect watches completionData to set viewMode='readonly'
 - **Check-in card uses ReactMarkdown** (10.1-09): Backend _build_checkin_message() returns markdown bullets; check-in card renders via ReactMarkdown for correct display
+- [Phase 10-discussion-workflow-chat-interface]: Filesystem status detection replaces conversation DB queries: phase status derived from CONTEXT.md/PLAN.md/SUMMARY.md/VERIFICATION.md/REVIEW.md presence
+- [Phase 10-01]: STATUS_CLI_COMMANDS maps each phase status to next /doc:* CLI command via get_cli_command() helper
+- [Phase 10-01]: config_phases.py is standalone module for project type definitions extracted from deleted prompts module
 
 ### Roadmap Evolution
 
@@ -168,8 +169,8 @@ None — cockpit pivot clears all previous discussion-engine blockers.
 
 ## Session Continuity
 
-Last session: 2026-03-20T19:49:14.003Z
-Stopped at: Phase 10 context gathered
+Last session: 2026-03-20T20:18:47.533Z
+Stopped at: Completed 10-discussion-workflow-chat-interface-01-PLAN.md
 
 **Next step:** Start Phase 10 (Workflow Status & Cleanup) — `/gsd:discuss-phase 10` or `/gsd:plan-phase 10`
 
