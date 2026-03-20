@@ -1,45 +1,63 @@
+---
+gsd_state_version: 1.0
+milestone: v2.0
+milestone_name: GUI
+status: unknown
+stopped_at: Phase 10 context gathered
+last_updated: "2026-03-20T19:49:14.005Z"
+progress:
+  total_phases: 7
+  completed_phases: 3
+  total_plans: 9
+  completed_plans: 9
+  percent: 64
+---
+
 # STATE.md -- GSD-Docs Industrial
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-02-14)
 
-**Core value:** Engineers can create, manage, and review FDS/SDS projects through a visual web interface that guides them through the full document lifecycle
-**Current focus:** Phase 10.1 UAT found 5 issues (2 blockers, 2 major, 1 minor) — needs discuss → plan → fix cycle
+**Core value:** Engineers can create, manage, and review FDS/SDS projects through a visual web cockpit that handles status, preview, review, and export — AI operations stay in CLI
+**Current focus:** Cockpit pivot complete — roadmap restructured from 17 to 14 phases. Phase 10 (Workflow Status & Cleanup) is next.
 
 ## Current Position
 
-- Phase: 10.1 of 17 (Discussion Behavior Rework) — COMPLETE
-- Plan: 9 of 9 in current phase (all 9 plans complete)
-- Status: Phase 10.1 complete — all 5 UAT issues resolved (Plans 08 + 09)
-- Last activity: 2026-02-17 - Plan 09 complete (UAT fixes 1D + 1E: Gesprekken tab + chat history)
+- Phase: 10 of 14 (Workflow Status & Cleanup) — NOT STARTED
+- Milestone: v2.0 GUI — Phases 8-14
+- Status: Architectural pivot applied. Phases 10-17 restructured to 10-14 (cockpit model).
+- Last activity: 2026-03-20 - Cockpit pivot: ROADMAP, REQUIREMENTS, PROJECT, STATE updated
 
 ## Progress
 
-Progress: [████████████░░░░░░░░] 59% (10 of 17 phases complete)
+Progress: [█████████████░░░░░░░] 64% (9 of 14 phases complete)
 
 v1.0 milestone: 7 phases, 33 plans - Complete ✓
-v2.0 milestone: 10 phases, 21 plans - Phase 10 complete
+v2.0 milestone: 7 phases — Phases 8, 9 complete. Old 10/10.1 superseded by cockpit pivot. New phases 10-14 not started.
 
 ## Performance Metrics
 
 **Velocity (v1.0):**
+
 - Total plans completed: 33
 - Total execution time: 8 days
 - 89/89 requirements satisfied
 
 **v2.0 (in progress):**
-- Plans completed: 13 of 21
+
 - Phase 8: 3/3 plans complete ✓
 - Phase 9: 2/2 plans complete ✓
-- Phase 10: 4/4 plans complete ✓
-- Phase 10.1: 9/9 plans complete ✓
+- Phase 10 (old): 4/4 plans complete — superseded by cockpit pivot
+- Phase 10.1: 7/9 plans complete — superseded by cockpit pivot
+- New phases 10-14: not started (cockpit model)
 - Files created: ~155
-- Last completed: Phase 10.1 Plan 09 (UAT fixes: Gesprekken tab + chat history)
+- Last completed: Cockpit pivot — roadmap restructured (2026-03-20)
 
 ## Accumulated Context
 
 **From v1.0:**
+
 - 14 `/doc:*` commands with proven workflow (discuss → plan → write → verify → review → assemble → export)
 - Domain knowledge in 194 files: templates, section structures, verification criteria, prompt patterns
 - SPECIFICATION.md v2.7.0 is SSOT for document generation logic
@@ -47,14 +65,16 @@ v2.0 milestone: 10 phases, 21 plans - Phase 10 complete
 - Typicals library (CATALOG.json) for SDS matching
 - Bilingual Dutch/English support throughout
 
-**v2.0 architecture:**
-- FastAPI backend replaces Claude Code as orchestrator
-- React frontend replaces terminal as UI
-- Claude API (Anthropic SDK) for LLM access
+**v2.0 architecture (post-cockpit pivot):**
+
+- FastAPI backend as file/project management API (no LLM orchestration)
+- React frontend as companion cockpit (status, preview, review, export)
+- AI operations stay in CLI (/doc:* commands via GitHub Copilot)
 - SQLite for project/file metadata
 - VM deployment with Nginx + systemd
 
 **Phase 8 deliverables (now available):**
+
 - FastAPI backend: project CRUD, health check, LLM provider abstraction (LiteLLM)
 - React frontend: dashboard with filters/search/sort, 3-step wizard, workspace
 - Workspace: fixed sidebar + slide-in Sheet for assistant panel
@@ -62,6 +82,7 @@ v2.0 milestone: 10 phases, 21 plans - Phase 10 complete
 - Tailwind v4 with shadcn/ui components
 
 **Phase 9 deliverables (now available):**
+
 - Backend: File/Folder models, defense-in-depth validation (5 layers), filesystem storage, complete REST API
 - Frontend: Drag-and-drop upload with progress, file browser with folder navigation, inline PDF/DOCX/image preview
 - File actions: delete (with confirmation), rename, replace, download, move between folders
@@ -72,6 +93,7 @@ v2.0 milestone: 10 phases, 21 plans - Phase 10 complete
 - Default folder auto-creation per project type (A/B/C/D)
 
 **Phase 10 deliverables (now available):**
+
 - Backend: Conversation/Message models, discussion engine with v1.0 pattern extraction (40 keywords, 7 content types)
 - Backend: Phase timeline API (status from DB), SSE streaming endpoints, context generator
 - Frontend: Horizontal phase timeline bar with colored status nodes and popovers
@@ -85,8 +107,10 @@ v2.0 milestone: 10 phases, 21 plans - Phase 10 complete
 See PROJECT.md Key Decisions table for full list.
 
 Recent decisions affecting v2.0:
-- **FastAPI + React stack**: Full control over UI, proper web architecture, model-agnostic
-- **LLM provider abstraction**: Enables local model swap in v3.0
+
+- **Cockpit pivot (2026-03-20)**: GUI is companion cockpit, not AI wrapper. Discussion engine (phases 10/10.1) proved that embedded chat feels forced vs CLI. Team has Claude via GitHub Copilot. GUI handles visual tasks; AI stays in CLI. 7 requirements dropped, phases 10-17 restructured to 10-14.
+- **FastAPI + React stack**: Full control over UI, proper web architecture
+- **No LLM orchestration in GUI**: Backend is file/project management API only
 - **SQLite for metadata**: Lightweight, sufficient for 5-20 users
 - **VM deployment**: No Docker per company policy
 - **SQLite async with aiosqlite** (08-01): Async operations throughout, check_same_thread=False for compatibility
@@ -135,21 +159,19 @@ Recent decisions affecting v2.0:
 
 ### Roadmap Evolution
 
-- Phase 10.1 inserted after Phase 10: Discussion behavior rework (URGENT)
+- Phase 10.1 inserted after Phase 10: Discussion behavior rework (URGENT) — superseded by cockpit pivot
+- **Cockpit pivot (2026-03-20)**: Phases 10-17 restructured to 10-14. Old phases 10/10.1 (discussion engine) superseded. New Phase 10 = Workflow Status & Cleanup (remove discussion code, keep timeline).
 
 ## Blockers
 
-- **Plan 05 checkpoint verification incomplete** — Foundation flow improved but needs re-test after sufficiency fix. Non-Foundation flow untested.
-- **SQLAlchemy JSON mutation bug** (91f2871) — was root cause of ALL conversation circles. Fixed by dict reassignment. May affect other JSON columns in project.
-- **Local model quality** — qwen2.5:14b leaks CJK reasoning, ignores anti-repetition. Mitigated but not eliminated.
+None — cockpit pivot clears all previous discussion-engine blockers.
 
 ## Session Continuity
 
-Last session: 2026-02-22
-Stopped at: Phase 10.1 Plan 05 Task 2 checkpoint — Foundation testing revealed issues, 6 hotfixes applied, needs re-verification
-Resume file: .planning/phases/10.1-discussion-behavior-rework/.continue-here.md
+Last session: 2026-03-20T19:49:14.003Z
+Stopped at: Phase 10 context gathered
 
-**Next step:** `/clear` then `/gsd:execute-phase 10.1` to resume checkpoint verification. Test Foundation + non-Foundation flows, then approve or report issues.
+**Next step:** Start Phase 10 (Workflow Status & Cleanup) — `/gsd:discuss-phase 10` or `/gsd:plan-phase 10`
 
 ---
-*Last updated: 2026-02-22*
+*Last updated: 2026-03-20*
