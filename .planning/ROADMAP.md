@@ -5,7 +5,7 @@
 ## Milestones
 
 - ✅ **v1.0 CLI** - Phases 1-7 (shipped 2026-02-14)
-- 🚧 **v2.0 GUI** - Phases 8-17 (in progress)
+- 🚧 **v2.0 GUI** - Phases 8-14 (in progress)
 
 ## Phases
 
@@ -18,7 +18,7 @@ Complete Claude Code plugin for FDS/SDS document generation. 14 commands, 194 fi
 
 ### 🚧 v2.0 GUI (In Progress)
 
-**Milestone Goal:** Web-based GUI that wraps the proven v1.0 CLI workflow in a visual, team-accessible interface with FastAPI backend and React frontend.
+**Milestone Goal:** Web-based cockpit that provides status, preview, review, and export for the v1.0 CLI workflow. AI operations stay in CLI; GUI handles visual tasks that CLI can't do well. FastAPI backend serves as file/project management API; React frontend is the engineer's cockpit.
 
 #### Phase 8: Core Infrastructure & Project Management
 
@@ -64,71 +64,43 @@ Plans:
 - [x] 09-01-PLAN.md -- Backend: file/folder models, defense-in-depth validation, filesystem storage, complete REST API for uploads, downloads, management, and folder CRUD
 - [x] 09-02-PLAN.md -- Frontend: drag-and-drop upload with progress, file browser with folders, PDF/DOCX/image preview panel, project files and shared library tabs, admin page, wizard step 4
 
-#### Phase 10: Discussion Workflow & Chat Interface
+#### Phase 10: Workflow Status & Cleanup
 
-**Goal**: Engineers can conduct discussion phases through an embedded chat panel with real-time AI interaction and conversation persistence.
+**Goal**: Clean up discussion engine code (superseded by CLI), keep phase timeline UI and status API, add CLI command guidance and context file display.
 
 **Depends on**: Phase 9
 
-**Requirements**: WORK-01, WORK-02, DISC-01, DISC-02, DISC-03, DISC-04
+**Requirements**: WORK-01, WORK-02
 
 **Success Criteria** (what must be TRUE):
   1. Engineer can view phase timeline showing ROADMAP phases with completion status
-  2. Engineer can trigger phase operations (discuss/plan/write/verify/review) from the timeline
-  3. Engineer can conduct discussion phases through an embedded chat panel
-  4. Chat panel displays AI-generated questions about gray areas in the phase
-  5. Engineer can view conversation history for completed discussions
-  6. Discussion decisions persist in CONTEXT.md for downstream phases
+  2. Engineer can see next recommended `/doc:*` CLI command per phase
+  3. Engineer can view CONTEXT.md and VERIFICATION.md results when available
+  4. Discussion engine code removed (backend conversation/chat models, frontend chat panel)
+  5. Phase timeline and status API remain functional
 
-**Plans**: 4 plans
+**Historical note**: Phases 10 (original) and 10.1 built an embedded discussion chat engine. The cockpit pivot (2026-03-20) determined that recreating CLI conversation UX in a webapp doesn't work — it feels forced compared to the CLI. Discussion code will be removed in this phase. Phase 10/10.1 directories preserved as historical record.
+
+**Plans**: 2 plans
 
 Plans:
-- [x] 10-01-PLAN.md -- Backend: conversation/message models, phase status model, Pydantic schemas, migration, config, dependencies
-- [x] 10-02-PLAN.md -- Backend: phase timeline API, discussion engine with v1.0 pattern extraction, SSE streaming endpoints, context generator, prompts
-- [x] 10-03-PLAN.md -- Frontend: horizontal phase timeline bar, phase node popovers with actions, Fasering tab, workspace integration
-- [x] 10-04-PLAN.md -- Frontend: chat panel with SSE streaming, question cards, summary panel, conversation history, workspace chat integration
+- [ ] 10-01-PLAN.md — Backend cleanup + rework: remove discussion/LLM code, extract PROJECT_TYPE_PHASES, rework phase API for filesystem-based status, add CLI command mapping, add context-files endpoint, create Alembic migration
+- [ ] 10-02-PLAN.md — Frontend cleanup + rework: remove discussions feature, remove assistant panel, update phase types, rework PhasePopover with CLI command display + context/verification info, update FaseringTab
 
-#### Phase 10.1: Discussion behavior rework (INSERTED)
+#### Phase 11: Document Preview & Outline
 
-**Goal**: Rework the discussion chat behavior to follow the proven v1.0 discuss-phase flow: AI-driven topic progression, structured question cards with option chips, faithful verbatim decision capture, Foundation intake conversation, and clear completion with CONTEXT.md generation.
+**Goal**: Engineers can view rendered FDS content, navigate section outlines, see generated section plans and wave assignments, with Mermaid diagram rendering.
 
 **Depends on**: Phase 10
 
-**Requirements**: DISC-01, DISC-02, DISC-03, DISC-04
-
-**Success Criteria** (what must be TRUE):
-  1. AI drives discussion with structured topic progression (4 questions per area, then check-in)
-  2. Question cards display option chips that trigger follow-up questions (chips are starting points, not final answers)
-  3. Decisions captured verbatim from engineer's exact words (no AI interpretation)
-  4. Foundation phase uses open-ended intake conversation, not structured topic cards
-  5. Completion workflow generates CONTEXT.md preview for review/edit before finalizing
-  6. After finalizing, discussion conversation closes and suggests planning (no auto-advance)
-
-**Plans**: 9 plans
-
-Plans:
-- [x] 10.1-01-PLAN.md — Backend: conversation state machine, XML output parser, Foundation phase prompt
-- [x] 10.1-02-PLAN.md — Frontend: SSE event handling, chip-follow-up question cards, decision confirm/reject UX
-- [x] 10.1-03-PLAN.md — Backend: enhanced discussion engine with topic progression, verbatim extraction, reference file reading
-- [x] 10.1-04-PLAN.md — Backend: completion workflow, CONTEXT.md generation, preview/finalize endpoints
-- [x] 10.1-05-PLAN.md — Frontend: CompletionCard, ContextPreview, completion flow integration, end-to-end verification
-- [x] Plan 06 (no file) — Architectural rework: scoped LLM calls, backend drives conversation flow
-- [x] Plan 07 (no file) — Fix discussion circles: probe tracking, topic Q&A context, decision summary in check-in
-- [ ] 10.1-08-PLAN.md — Backend: fix question loop (hard cap + anti-repetition), silent decision accumulation, Foundation option chips
-- [ ] 10.1-09-PLAN.md — Frontend: chat history loading, Gesprekken tab click navigation, decision timing UI
-
-#### Phase 11: Planning Workflow & Section Organization
-
-**Goal**: Engineers can trigger plan-phase to generate section plans with wave assignments and navigate document outline.
-
-**Depends on**: Phase 10
-
-**Requirements**: WORK-03, WORK-04, DOCG-01
+**Requirements**: WORK-03, WORK-04, OUTP-01, DOCG-01
 
 **Success Criteria** (what must be TRUE):
   1. Engineer can view document outline tree with expandable/collapsible sections
   2. Engineer can navigate to a specific section from the outline tree
-  3. Engineer can trigger plan-phase to generate section plans with wave assignments
+  3. Engineer can preview rendered document content (markdown → HTML, not raw files)
+  4. Engineer can view Mermaid diagrams rendered inline
+  5. Engineer can view generated section plans and wave assignments
 
 **Plans**: TBD
 
@@ -136,19 +108,22 @@ Plans:
 - [ ] 11-01: TBD
 - [ ] 11-02: TBD
 
-#### Phase 12: Writing Workflow & Real-Time Progress
+#### Phase 12: Review Interface
 
-**Goal**: Engineers can trigger parallel section writing with real-time progress feedback and document preview capabilities.
+**Goal**: Engineers can review sections with approve/reject/request-changes workflow, view verification results and standards compliance from CLI output.
 
 **Depends on**: Phase 11
 
-**Requirements**: DOCG-02, DOCG-03, DOCG-04, OUTP-01
+**Requirements**: QUAL-01, QUAL-02, QUAL-03, QUAL-04, QUAL-05, QUAL-06, QUAL-07, QUAL-08
 
 **Success Criteria** (what must be TRUE):
-  1. Engineer can trigger write-phase to generate section content in parallel waves
-  2. Engineer can see real-time progress during AI writing with section-level granularity
-  3. Engineer can view which reference docs and context fed each section writer
-  4. Engineer can preview rendered document content with Mermaid diagram rendering
+  1. Engineer can conduct section-by-section approve/reject/request-changes review
+  2. Engineer can provide text feedback per section
+  3. Engineer can view verification results (gaps, severity, recommendations) from CLI output files
+  4. Engineer can see gap closure cycle status (verify → re-plan → re-write)
+  5. Engineer can approve or reject verification results before proceeding
+  6. Engineer can view PackML/ISA-88 standards compliance results
+  7. Engineer can view standards violations with references to standard sections
 
 **Plans**: TBD
 
@@ -157,21 +132,21 @@ Plans:
 - [ ] 12-02: TBD
 - [ ] 12-03: TBD
 
-#### Phase 13: Verification & Gap Closure
+#### Phase 13: Export & Assembly
 
-**Goal**: Engineers can run 5-level verification cascade with gap detection, closure loops, and opt-in standards compliance.
+**Goal**: Engineers can assemble FDS with cross-reference resolution, export to DOCX with corporate styling, view SDS scaffolding with typicals matching.
 
 **Depends on**: Phase 12
 
-**Requirements**: QUAL-01, QUAL-02, QUAL-03, QUAL-04, QUAL-07, QUAL-08
+**Requirements**: OUTP-02, OUTP-03, OUTP-04, OUTP-05, OUTP-06, OUTP-07
 
 **Success Criteria** (what must be TRUE):
-  1. Engineer can trigger verify-phase to run 5-level verification cascade
-  2. Engineer can view verification results with gaps, severity, and recommendations
-  3. Engineer can see gap closure cycles (verify → re-plan → re-write, max 2 iterations)
-  4. Engineer can approve or reject verification results before proceeding
-  5. Engineer can enable opt-in PackML/ISA-88 standards compliance checking
-  6. Engineer can view standards violations with references to standard sections
+  1. Engineer can trigger FDS assembly with cross-reference resolution (file processing, no AI)
+  2. Engineer can export FDS/SDS to DOCX with corporate styling via Pandoc
+  3. Engineer can see export progress during DOCX generation
+  4. Engineer can view SDS scaffolding with typicals matching confidence scores
+  5. Engineer can see "NEW TYPICAL NEEDED" indicators for unmatched equipment
+  6. Engineer can generate documents in Dutch or English based on project setting
 
 **Plans**: TBD
 
@@ -179,65 +154,11 @@ Plans:
 - [ ] 13-01: TBD
 - [ ] 13-02: TBD
 
-#### Phase 14: Review & Human-in-the-Loop
+#### Phase 14: Production Deployment
 
-**Goal**: Engineers can conduct review-phase with approve/reject/request-changes workflow and text feedback capture.
+**Goal**: Application deployed on VM with Nginx reverse proxy, crash recovery, and CLI compatibility verification.
 
 **Depends on**: Phase 13
-
-**Requirements**: QUAL-05, QUAL-06
-
-**Success Criteria** (what must be TRUE):
-  1. Engineer can conduct review-phase with approve/reject/request-changes per section
-  2. Engineer can provide text feedback during review that feeds back into the workflow
-
-**Plans**: TBD
-
-Plans:
-- [ ] 14-01: TBD
-
-#### Phase 15: FDS Assembly & Export
-
-**Goal**: Engineers can assemble complete FDS with cross-reference resolution and export to DOCX with corporate styling.
-
-**Depends on**: Phase 14
-
-**Requirements**: OUTP-02, OUTP-03, OUTP-04, OUTP-07
-
-**Success Criteria** (what must be TRUE):
-  1. Engineer can trigger FDS assembly with cross-reference resolution
-  2. Engineer can export FDS/SDS to DOCX with corporate styling
-  3. Engineer can see export progress during DOCX generation
-  4. Engineer can generate documents in Dutch or English based on project setting
-
-**Plans**: TBD
-
-Plans:
-- [ ] 15-01: TBD
-- [ ] 15-02: TBD
-
-#### Phase 16: SDS Generation
-
-**Goal**: Engineers can generate SDS scaffolding from completed FDS with typicals matching and confidence scoring.
-
-**Depends on**: Phase 15
-
-**Requirements**: OUTP-05, OUTP-06
-
-**Success Criteria** (what must be TRUE):
-  1. Engineer can trigger SDS scaffolding from completed FDS with typicals matching
-  2. Engineer can see typicals matching confidence scores and "NEW TYPICAL NEEDED" indicators
-
-**Plans**: TBD
-
-Plans:
-- [ ] 16-01: TBD
-
-#### Phase 17: Production Hardening & Deployment
-
-**Goal**: Application deployed on VM with crash recovery, graceful shutdown, and production monitoring.
-
-**Depends on**: Phase 16
 
 **Requirements**: SYST-01, SYST-02, SYST-03
 
@@ -249,8 +170,8 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 17-01: TBD
-- [ ] 17-02: TBD
+- [ ] 14-01: TBD
+- [ ] 14-02: TBD
 
 ## Progress
 
@@ -265,17 +186,14 @@ Plans:
 | 7. SDS + Export | v1.0 | 5/5 | Complete | 2026-02-14 |
 | 8. Core Infrastructure | v2.0 | 3/3 | Complete | 2026-02-15 |
 | 9. File Management | v2.0 | 2/2 | Complete | 2026-02-15 |
-| 10. Discussion Workflow | v2.0 | 4/4 | Complete | 2026-02-15 |
-| 10.1 Discussion behavior rework | v2.0 | 7/9 | Gap closure | - |
-| 11. Planning Workflow | v2.0 | 0/2 | Not started | - |
-| 12. Writing Workflow | v2.0 | 0/3 | Not started | - |
-| 13. Verification | v2.0 | 0/2 | Not started | - |
-| 14. Review | v2.0 | 0/1 | Not started | - |
-| 15. FDS Assembly | v2.0 | 0/2 | Not started | - |
-| 16. SDS Generation | v2.0 | 0/1 | Not started | - |
-| 17. Production Hardening | v2.0 | 0/2 | Not started | - |
+| ~~10. Discussion Workflow~~ | v2.0 | 4/4 | Superseded | 2026-02-15 |
+| ~~10.1 Discussion behavior rework~~ | v2.0 | 7/9 | Superseded | - |
+| 10. Workflow Status & Cleanup | v2.0 | 0/2 | Not started | - |
+| 11. Document Preview & Outline | v2.0 | 0/2 | Not started | - |
+| 12. Review Interface | v2.0 | 0/3 | Not started | - |
+| 13. Export & Assembly | v2.0 | 0/2 | Not started | - |
+| 14. Production Deployment | v2.0 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-16 -- Phase 10.1 planned*
-
+*Last updated: 2026-03-20 -- Phase 10 plans created*
