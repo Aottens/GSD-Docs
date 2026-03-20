@@ -1,187 +1,133 @@
 ---
 phase: 10-discussion-workflow-chat-interface
 plan: 02
-subsystem: api
-tags: [fastapi, sse, discussion-workflow, v1.0-extraction, prompts]
+subsystem: ui
+tags: [react, typescript, tanstack-query, shadcn, tailwind, lucide]
 
 # Dependency graph
 requires:
   - phase: 10-01
-    provides: Conversation and Message models, PhaseInfo Pydantic schema
+    provides: New backend phase API with filesystem-derived status, cli_command field, context-files endpoint, PhaseStatusResponse schema without conversation_id
+
 provides:
-  - Phase timeline API with filesystem-derived status
-  - Discussion API with SSE streaming for chat interface
-  - Context API for CONTEXT.md generation
-  - DiscussionEngine service orchestrating v1.0 workflow
-  - ContextGenerator service with 100-line limit
-  - Chat-optimized prompts extracted from v1.0 source files
-affects: [10-03, 10-04]
+  - Frontend cleanup: discussions feature directory deleted (14 files)
+  - Updated PhaseStatus type: cli_command added, conversation_id/discussing/available_actions removed
+  - ContextFilesData interface for context-files endpoint
+  - ProjectWorkspace stripped of Sheet/ChatPanel/Bot/assistant panel code
+  - ProjectNavigation with 5 tabs only (no Gesprekken)
+  - PhasePopover reworked: CLI command with click-to-copy, CONTEXT decisions list, verification score
+  - FaseringTab reworked: CLI command per phase card, no action buttons
+  - usePhaseContextFiles hook for lazy context-files fetching
+  - TypeScript compiles with zero errors
+
+affects: [phase-11, phase-12, phase-13, phase-14]
 
 # Tech tracking
 tech-stack:
-  added: [sse-starlette, EventSourceResponse]
-  patterns: [SSE streaming for chat, filesystem-derived status, v1.0 pattern extraction]
+  added: []
+  patterns:
+    - "CLI command display with click-to-copy using navigator.clipboard + sonner toast"
+    - "Lazy context-files fetch: only when popover open AND phase has context/verification"
+    - "PhasePopover wraps PhaseNode as PopoverTrigger — node is pure display, popover handles interaction"
 
 key-files:
-  created:
-    - backend/app/prompts/__init__.py
-    - backend/app/prompts/discuss_phase.py
-    - backend/app/services/discussion_engine.py
-    - backend/app/services/context_generator.py
-    - backend/app/api/phases.py
-    - backend/app/api/discussions.py
-    - backend/app/api/context.py
+  created: []
   modified:
-    - backend/app/api/__init__.py
-    - backend/app/main.py
+    - frontend/src/features/timeline/types/phase.ts
+    - frontend/src/features/timeline/components/PhasePopover.tsx
+    - frontend/src/features/timeline/components/FaseringTab.tsx
+    - frontend/src/features/timeline/components/PhaseTimeline.tsx
+    - frontend/src/features/timeline/components/PhaseNode.tsx
+    - frontend/src/features/timeline/hooks/usePhaseStatus.ts
+    - frontend/src/features/projects/ProjectWorkspace.tsx
+    - frontend/src/features/projects/components/ProjectNavigation.tsx
 
 key-decisions:
-  - "Extracted 40 content type keywords mapping to 9 content types from v1.0 discuss-phase.md"
-  - "Extracted gray area patterns for 7 content types with probe questions from v1.0"
-  - "Phase status derived from filesystem artifacts (CONTEXT.md, PLAN.md, SUMMARY.md) not database"
-  - "SSE streaming via sse-starlette EventSourceResponse for real-time chat"
-  - "ContextGenerator enforces 100-line limit per v1.0 Pitfall 7 mitigation"
+  - "PhaseNode uses plain <button> element wrapped by PopoverTrigger — no onClick prop needed, PopoverTrigger handles click"
+  - "usePhaseContextFiles enabled guard: isOpen AND (has_context OR has_verification) — avoids unnecessary API calls for phases without context files"
+  - "CliCommandBlock extracted as local component in both PhasePopover and FaseringTab — avoids cross-file dependency for a small UI piece"
 
 patterns-established:
-  - "Pattern 1: Content type detection using keyword mapping from v1.0"
-  - "Pattern 2: Gray area topic selection with probe questions at functional spec depth"
-  - "Pattern 3: SSE event streaming for chat with message_delta, message_complete, error, done events"
-  - "Pattern 4: Filesystem-derived status instead of database status fields"
+  - "CLI command display: monospace code block with ghost Copy button triggering navigator.clipboard and sonner toast"
+  - "Lazy popover data: useQuery with enabled flag tied to popover open state"
+
+requirements-completed: [WORK-01, WORK-02]
 
 # Metrics
-duration: 6 min
-completed: 2026-02-15
+duration: 25min
+completed: 2026-03-20
 ---
 
-# Phase 10 Plan 02: Discussion API Routes Summary
+# Phase 10 Plan 02: Frontend Cleanup and Timeline Rework Summary
 
-**FastAPI discussion workflow APIs with SSE streaming, v1.0 pattern extraction (40 keywords, 7 content types), and filesystem-derived phase status**
+**Discussions feature deleted (14 files), PhasePopover and FaseringTab reworked to show CLI commands with click-to-copy replacing action buttons, TypeScript compiles clean**
 
 ## Performance
 
-- **Duration:** 6 min
-- **Started:** 2026-02-15T20:38:43Z
-- **Completed:** 2026-02-15T20:45:19Z
-- **Tasks:** 2
-- **Files modified:** 9
+- **Duration:** ~25 min
+- **Started:** 2026-03-20T20:20:00Z
+- **Completed:** 2026-03-20T20:45:00Z
+- **Tasks:** 2 auto tasks complete, 1 checkpoint pending human verification
+- **Files modified:** 8
 
 ## Accomplishments
 
-- Extracted v1.0 content type keywords (40 keywords for 9 content types) and gray area patterns (7 content types with probe questions)
-- Created DiscussionEngine service orchestrating v1.0 workflow with chat-optimized prompts
-- Created ContextGenerator service enforcing 100-line limit
-- Built phase timeline API with filesystem-derived status
-- Built discussion API with SSE streaming for real-time chat responses
-- Built context API for CONTEXT.md generation and retrieval
-- All routers registered and server starts cleanly
+- Deleted entire `frontend/src/features/discussions/` directory (14 files: ChatPanel, ConversationHistory, ChatInput, MessageBubble, MessageList, QuestionCard, SummaryCard, SummaryPanel, TopicSelectionCard, CompletionCard, ContextPreview, useDiscussionStream, useConversationHistory, conversation types)
+- Updated `PhaseStatus` type: added `cli_command: string | null`, added `ContextFilesData` interface, removed `conversation_id`, `discussing` status, and `available_actions`
+- Stripped `ProjectWorkspace` of all Sheet/ChatPanel/Bot/ConversationHistory/handlePhaseAction code
+- Removed Gesprekken tab from `ProjectNavigation` (6 → 5 nav items, MessageSquare import removed)
+- Reworked `PhasePopover`: CLI command with click-to-copy button, lazy-loaded CONTEXT.md decisions list, verification score badge — no more action buttons
+- Reworked `FaseringTab`: CLI command per phase card with copy button — no action buttons, no discussion links
+- Added `usePhaseContextFiles` hook to `usePhaseStatus.ts` for the new `context-files` backend endpoint
+- Simplified `PhaseNode`: removed onClick prop and Clock icon, uses plain `<button>` wrapped by PopoverTrigger
+- `PhaseTimeline`: removed `onAction` prop, passes `projectId` to `PhasePopover`
+- Zero TypeScript compile errors
 
 ## Task Commits
 
 Each task was committed atomically:
 
-1. **Task 1: Discussion prompts module and discussion engine service** - `1a9d356` (feat)
-   - backend/app/prompts/__init__.py
-   - backend/app/prompts/discuss_phase.py (40 keywords, 7 content types, chat-optimized prompt builder)
-   - backend/app/services/discussion_engine.py (v1.0 workflow orchestration)
-   - backend/app/services/context_generator.py (100-line limit enforcement)
+1. **Task 1: Delete discussions, update types, clean workspace/navigation** - `8e1c9bd` (feat)
+2. **Task 2: Rework PhasePopover, FaseringTab, PhaseTimeline, PhaseNode, usePhaseStatus** - `7eb5fc0` (feat)
 
-2. **Task 2: Phase timeline API, discussion API with SSE, context API, and router registration** - `c44bf12` (feat)
-   - backend/app/api/phases.py (filesystem-derived status)
-   - backend/app/api/discussions.py (SSE streaming via EventSourceResponse)
-   - backend/app/api/context.py (CONTEXT.md generation)
-   - backend/app/api/__init__.py (router exports)
-   - backend/app/main.py (router registration)
+**Plan metadata commit:** pending (after checkpoint)
 
 ## Files Created/Modified
 
-**Created:**
-- `backend/app/prompts/__init__.py` - Prompts package
-- `backend/app/prompts/discuss_phase.py` - V1.0 extracted patterns (CONTENT_TYPE_KEYWORDS, GRAY_AREA_PATTERNS, system prompt builder)
-- `backend/app/services/discussion_engine.py` - Discussion workflow orchestration with v1.0 patterns
-- `backend/app/services/context_generator.py` - CONTEXT.md generation with 100-line limit
-- `backend/app/api/phases.py` - Phase timeline API with filesystem-derived status
-- `backend/app/api/discussions.py` - Discussion CRUD + SSE streaming endpoints
-- `backend/app/api/context.py` - CONTEXT.md generation and retrieval endpoints
-
-**Modified:**
-- `backend/app/api/__init__.py` - Added phases, discussions, context to exports
-- `backend/app/main.py` - Registered new routers
+- `frontend/src/features/timeline/types/phase.ts` - PhaseStatus type (cli_command added, conversation_id/discussing removed), ContextFilesData interface added
+- `frontend/src/features/timeline/hooks/usePhaseStatus.ts` - Added usePhaseContextFiles hook for context-files endpoint
+- `frontend/src/features/timeline/components/PhasePopover.tsx` - CLI command display with copy, context decisions, verification score; removed action buttons
+- `frontend/src/features/timeline/components/FaseringTab.tsx` - CLI command per card, progress checklist only; removed action buttons and discussion links
+- `frontend/src/features/timeline/components/PhaseTimeline.tsx` - Removed onAction prop, added projectId to PhasePopover
+- `frontend/src/features/timeline/components/PhaseNode.tsx` - Simplified: no onClick, no Clock icon, plain button element
+- `frontend/src/features/projects/ProjectWorkspace.tsx` - Removed Sheet/ChatPanel/Bot/ConversationHistory/handlePhaseAction
+- `frontend/src/features/projects/components/ProjectNavigation.tsx` - Removed Gesprekken tab and MessageSquare import
 
 ## Decisions Made
 
-1. **V1.0 fidelity in extraction**: Read v1.0 source files FIRST before implementing any discussion logic. Extracted exact patterns:
-   - Content type keywords from discuss-phase.md lines 128-140 (40 keywords mapping to 9 content types)
-   - Gray area patterns from discuss-phase.md lines 164-214 (7 content types with specific probe questions)
-   - CONTEXT.md structure from templates/context.md (XML tags: domain, decisions, specifics, deferred)
-   - Project type phases from CLAUDE-CONTEXT.md
-
-2. **Chat-optimized prompts**: Built `DISCUSSION_SYSTEM_PROMPT` by extracting core patterns from v1.0, not verbatim injection:
-   - Role and phase boundary enforcement
-   - Content type detection results
-   - Gray area probing at FULL functional spec depth
-   - Scope creep redirection to deferred ideas
-   - Summary after each topic
-   - Questions in project language (Dutch/English)
-   - Delta framing for Type C/D projects
-
-3. **Filesystem-derived phase status**: Phase status is NOT stored in database. Derived from artifact existence:
-   - CONTEXT.md → "discussed"
-   - PLAN.md → "planned"
-   - SUMMARY.md → "written"
-   - VERIFICATION.md → "verified"
-   - REVIEW.md → "reviewed"
-
-4. **SSE streaming for chat**: Use sse-starlette EventSourceResponse for real-time streaming:
-   - Events: message_delta (chunks), message_complete, question_card, summary_card, error, done
-   - Persistent connection for continuous updates during AI response generation
-
-5. **100-line CONTEXT.md limit**: ContextGenerator enforces v1.0 Pitfall 7 mitigation with priority tiers:
-   - Priority 1: Decisions that change what gets written (keep)
-   - Priority 2: Specific technical values (keep)
-   - Priority 3: General approach notes (compress or omit)
+- PhaseNode uses a plain `<button>` element instead of shadcn `Button` — PopoverTrigger from the parent PhasePopover handles the click interaction, so no `onClick` is needed on PhaseNode itself.
+- `usePhaseContextFiles` enabled guard: `isOpen && (phase.has_context || phase.has_verification)` — context files are only fetched when popover is open AND the phase actually has context or verification artifacts. Prevents unnecessary API calls for phases that have no context files.
+- `CliCommandBlock` is defined locally in both `PhasePopover.tsx` and `FaseringTab.tsx` rather than extracted to a shared utility. The component is small (15 lines) and the two use-sites have no other overlap, so extraction would add unnecessary coupling.
 
 ## Deviations from Plan
 
-None - plan executed exactly as written.
+None — plan executed exactly as written.
 
 ## Issues Encountered
 
-None
+None — TypeScript compiled clean on first attempt.
 
 ## User Setup Required
 
-None - no external service configuration required.
+None — no external service configuration required.
 
 ## Next Phase Readiness
 
-Backend APIs complete for discussion workflow. Ready for Phase 10 Plan 03 (Frontend Timeline Component).
-
-Provides:
-- Phase timeline API at `/api/projects/{project_id}/phases`
-- Discussion API at `/api/projects/{project_id}/discussions` with SSE streaming
-- Context API at `/api/projects/{project_id}/context/{phase_number}`
-
-Frontend can now:
-- Display phase timeline with status derived from filesystem
-- Create discussions and stream AI responses via SSE
-- Show real-time chat interface with message deltas
-- Generate and retrieve CONTEXT.md files
-
-## Self-Check: PASSED
-
-All created files verified:
-- backend/app/prompts/__init__.py ✓
-- backend/app/prompts/discuss_phase.py ✓
-- backend/app/services/discussion_engine.py ✓
-- backend/app/services/context_generator.py ✓
-- backend/app/api/phases.py ✓
-- backend/app/api/discussions.py ✓
-- backend/app/api/context.py ✓
-
-All commits verified:
-- 1a9d356 (Task 1) ✓
-- c44bf12 (Task 2) ✓
+- Frontend is ready for visual verification (Task 3 checkpoint)
+- Backend `context-files` endpoint (built in Plan 01) needs to be running for full popover experience
+- After checkpoint approval: proceed to Phase 11 (next cockpit phase)
+- Any pre-existing TypeScript warnings in unrelated files are out of scope
 
 ---
 *Phase: 10-discussion-workflow-chat-interface*
-*Completed: 2026-02-15*
+*Completed: 2026-03-20*
