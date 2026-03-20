@@ -16,11 +16,6 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./gsd_docs.db"
 
-    # LLM Configuration
-    LLM_PROVIDER: str = "anthropic"
-    LLM_MODEL: str = "anthropic/claude-sonnet-4-20250514"
-    ANTHROPIC_API_KEY: str = ""  # Optional - app starts without it
-
     # CORS
     CORS_ORIGINS: list[str] = Field(default=["http://localhost:5173"])
 
@@ -45,6 +40,9 @@ class Settings(BaseSettings):
 
     # Path to v1.0 source files
     V1_DOCS_PATH: str = "./gsd-docs-industrial"
+
+    # Path to project directories (for filesystem-based phase status)
+    PROJECT_ROOT: str = "./projects"
 
     model_config = SettingsConfigDict(
         env_file=".env",
