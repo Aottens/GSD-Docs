@@ -102,11 +102,12 @@ Plans:
   4. Engineer can view Mermaid diagrams rendered inline
   5. Engineer can view generated section plans and wave assignments
 
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 11-01: TBD
-- [ ] 11-02: TBD
+- [ ] 11-01-PLAN.md — Backend document API + type contracts: outline endpoint (fds-structure.json tree builder with Type C/D baseline handling), section content endpoint, PLAN.md frontmatter parser, Pydantic schemas, TypeScript types, pytest test scaffolding
+- [ ] 11-02-PLAN.md — Frontend document components: DocumentsTab (ResizablePanelGroup), OutlinePanel + OutlineNode (tree with status icons/wave badges), ContentPanel + SectionBlock (markdown rendering), MermaidDiagram (SVG with fallback), PlanCard + EmptySectionCard, React Query hooks with polling, scroll-spy
+- [ ] 11-03-PLAN.md — Workspace integration: enable Documents navigation, wire DocumentsTab into ProjectWorkspace, enable "Documenten bekijken" quick action, human verification checkpoint
 
 #### Phase 12: Review Interface
 
@@ -189,11 +190,11 @@ Plans:
 | ~~10. Discussion Workflow~~ | v2.0 | 4/4 | Superseded | 2026-02-15 |
 | ~~10.1 Discussion behavior rework~~ | v2.0 | 7/9 | Superseded | - |
 | 10. Workflow Status & Cleanup | 2/2 | Complete    | 2026-03-20 | - |
-| 11. Document Preview & Outline | v2.0 | 0/2 | Not started | - |
+| 11. Document Preview & Outline | v2.0 | 0/3 | Not started | - |
 | 12. Review Interface | v2.0 | 0/3 | Not started | - |
 | 13. Export & Assembly | v2.0 | 0/2 | Not started | - |
 | 14. Production Deployment | v2.0 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-03-20 -- Phase 10 plans created*
+*Last updated: 2026-03-20 -- Phase 11 plans created*
