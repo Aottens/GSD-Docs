@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A web-based application for writing industrial FDS (Functional Design Specification) and SDS (Software Design Specification) documents. Built on the proven GSD-Docs workflow (v1.0 shipped as Claude Code plugin), the GUI provides a visual interface with project wizard, phase timeline, document preview, reference library, and embedded chat — making the FDS/SDS workflow accessible to engineering teams without CLI knowledge. FastAPI backend orchestrates Claude API calls using the domain knowledge from v1.0; React frontend provides the engineer's cockpit.
+A web-based cockpit for managing industrial FDS (Functional Design Specification) and SDS (Software Design Specification) document projects. Built on the proven GSD-Docs workflow (v1.0 shipped as Claude Code plugin), the GUI is a companion to the CLI — handling visual tasks (dashboard, preview, review, export) that the terminal can't do well. AI-driven operations (discuss, plan, write, verify) stay in the CLI where they work best. FastAPI backend serves as a file/project management API; React frontend provides the engineer's cockpit.
 
 ## Core Value
 
@@ -10,16 +10,17 @@ Engineers can create, manage, and review FDS/SDS projects through a visual web i
 
 ## Current Milestone: v2.0 GUI
 
-**Goal:** Build a web-based GUI that wraps the proven v1.0 FDS/SDS workflow in a visual, team-accessible interface.
+**Goal:** Build a web-based cockpit that complements the CLI for visual tasks — status tracking, document preview, section review, and DOCX export.
 
 **Target features:**
 - Project wizard (type classification, language, reference file upload)
-- Phase timeline + document outline as main working view
-- Embedded chat panel for discussion phases
-- Automated writing with progress feedback, human-in-the-loop verification
+- Phase timeline with status tracking and next recommended CLI command
+- Document outline tree with rendered preview (markdown → HTML, Mermaid diagrams)
+- Section-by-section review with approve/reject/request-changes workflow
+- Verification and standards compliance result display (from CLI output files)
 - Reference library (shared standards/typicals + per-project uploads/overrides)
-- Rendered document preview (not raw Markdown)
-- Full workflow coverage (all 14 /doc:* steps through the GUI)
+- FDS assembly and DOCX export with corporate styling
+- SDS scaffolding display with typicals matching scores
 - Team server deployment (VM, browser access)
 
 ## Requirements
@@ -50,9 +51,9 @@ Engineers can create, manage, and review FDS/SDS projects through a visual web i
 
 ### Active
 
-- [ ] Web-based GUI with project wizard, phase timeline, and document preview
-- [ ] FastAPI backend orchestrating Claude API calls with v1.0 workflow logic
-- [ ] React frontend with dashboard, chat panel, and reference management
+- [ ] Web-based cockpit with project wizard, phase timeline, document preview, and review
+- [ ] FastAPI backend as file/project management API (no LLM orchestration — CLI handles AI)
+- [ ] React frontend with dashboard, document preview, review interface, and export
 - [ ] Reference library with shared + per-project file management
 - [ ] Team server deployment (VM, Nginx reverse proxy)
 
@@ -74,7 +75,7 @@ Engineers can create, manage, and review FDS/SDS projects through a visual web i
 
 **v1.0 architecture:** Commands as frontmatter-driven .md files in `~/.claude/commands/doc/`, supporting files in `~/.claude/gsd-docs-industrial/`. SPECIFICATION.md v2.7.0 is the SSOT. Domain knowledge (templates, section structures, verification criteria, prompt patterns) transfers to v2.0 as API prompt context.
 
-**v2.0 architecture:** FastAPI backend replaces Claude Code as workflow orchestrator. React frontend replaces terminal as user interface. Claude API (Anthropic SDK) replaces Claude Code's built-in LLM access. LLM provider abstracted behind interface for future local model support (v3.0). SQLite for project/file metadata. Deployed on VM with Nginx reverse proxy.
+**v2.0 architecture:** FastAPI backend serves as file/project management API — no LLM orchestration needed since AI operations stay in the CLI. React frontend is a companion cockpit for visual tasks. SQLite for project/file metadata. Deployed on VM with Nginx reverse proxy.
 
 **Users:** Industrial automation engineering team writing FDS/SDS documents for client projects. Team server deployment — engineers access via browser. No Docker available; VM-based hosting.
 
@@ -84,8 +85,7 @@ Engineers can create, manage, and review FDS/SDS projects through a visual web i
 
 - **Tech stack**: FastAPI (Python) backend + React (TypeScript) frontend
 - **Deployment**: VM-based, no Docker. Nginx reverse proxy, systemd services
-- **API dependency**: Claude API (Anthropic) required for AI features; offline mode limited to review/export
-- **LLM abstraction**: Provider interface must support future swap to local models (v3.0)
+- **No LLM orchestration in GUI**: AI operations handled by CLI; backend is a file/project management API
 - **CLI compatibility**: Project file format must remain compatible with v1.0 `/doc:*` commands
 - **Domain knowledge reuse**: v1.0 templates, section structures, and prompt patterns are the SSOT for document generation logic
 - **v1.0 fidelity (HARD RULE)**: v2.0 must faithfully reproduce all v1.0 behavior and domain content. Plans MUST reference specific v1.0 source files (path + section) for any domain content — never paraphrase or simplify. Executors MUST read the referenced v1.0 files before implementing. Verifiers MUST cross-check against v1.0 originals. Key v1.0 sources: `gsd-docs-industrial/SPECIFICATION.md` (SSOT), `gsd-docs-industrial/templates/`, `gsd-docs-industrial/references/`
@@ -107,11 +107,11 @@ Engineers can create, manage, and review FDS/SDS projects through a visual web i
 | Typicals matching with confidence scoring | Prevents hallucinated SDS content for unknown equipment | ✓ Good -- NEW TYPICAL NEEDED for unmatched |
 | Pandoc + huisstijl.docx for export | Industry-standard toolchain, corporate styling | ✓ Good -- graceful degradation with --draft/--skip-diagrams |
 | Plugin files in project repo, installed via junctions | No admin required, version-controlled | ✓ Good -- install.ps1 handles setup |
-| FastAPI + React for v2.0 GUI | Full control over UI, proper web app architecture, model-agnostic | -- Pending |
-| LLM provider abstraction | Enables local model support in v3.0 without rewriting orchestration | -- Pending |
+| GUI as cockpit, not AI wrapper | Phase 10/10.1 proved embedded chat feels forced vs CLI. Team has Claude via Copilot. GUI handles visual tasks (status, preview, review, export); AI stays in CLI | ✓ Good -- eliminates 7 requirements, simplifies backend, plays to GUI strengths |
+| FastAPI + React for v2.0 GUI | Full control over UI, proper web app architecture | -- Pending |
 | SQLite for metadata | Lightweight, zero-config, sufficient for single-server deployment | -- Pending |
 | VM deployment (no Docker) | Company policy; systemd + Nginx is proven and maintainable | -- Pending |
 | Mock + Ollama for dev, no paid API | Zero cost during development; MockLLMProvider for canned responses + Ollama/LiteLLM for local models (DeepSeek, Llama). Paid API only at production deploy | -- Pending |
 
 ---
-*Last updated: 2026-02-14 after v2.0 milestone started*
+*Last updated: 2026-03-20 -- Phase 10 complete: discussion/LLM code removed, phase API reworked to filesystem-based status, frontend cleaned up with CLI command guidance*
