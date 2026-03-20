@@ -61,30 +61,33 @@ Declared values (multiples of 4 — consistent with existing codebase pattern):
 
 This phase has two typography contexts: (1) **UI chrome** (outline panel, status messages, badges) and (2) **Document content** (rendered markdown in the content panel). Both use the same system sans-serif font.
 
-### UI Chrome Typography
+**Consolidated font size scale (4 sizes total — document content context drives the scale):**
 
-| Role | Size | Weight | Line Height | Usage |
-|------|------|--------|-------------|-------|
-| Label | 12px (text-xs) | 500 (medium) | 1.4 | Tree node section numbers, wave badges, status text |
-| Body | 14px (text-sm) | 400 (regular) | 1.5 | Tree node titles, snippet previews, panel descriptions |
-| Heading | 18px (text-lg) | 600 (semibold) | 1.3 | Panel headings ("Document Overzicht"), card titles |
-| Mono | 12px (text-xs font-mono) | 400 (regular) | 1.4 | CLI command display in empty section cards |
+| Size | Tailwind class | Usage across both contexts |
+|------|---------------|---------------------------|
+| 14px | `text-sm` | Labels, tree node titles, snippet previews, table cells, code blocks, badges, CLI command display (font-mono), section metadata |
+| 16px | `text-base` | Document body text, panel descriptions, UI body text |
+| 22px | `text-2xl` | Document h2 and h3 headings, panel headings ("Documentstructuur") |
+| 28px | `text-3xl` | Document h1 / display title (section 1 heading) |
 
-Source: Consistent with existing FaseringTab (`text-2xl font-bold` for page titles, `text-sm`/`text-xs` for content, `font-mono text-xs` for CLI commands).
+**Font weights (2 weights total):**
 
-### Document Content Typography (markdown renderer via react-markdown components prop)
+| Weight | Usage |
+|--------|-------|
+| 400 (regular) | All body text, labels, table cells, snippets, code, captions, metadata |
+| 600 (semibold) | All headings (h1, h2, h3), panel headings, card titles |
 
-| Role | Size | Weight | Line Height | Usage |
-|------|------|--------|-------------|-------|
-| h1 | 28px (text-3xl) | 700 (bold) | 1.2 | Document title (section 1 heading) |
-| h2 | 22px (text-2xl) | 600 (semibold) | 1.25 | Top-level section headings (1., 2., 3.) |
-| h3 | 18px (text-lg) | 600 (semibold) | 1.3 | Sub-section headings (1.1, 4.2.3) |
-| Body | 16px (text-base) | 400 (regular) | 1.7 | Document body text — generous line-height for readability |
-| Table cell | 14px (text-sm) | 400 (regular) | 1.5 | Table content |
-| Code block | 13px (text-[13px] font-mono) | 400 (regular) | 1.5 | Non-mermaid code fences |
-| Caption/note | 12px (text-xs) | 400 (regular) | 1.4 | Section number badge text, plan card metadata |
+**Line heights:**
+
+| Context | Line height | Usage |
+|---------|-------------|-------|
+| 1.2 | Headings (28px, 22px) | Tight heading display |
+| 1.5 | Labels, UI body (14px, 16px chrome) | Standard readability |
+| 1.7 | Document body (16px content) | Generous line-height for long-form reading |
 
 **Max content width:** 720px centered in the content panel — prevents ultra-wide lines for readability on large screens.
+
+Source: Consolidated from checker feedback — 7 sizes reduced to 4; 4 weights reduced to 2. 13px code → 14px. 12px labels → 14px. 18px h3/UI heading → 22px (headings) or 16px (UI body). 500 medium → 400. 700 bold → 600.
 
 ---
 
@@ -133,6 +136,22 @@ Source: CONTEXT.md (progressive status icons) + PhaseNode.tsx (established icon/
 
 ---
 
+## Visuals
+
+**Primary visual anchor:** Rendered document content in the content panel (right panel) is the primary focal point. The outline panel is a navigation aid — it must never visually compete with the content.
+
+**Focal hierarchy:**
+1. Content panel body text and headings — dominant weight, maximum contrast
+2. Section header dividers with number badge and wave badge — secondary emphasis
+3. Outline panel tree nodes — tertiary, muted background
+
+**Icon accessibility:**
+- Expand/collapse chevron on outline tree nodes: `aria-label="Sectie uitvouwen"` (collapsed state) / `aria-label="Sectie inklappen"` (expanded state)
+- Status icons: `aria-label="{status label}"` matching the Dutch status label (e.g., `aria-label="Gepland"`)
+- Wave badge icons: decorative — `aria-hidden="true"` on the colored badge; status conveyed by text label
+
+---
+
 ## Copywriting Contract
 
 All UI copy in Dutch. Section titles use project language (nl/en) per fds-structure.json bilingual titles.
@@ -146,7 +165,7 @@ All UI copy in Dutch. Section titles use project language (nl/en) per fds-struct
 | Content panel empty body (fresh project) | "Dit project heeft nog geen gegenereerde secties. Voer `/doc:plan-phase` uit in de CLI om te beginnen." |
 | Content panel empty body (section planned, not written) | "Deze sectie is gepland maar nog niet geschreven. Voer `/doc:write-phase` uit om inhoud te genereren." |
 | Error state — outline load fail | "Documentstructuur kon niet worden geladen. Controleer of het project bestaat en probeer opnieuw." |
-| Error state — section content load fail | "Sectie-inhoud kon niet worden geladen." |
+| Error state — section content load fail | "Sectie-inhoud kon niet worden geladen. Ververs de pagina of controleer de verbinding met de server." |
 | Error state — mermaid render fail | (silent fallback to code block — no error message shown to user) |
 | Section status — empty | "Leeg" |
 | Section status — planned | "Gepland" |
@@ -205,12 +224,13 @@ New hooks:
 ### Outline Tree
 
 - Expand/collapse: top-level nodes (depth 1) expanded by default; depth 2+ collapsed by default; toggle on click of chevron icon (separate from node click)
+- Chevron icon: `aria-label="Sectie uitvouwen"` when collapsed, `aria-label="Sectie inklappen"` when expanded
 - Select a node: scrolls content panel to `section-{id}` element via `scrollIntoView({ behavior: 'smooth' })`
 - After programmatic scroll: suppress scroll-spy for 600ms via `isScrolling` ref (per RESEARCH.md Pitfall 3)
 - Active node highlight: `bg-accent` background on currently scroll-spy-active node
 - Hover state: `hover:bg-accent` on all nodes (matches PhaseNode pattern)
 - Wave badge: shown on nodes with `has_plan === true`; positioned to the right of the status icon
-- Preview snippet: shown as second line in `text-xs text-muted-foreground` when `has_content === true`; max 80 chars, truncated with ellipsis
+- Preview snippet: shown as second line in `text-sm text-muted-foreground` when `has_content === true`; max 80 chars, truncated with ellipsis
 - Dependencies tooltip: `Tooltip` on wave badge hover showing "Afhankelijk van: {ids}" when `depends_on.length > 0`
 
 ### Content Panel
@@ -225,7 +245,7 @@ New hooks:
 ### Section Block Header
 
 - Light horizontal `<Separator />` rule above each top-level section
-- Section number shown as `bg-muted rounded text-xs px-1.5 py-0.5` badge inline with title
+- Section number shown as `bg-muted rounded text-sm px-1.5 py-0.5` badge inline with title
 - Phase badge (wave) shown as colored badge matching wave color scheme
 
 ### Plan Card (planned but unwritten sections)
@@ -248,7 +268,7 @@ New hooks:
 - `securityLevel: 'loose'` for stateDiagram-v2 compatibility
 - `mermaid.render(uniqueId, chart)` → Promise resolving to `{ svg }` — rendered via `dangerouslySetInnerHTML`
 - Loading state: `<Skeleton className="h-48 w-full" />` while SVG renders
-- Error fallback: `<pre><code className="text-xs">{chart}</code></pre>` — silent, no error badge
+- Error fallback: `<pre><code className="text-sm">{chart}</code></pre>` — silent, no error badge
 
 ### Polling & Data Freshness
 
@@ -307,6 +327,11 @@ No third-party shadcn registries declared for this phase.
 | Outline node depth indentation 12px per level | Claude's Discretion |
 | Wave badge label "G{N}" (Golf = Dutch for Wave) | Claude's Discretion + Dutch UI requirement |
 | W4+ wave color purple | Claude's Discretion (extending W1-W3 pattern) |
+| Typography consolidated to 4 sizes (14/16/22/28px) | Checker revision — reduced from 7 sizes |
+| Font weights consolidated to 2 (400/600) | Checker revision — reduced from 4 weights |
+| Error copy for section content includes solution path | Checker revision — added "Ververs de pagina of controleer de verbinding met de server." |
+| Primary visual anchor declared (content panel) | Checker recommendation |
+| Chevron aria-labels declared | Checker recommendation |
 
 ---
 
@@ -325,4 +350,5 @@ No third-party shadcn registries declared for this phase.
 
 *Phase: 11-document-preview-outline*
 *UI-SPEC created: 2026-03-20*
+*UI-SPEC revised: 2026-03-20 (checker revision — typography, copywriting, visuals)*
 *Researcher: gsd-ui-researcher*
