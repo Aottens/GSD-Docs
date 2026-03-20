@@ -84,8 +84,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 10-01-PLAN.md — Backend cleanup + rework: remove discussion/LLM code, extract PROJECT_TYPE_PHASES, rework phase API for filesystem-based status, add CLI command mapping, add context-files endpoint, create Alembic migration
-- [ ] 10-02-PLAN.md — Frontend cleanup + rework: remove discussions feature, remove assistant panel, update phase types, rework PhasePopover with CLI command display + context/verification info, update FaseringTab
+- [x] 10-01-PLAN.md — Backend cleanup + rework: remove discussion/LLM code, extract PROJECT_TYPE_PHASES, rework phase API for filesystem-based status, add CLI command mapping, add context-files endpoint, create Alembic migration
+- [x] 10-02-PLAN.md — Frontend cleanup + rework: remove discussions feature, remove assistant panel, update phase types, rework PhasePopover with CLI command display + context/verification info, update FaseringTab
 
 #### Phase 11: Document Preview & Outline
 

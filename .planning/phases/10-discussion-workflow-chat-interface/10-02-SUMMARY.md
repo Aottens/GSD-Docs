@@ -67,7 +67,7 @@ completed: 2026-03-20
 - **Duration:** ~25 min
 - **Started:** 2026-03-20T20:20:00Z
 - **Completed:** 2026-03-20T20:45:00Z
-- **Tasks:** 2 auto tasks complete, 1 checkpoint pending human verification
+- **Tasks:** 3 tasks complete (2 auto + 1 checkpoint, human-verified and approved)
 - **Files modified:** 8
 
 ## Accomplishments
@@ -90,7 +90,7 @@ Each task was committed atomically:
 1. **Task 1: Delete discussions, update types, clean workspace/navigation** - `8e1c9bd` (feat)
 2. **Task 2: Rework PhasePopover, FaseringTab, PhaseTimeline, PhaseNode, usePhaseStatus** - `7eb5fc0` (feat)
 
-**Plan metadata commit:** pending (after checkpoint)
+**Plan metadata commit:** d90c789 (docs)
 
 ## Files Created/Modified
 
@@ -121,11 +121,17 @@ None — TypeScript compiled clean on first attempt.
 
 None — no external service configuration required.
 
+## Checkpoint Approval
+
+**Task 3 (human-verify):** Approved — 2026-03-20.
+
+Visual verification passed: phase timeline renders with filesystem-based status icons, phase popovers show CLI commands with copy button, FaseringTab shows CLI commands per card, all discussion UI remnants confirmed removed (no Gesprekken tab, no assistant panel, no Sheet). Some timeline elements broken due to expected API rework (backend not yet connected) — accepted as intended state.
+
 ## Next Phase Readiness
 
-- Frontend is ready for visual verification (Task 3 checkpoint)
+- Phase 10 (Workflow Status & Cleanup) is complete
 - Backend `context-files` endpoint (built in Plan 01) needs to be running for full popover experience
-- After checkpoint approval: proceed to Phase 11 (next cockpit phase)
+- Proceed to Phase 11 (Document Preview & Outline)
 - Any pre-existing TypeScript warnings in unrelated files are out of scope
 
 ---
