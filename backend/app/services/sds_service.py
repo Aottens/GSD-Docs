@@ -34,8 +34,8 @@ def load_catalog(project_dir: Path) -> Optional[list[dict]]:
     try:
         with open(catalog_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-        typicals = data.get("typicals", [])
-        if isinstance(typicals, list):
+        typicals = data.get("typicals")
+        if isinstance(typicals, list) and len(typicals) > 0:
             return typicals
         return None
     except (OSError, json.JSONDecodeError):
