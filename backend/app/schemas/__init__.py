@@ -21,6 +21,12 @@ from app.schemas.phase import (
     PhaseTimelineResponse,
     ContextFilesResponse,
 )
+from app.schemas.document import (
+    OutlineNodeSchema,
+    PlanInfoSchema,
+    DocumentOutlineResponse,
+    SectionContentResponse,
+)
 
 __all__ = [
     "ProjectBase",
@@ -38,4 +44,8 @@ __all__ = [
     "PhaseStatusResponse",
     "PhaseTimelineResponse",
     "ContextFilesResponse",
+    "OutlineNodeSchema",
+    "PlanInfoSchema",
+    "DocumentOutlineResponse",
+    "SectionContentResponse",
 ]
