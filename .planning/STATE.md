@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: GUI
 status: unknown
-stopped_at: Phase 13 context gathered
-last_updated: "2026-03-21T18:06:26.963Z"
+stopped_at: Completed 13-01-PLAN.md
+last_updated: "2026-03-21T19:03:48.873Z"
 progress:
   total_phases: 7
   completed_phases: 5
-  total_plans: 13
-  completed_plans: 13
+  total_plans: 17
+  completed_plans: 14
   percent: 92
 ---
 
@@ -20,12 +20,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Engineers can create, manage, and review FDS/SDS projects through a visual web cockpit that handles status, preview, review, and export — AI operations stay in CLI
-**Current focus:** Phase 12 — review-interface
+**Current focus:** Phase 13 — export-assembly
 
 ## Current Position
 
-Phase: 12 (review-interface) — COMPLETE
-Plan: 3 of 3
+Phase: 13 (export-assembly) — EXECUTING
+Plan: 1 of 4
 
 ## Progress
 
@@ -173,6 +173,8 @@ Recent decisions affecting v2.0:
 - [Phase 12-03]: ProjectWorkspace selects most recent phase with has_verification=true via usePhaseTimeline — automatic review activation, no mode switch needed
 - [Phase 12-03]: Conditional ReviewProvider in DocumentsTab — wraps content tree only when phaseNumber is defined, preserving backward compat for phases without verification
 - [Phase 12-03]: overflow-auto (not overflow-hidden) required on ProjectWorkspace tab panels to preserve scroll on Overview/Fases tabs
+- [Phase 13]: Draft mode injects CONCEPT header text into assembled markdown (not Pandoc watermark background)
+- [Phase 13]: Version scheme FDS-v{major}.{minor}_{mode}_{language}.docx: minor increments per same mode+language run
 
 ### Roadmap Evolution
 
@@ -185,8 +187,8 @@ None — cockpit pivot clears all previous discussion-engine blockers.
 
 ## Session Continuity
 
-Last session: 2026-03-21T18:06:26.960Z
-Stopped at: Phase 13 context gathered
+Last session: 2026-03-21T19:03:48.871Z
+Stopped at: Completed 13-01-PLAN.md
 
 **Next step:** Start Phase 13 (Export Interface) — `/gsd:discuss-phase 13` or `/gsd:plan-phase 13`
 

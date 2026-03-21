@@ -54,12 +54,12 @@ Requirements for v2.0 release. Each maps to roadmap phases.
 ### Document Output
 
 - [x] **OUTP-01**: Engineer can preview rendered document content with Mermaid diagram rendering
-- [ ] **OUTP-02**: Engineer can trigger FDS assembly with cross-reference resolution
-- [ ] **OUTP-03**: Engineer can export FDS/SDS to DOCX with corporate styling
-- [ ] **OUTP-04**: Engineer can see export progress during DOCX generation
+- [x] **OUTP-02**: Engineer can trigger FDS assembly with cross-reference resolution
+- [x] **OUTP-03**: Engineer can export FDS/SDS to DOCX with corporate styling
+- [x] **OUTP-04**: Engineer can see export progress during DOCX generation
 - [ ] **OUTP-05**: Engineer can trigger SDS scaffolding from completed FDS with typicals matching
 - [ ] **OUTP-06**: Engineer can see typicals matching confidence scores and "NEW TYPICAL NEEDED" indicators
-- [ ] **OUTP-07**: Engineer can generate documents in Dutch or English based on project setting
+- [x] **OUTP-07**: Engineer can generate documents in Dutch or English based on project setting
 
 ### System & Deployment
 
@@ -142,12 +142,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REFM-04 | Phase 9 | Pending |
 | REFM-05 | Phase 9 | Pending |
 | OUTP-01 | Phase 11 | Complete |
-| OUTP-02 | Phase 13 | Pending |
-| OUTP-03 | Phase 13 | Pending |
-| OUTP-04 | Phase 13 | Pending |
+| OUTP-02 | Phase 13 | Complete |
+| OUTP-03 | Phase 13 | Complete |
+| OUTP-04 | Phase 13 | Complete |
 | OUTP-05 | Phase 13 | Pending |
 | OUTP-06 | Phase 13 | Pending |
-| OUTP-07 | Phase 13 | Pending |
+| OUTP-07 | Phase 13 | Complete |
 | SYST-01 | Phase 14 | Pending |
 | SYST-02 | Phase 14 | Pending |
 | SYST-03 | Phase 14 | Pending |
