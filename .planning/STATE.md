@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: GUI
 status: unknown
-stopped_at: Completed 13-export-assembly 13-04-PLAN.md
-last_updated: "2026-03-21T19:08:57.049Z"
+stopped_at: Completed 13-export-assembly 13-03-PLAN.md
+last_updated: "2026-03-21T19:09:47.120Z"
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 17
-  completed_plans: 16
-  percent: 88
+  completed_plans: 17
+  percent: 94
 ---
 
 # STATE.md -- GSD-Docs Industrial
@@ -179,6 +179,8 @@ Recent decisions affecting v2.0:
 - [Phase 13-export-assembly]: load_catalog returns None for empty typicals — triggers skeleton mode (sds-service)
 - [Phase 13-export-assembly]: Expandable table rows use sibling TableRow (colSpan=5) instead of Collapsible wrapper for cleaner HTML table structure
 - [Phase 13-export-assembly]: SdsTab uses overflow-auto without p-6 in workspace — component manages its own padding
+- [Phase 13-export-assembly]: ExportTab owns mode/exportLanguage state — pipeline is single-tab, no cross-tab sharing needed (13-03)
+- [Phase 13-export-assembly]: useAssemblyStream uses EventSource with eventSourceRef for cancel/cleanup, onerror sets isRunning=false (13-03)
 
 ### Roadmap Evolution
 
@@ -191,8 +193,8 @@ None — cockpit pivot clears all previous discussion-engine blockers.
 
 ## Session Continuity
 
-Last session: 2026-03-21T19:08:57.046Z
-Stopped at: Completed 13-export-assembly 13-04-PLAN.md
+Last session: 2026-03-21T19:09:40.075Z
+Stopped at: Completed 13-export-assembly 13-03-PLAN.md
 
 **Next step:** Start Phase 13 (Export Interface) — `/gsd:discuss-phase 13` or `/gsd:plan-phase 13`
 
