@@ -8,8 +8,11 @@ import { useSectionContent } from '../hooks/useSectionContent'
 import { MermaidDiagram } from './MermaidDiagram'
 import { PlanCard } from './PlanCard'
 import { EmptySectionCard } from './EmptySectionCard'
+import { VerificationDetailPanel } from './VerificationDetailPanel'
+import { ReviewActionBar } from './ReviewActionBar'
 import type { OutlineNode } from '../types/document'
 import type { Components } from 'react-markdown'
+import type { VerificationDetail } from '../types/verification'
 
 function getWaveColor(wave: number): string {
   if (wave === 1) return 'bg-blue-500/10 text-blue-500 border-blue-500/20'
@@ -79,6 +82,9 @@ interface SectionBlockProps {
   node: OutlineNode
   language: 'nl' | 'en'
   projectId: number
+  phaseNumber?: number
+  phaseHasVerification?: boolean
+  verificationData?: VerificationDetail | null
   depth?: number
 }
 
@@ -142,7 +148,7 @@ function SectionContent({
   )
 }
 
-export function SectionBlock({ node, language, projectId, depth = 1 }: SectionBlockProps) {
+export function SectionBlock({ node, language, projectId, phaseNumber, phaseHasVerification, verificationData, depth = 1 }: SectionBlockProps) {
   const title = node.title[language]
 
   return (
@@ -174,6 +180,22 @@ export function SectionBlock({ node, language, projectId, depth = 1 }: SectionBl
         <SectionContent node={node} language={language} projectId={projectId} />
       )}
 
+      {/* Verification detail + Review controls — leaf nodes only, when phase has verification */}
+      {phaseHasVerification && verificationData?.has_verification && node.children.length === 0 && (
+        <div className="transition-all duration-150">
+          {/* Verification detail panel — sibling to review bar, not nested */}
+          <VerificationDetailPanel
+            truths={verificationData.truths}
+            currentCycle={verificationData.current_cycle}
+            maxCycles={verificationData.max_cycles}
+            isBlocked={verificationData.is_blocked}
+            phaseNumber={phaseNumber!}
+          />
+          {/* Review action bar — always below verification panel */}
+          <ReviewActionBar sectionId={node.id} />
+        </div>
+      )}
+
       {/* Children */}
       {node.children.map(child => (
         <SectionBlock
@@ -181,6 +203,9 @@ export function SectionBlock({ node, language, projectId, depth = 1 }: SectionBl
           node={child}
           language={language}
           projectId={projectId}
+          phaseNumber={phaseNumber}
+          phaseHasVerification={phaseHasVerification}
+          verificationData={verificationData}
           depth={depth + 1}
         />
       ))}
