@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: GUI
 status: unknown
-stopped_at: Completed 12-review-interface-01-PLAN.md
-last_updated: "2026-03-21T13:50:06.240Z"
+stopped_at: Completed 12-review-interface-02-PLAN.md
+last_updated: "2026-03-21T13:54:19.472Z"
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 13
-  completed_plans: 11
-  percent: 90
+  completed_plans: 12
+  percent: 85
 ---
 
 # STATE.md -- GSD-Docs Industrial
@@ -167,6 +167,8 @@ Recent decisions affecting v2.0:
 - [Phase 12-review-interface]: useReviewContext returns ReviewContextValue | null (not throws) — avoids React Rules of Hooks violation when called outside provider
 - [Phase 12-review-interface]: exportAsJson maps Dutch: goedgekeurd->Approved, opmerking->Comment, afgewezen->Flag (REVIEW.md template format)
 - [Phase 12-review-interface]: Standards violations extracted via regex matching PackML/ISA-88/IEC/EN/NEN references in gap description text
+- [Phase 12-review-interface]: Collapsible collapsed by default — engineer expands on demand, preserves reading flow
+- [Phase 12-review-interface]: Phase-level truths shown on all leaf sections by design — VERIFICATION.md verifies phase-level truths, evidence_files filtering deferred
 
 ### Roadmap Evolution
 
@@ -179,8 +181,8 @@ None — cockpit pivot clears all previous discussion-engine blockers.
 
 ## Session Continuity
 
-Last session: 2026-03-21T13:50:06.237Z
-Stopped at: Completed 12-review-interface-01-PLAN.md
+Last session: 2026-03-21T13:54:11.756Z
+Stopped at: Completed 12-review-interface-02-PLAN.md
 
 **Next step:** Start Phase 11 (Document Preview & Outline) — `/gsd:discuss-phase 11` or `/gsd:plan-phase 11`
 
