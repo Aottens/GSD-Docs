@@ -34,12 +34,12 @@ Requirements for v2.0 release. Each maps to roadmap phases.
 
 ### Quality & Review
 
-- [ ] **QUAL-01**: Engineer can view verification results from CLI output in the GUI
-- [ ] **QUAL-02**: Engineer can view gaps, severity, and recommendations from verification
-- [ ] **QUAL-03**: Engineer can see gap closure cycle status (verify → re-plan → re-write)
+- [x] **QUAL-01**: Engineer can view verification results from CLI output in the GUI
+- [x] **QUAL-02**: Engineer can view gaps, severity, and recommendations from verification
+- [x] **QUAL-03**: Engineer can see gap closure cycle status (verify → re-plan → re-write)
 - [ ] **QUAL-04**: Engineer can approve or reject verification results before proceeding
 - [ ] **QUAL-05**: Engineer can conduct review-phase with approve/reject/request-changes per section
-- [ ] **QUAL-06**: Engineer can provide text feedback during review that feeds back into the workflow
+- [x] **QUAL-06**: Engineer can provide text feedback during review that feeds back into the workflow
 - [ ] **QUAL-07**: Engineer can view PackML/ISA-88 standards compliance results in the GUI
 - [ ] **QUAL-08**: Engineer can view standards violations with references to standard sections
 
@@ -128,12 +128,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DOCG-02 | Dropped | CLI |
 | DOCG-03 | Dropped | CLI |
 | DOCG-04 | Dropped | CLI |
-| QUAL-01 | Phase 12 | Pending |
-| QUAL-02 | Phase 12 | Pending |
-| QUAL-03 | Phase 12 | Pending |
+| QUAL-01 | Phase 12 | Complete |
+| QUAL-02 | Phase 12 | Complete |
+| QUAL-03 | Phase 12 | Complete |
 | QUAL-04 | Phase 12 | Pending |
 | QUAL-05 | Phase 12 | Pending |
-| QUAL-06 | Phase 12 | Pending |
+| QUAL-06 | Phase 12 | Complete |
 | QUAL-07 | Phase 12 | Pending |
 | QUAL-08 | Phase 12 | Pending |
 | REFM-01 | Phase 9 | Pending |

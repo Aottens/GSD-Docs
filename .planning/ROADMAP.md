@@ -191,7 +191,7 @@ Plans:
 | ~~10.1 Discussion behavior rework~~ | v2.0 | 7/9 | Superseded | - |
 | 10. Workflow Status & Cleanup | 2/2 | Complete    | 2026-03-20 | - |
 | 11. Document Preview & Outline | 3/3 | Complete    | 2026-03-21 | - |
-| 12. Review Interface | v2.0 | 0/3 | Planned | - |
+| 12. Review Interface | 1/3 | In Progress|  | - |
 | 13. Export & Assembly | v2.0 | 0/2 | Not started | - |
 | 14. Production Deployment | v2.0 | 0/2 | Not started | - |
 

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: GUI
 status: unknown
-stopped_at: Phase 12 context gathered
-last_updated: "2026-03-21T13:12:56.301Z"
+stopped_at: Completed 12-review-interface-01-PLAN.md
+last_updated: "2026-03-21T13:50:06.240Z"
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 10
-  completed_plans: 10
+  total_plans: 13
+  completed_plans: 11
   percent: 90
 ---
 
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Engineers can create, manage, and review FDS/SDS projects through a visual web cockpit that handles status, preview, review, and export — AI operations stay in CLI
-**Current focus:** Phase 11 — document-preview-outline
+**Current focus:** Phase 12 — review-interface
 
 ## Current Position
 
-Phase: 11 (document-preview-outline) — EXECUTING
-Plan: 1 of 3
+Phase: 12 (review-interface) — EXECUTING
+Plan: 2 of 3
 
 ## Progress
 
-Progress: [█████████░] 90% (Phase 11 in progress — plan 2/3 complete)
+Progress: [█████████░] 85% (Phase 12 in progress — plan 1/3 complete)
 
 v1.0 milestone: 7 phases, 33 plans - Complete ✓
 v2.0 milestone: 7 phases — Phases 8, 9, 10 complete. Old 10/10.1 superseded by cockpit pivot. Phases 11-14 not started.
@@ -164,6 +164,9 @@ Recent decisions affecting v2.0:
 - [Phase 11-01]: _build_outline_sections returns list[dict] for testability; Pydantic conversion at endpoint boundary
 - [Phase 11-document-preview-outline]: SectionContent extracted as inner component in SectionBlock to isolate useSectionContent hook per section
 - [Phase 11-document-preview-outline]: mermaid initialized once via module-level mermaidInitialized flag — prevents re-init bugs with multiple diagrams
+- [Phase 12-review-interface]: useReviewContext returns ReviewContextValue | null (not throws) — avoids React Rules of Hooks violation when called outside provider
+- [Phase 12-review-interface]: exportAsJson maps Dutch: goedgekeurd->Approved, opmerking->Comment, afgewezen->Flag (REVIEW.md template format)
+- [Phase 12-review-interface]: Standards violations extracted via regex matching PackML/ISA-88/IEC/EN/NEN references in gap description text
 
 ### Roadmap Evolution
 
@@ -176,8 +179,8 @@ None — cockpit pivot clears all previous discussion-engine blockers.
 
 ## Session Continuity
 
-Last session: 2026-03-21T13:12:56.298Z
-Stopped at: Phase 12 context gathered
+Last session: 2026-03-21T13:50:06.237Z
+Stopped at: Completed 12-review-interface-01-PLAN.md
 
 **Next step:** Start Phase 11 (Document Preview & Outline) — `/gsd:discuss-phase 11` or `/gsd:plan-phase 11`
 
