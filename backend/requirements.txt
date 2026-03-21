@@ -25,6 +25,7 @@ python-dotenv>=1.0.0
 
 # Document parsing
 pyyaml>=6.0
+sse-starlette>=3.2.0
 
 # Development dependencies
 pytest>=8.0.0
