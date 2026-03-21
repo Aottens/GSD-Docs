@@ -7,8 +7,12 @@ interface ContentPanelProps {
   projectId: number
 }
 
+function hasNonEmptyNode(nodes: OutlineNode[]): boolean {
+  return nodes.some(n => n.status !== 'empty' || hasNonEmptyNode(n.children))
+}
+
 export function ContentPanel({ sections, language, projectId }: ContentPanelProps) {
-  const hasContent = sections.length > 0 && sections.some(s => s.status !== 'empty')
+  const hasContent = sections.length > 0 && hasNonEmptyNode(sections)
 
   return (
     <div className="h-full overflow-auto">

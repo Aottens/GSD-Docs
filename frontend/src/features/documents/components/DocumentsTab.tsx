@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import { GripVerticalIcon } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDocumentOutline } from '../hooks/useDocumentOutline'
 import { useScrollSpy } from '../hooks/useScrollSpy'
@@ -11,6 +11,10 @@ interface DocumentsTabProps {
   projectId: number
   language: 'nl' | 'en'
 }
+
+const MIN_WIDTH = 180
+const MAX_WIDTH = 480
+const DEFAULT_WIDTH = 260
 
 function collectSectionIds(sections: OutlineNode[]): string[] {
   const ids: string[] = []
@@ -26,6 +30,34 @@ function collectSectionIds(sections: OutlineNode[]): string[] {
 
 export function DocumentsTab({ projectId, language }: DocumentsTabProps) {
   const { data, isLoading, error } = useDocumentOutline(projectId)
+  const [outlineWidth, setOutlineWidth] = useState(DEFAULT_WIDTH)
+  const isDragging = useRef(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    isDragging.current = true
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!isDragging.current || !containerRef.current) return
+      const containerLeft = containerRef.current.getBoundingClientRect().left
+      const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, ev.clientX - containerLeft))
+      setOutlineWidth(newWidth)
+    }
+
+    const onMouseUp = () => {
+      isDragging.current = false
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+    }
+
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+  }, [])
 
   const sectionIds = useMemo(
     () => data ? collectSectionIds(data.sections) : [],
@@ -53,23 +85,30 @@ export function DocumentsTab({ projectId, language }: DocumentsTabProps) {
   }
 
   return (
-    <ResizablePanelGroup direction="horizontal" className="h-full">
-      <ResizablePanel defaultSize={25} minSize={15} maxSize={40}>
+    <div ref={containerRef} className="flex h-full overflow-hidden">
+      <div style={{ width: outlineWidth, minWidth: MIN_WIDTH, maxWidth: MAX_WIDTH }} className="shrink-0 overflow-hidden">
         <OutlinePanel
           sections={data.sections}
           language={language}
           activeId={activeId}
           onSelect={scrollToSection}
         />
-      </ResizablePanel>
-      <ResizableHandle withHandle />
-      <ResizablePanel defaultSize={75}>
+      </div>
+      <div
+        onMouseDown={handleMouseDown}
+        className="relative flex w-1.5 shrink-0 items-center justify-center bg-border/50 hover:bg-border transition-colors cursor-col-resize select-none"
+      >
+        <div className="z-10 flex h-6 w-3.5 items-center justify-center rounded-sm border bg-border">
+          <GripVerticalIcon className="size-3" />
+        </div>
+      </div>
+      <div className="flex-1 overflow-hidden">
         <ContentPanel
           sections={data.sections}
           language={language}
           projectId={projectId}
         />
-      </ResizablePanel>
-    </ResizablePanelGroup>
+      </div>
+    </div>
   )
 }

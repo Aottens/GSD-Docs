@@ -169,8 +169,10 @@ export function SectionBlock({ node, language, projectId, depth = 1 }: SectionBl
         )}
       </div>
 
-      {/* Content */}
-      <SectionContent node={node} language={language} projectId={projectId} />
+      {/* Content — only render for leaf nodes or nodes without children */}
+      {node.children.length === 0 && (
+        <SectionContent node={node} language={language} projectId={projectId} />
+      )}
 
       {/* Children */}
       {node.children.map(child => (

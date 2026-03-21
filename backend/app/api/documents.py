@@ -316,12 +316,13 @@ def _enrich_node_status(node: dict, planning_dir: Path) -> None:
 
 
 def _plan_references_section(content: str, section_id: str) -> bool:
-    """Check if a document references a specific section ID."""
-    # Match patterns like "section 1.1", "Section 1.1", "#1.1", "1.1." in context
+    """Check if a document references a specific section ID.
+
+    Uses exact matching to avoid e.g. section '1' matching '1.1'.
+    """
     patterns = [
-        rf'[Ss]ection\s+{re.escape(section_id)}\b',
-        rf'#{re.escape(section_id)}\b',
-        rf'\b{re.escape(section_id)}\.',
+        rf'[Ss]ection\s+{re.escape(section_id)}(?:\s|$|[^.\d])',
+        rf'#{{1,6}}\s+[Ss]ection\s+{re.escape(section_id)}(?:\s|$|[^.\d])',
     ]
     for pattern in patterns:
         if re.search(pattern, content):
@@ -342,6 +343,42 @@ def _extract_preview_snippet(content: str) -> Optional[str]:
         if clean:
             return clean[:80]
     return None
+
+
+def _extract_section_content(content: str, section_id: str) -> Optional[str]:
+    """Extract only the markdown content for a specific section from a SUMMARY.md.
+
+    Looks for a heading like '## Section 1.1' and captures everything until the
+    next heading of equal or higher level, or end of file.
+    """
+    lines = content.splitlines()
+    # Find the start: a heading containing this section ID
+    start_idx = None
+    start_level = None
+    section_pattern = re.compile(
+        rf'^(#{{1,6}})\s+.*\b{re.escape(section_id)}\b'
+    )
+    for i, line in enumerate(lines):
+        m = section_pattern.match(line)
+        if m:
+            start_idx = i
+            start_level = len(m.group(1))
+            break
+
+    if start_idx is None:
+        return None
+
+    # Find the end: next heading at same or higher level
+    end_idx = len(lines)
+    for i in range(start_idx + 1, len(lines)):
+        heading_match = re.match(r'^(#{1,6})\s', lines[i])
+        if heading_match and len(heading_match.group(1)) <= start_level:
+            end_idx = i
+            break
+
+    section_lines = lines[start_idx:end_idx]
+    result = '\n'.join(section_lines).strip()
+    return result if result else None
 
 
 def _get_project_dir(project_id: int) -> Path:
@@ -460,8 +497,11 @@ async def get_section_content(
                 try:
                     summary_content = summary_file.read_text(encoding="utf-8")
                     if _plan_references_section(summary_content, section_id):
-                        has_content = True
-                        markdown_content = summary_content
+                        # Extract only this section's content, not the full file
+                        extracted = _extract_section_content(summary_content, section_id)
+                        if extracted:
+                            has_content = True
+                            markdown_content = extracted
                         break
                 except (OSError, UnicodeDecodeError):
                     continue
