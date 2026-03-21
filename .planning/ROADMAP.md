@@ -149,11 +149,13 @@ Plans:
   5. Engineer can see "NEW TYPICAL NEEDED" indicators for unmatched equipment
   6. Engineer can generate documents in Dutch or English based on project setting
 
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 13-01: TBD
-- [ ] 13-02: TBD
+- [ ] 13-01-PLAN.md — Backend assembly + export services: type contracts, FDS assembly (cross-ref resolution, section ordering), Pandoc DOCX export, SSE streaming endpoint, version history, pytest tests
+- [ ] 13-02-PLAN.md — Backend SDS scaffolding service: typicals matching algorithm (I/O 40%, Jaccard 30%, states 20%, category 10%), confidence scoring, CATALOG.json loading, skeleton mode, pytest tests
+- [ ] 13-03-PLAN.md — Frontend Export tab: three-stage pipeline (Samenstellen/Exporteren/Downloaden), SSE progress hook, export options (mode/language), version history table, workspace navigation wiring
+- [ ] 13-04-PLAN.md — Frontend SDS tab: typicals matching table (sortable/filterable), confidence color coding, NIEUW TYPICAL NODIG badges, expandable match detail with CLI hints, workspace wiring
 
 #### Phase 14: Production Deployment
 
@@ -192,9 +194,9 @@ Plans:
 | 10. Workflow Status & Cleanup | 2/2 | Complete    | 2026-03-20 | - |
 | 11. Document Preview & Outline | 3/3 | Complete    | 2026-03-21 | - |
 | 12. Review Interface | 3/3 | Complete    | 2026-03-21 | - |
-| 13. Export & Assembly | v2.0 | 0/2 | Not started | - |
+| 13. Export & Assembly | v2.0 | 0/4 | Not started | - |
 | 14. Production Deployment | v2.0 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-03-21 -- Phase 12 complete (3/3 plans)*
+*Last updated: 2026-03-21 -- Phase 13 planned (4 plans in 2 waves)*
