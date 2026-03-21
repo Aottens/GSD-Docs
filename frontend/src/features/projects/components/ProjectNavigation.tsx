@@ -1,4 +1,4 @@
-import { LayoutDashboard, Calendar, FileText, FolderOpen, Settings } from 'lucide-react'
+import { LayoutDashboard, Calendar, FileText, FolderOpen, Settings, Download, Layers } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import type { Project } from '@/types/project'
@@ -14,6 +14,8 @@ const navigationSections = [
   { id: 'fasering', label: 'Fases', icon: Calendar },
   { id: 'documents', label: 'Documenten', icon: FileText },
   { id: 'references', label: 'Referenties', icon: FolderOpen },
+  { id: 'export', label: 'Exporteren', icon: Download },
+  { id: 'sds', label: 'SDS', icon: Layers },
   { id: 'settings', label: 'Instellingen', icon: Settings },
 ]
 
@@ -57,7 +59,9 @@ export function ProjectNavigation({
             section.id === 'overview' ||
             section.id === 'references' ||
             section.id === 'fasering' ||
-            section.id === 'documents'
+            section.id === 'documents' ||
+            section.id === 'export' ||
+            section.id === 'sds'
 
           return (
             <button

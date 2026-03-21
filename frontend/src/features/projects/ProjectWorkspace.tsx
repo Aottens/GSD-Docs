@@ -10,9 +10,10 @@ import { ReferenceManager } from '../files/components/ReferenceManager'
 import { PhaseTimeline } from '../timeline/components/PhaseTimeline'
 import { FaseringTab } from '../timeline/components/FaseringTab'
 import { DocumentsTab } from '../documents/components/DocumentsTab'
+import { ExportTab } from '../export/components/ExportTab'
+import { SdsTab } from '../sds/components/SdsTab'
 import { useProject } from './queries'
 import { usePhaseTimeline } from '../timeline/hooks/usePhaseStatus'
-import { SdsTab } from '../sds/components/SdsTab'
 
 export function ProjectWorkspace() {
   const { id } = useParams<{ id: string }>()
@@ -92,7 +93,11 @@ export function ProjectWorkspace() {
         </div>
 
         {/* Center Content */}
-        <div className={`flex-1 ${activeSection === 'documents' ? 'overflow-hidden' : activeSection === 'sds' ? 'overflow-auto' : 'overflow-auto p-6'}`}>
+        <div className={`flex-1 ${
+          activeSection === 'documents' ? 'overflow-hidden' :
+          activeSection === 'export' || activeSection === 'sds' ? 'overflow-auto' :
+          'overflow-auto p-6'
+        }`}>
           {activeSection === 'overview' && (
             <ProjectOverview project={project} onNavigate={setActiveSection} />
           )}
@@ -105,6 +110,9 @@ export function ProjectWorkspace() {
               activePhaseNumber={activePhaseForReview}
             />
           )}
+          {activeSection === 'export' && (
+            <ExportTab projectId={project.id} language={project.language} />
+          )}
           {activeSection === 'sds' && (
             <SdsTab projectId={project.id} />
           )}
@@ -112,6 +120,7 @@ export function ProjectWorkspace() {
             activeSection !== 'references' &&
             activeSection !== 'fasering' &&
             activeSection !== 'documents' &&
+            activeSection !== 'export' &&
             activeSection !== 'sds' && (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center space-y-2">
