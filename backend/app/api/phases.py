@@ -9,6 +9,7 @@ from sqlalchemy import select
 
 from app.dependencies import get_db
 from app.schemas.phase import PhaseTimelineResponse, PhaseStatusResponse, ContextFilesResponse
+from app.schemas.verification import VerificationDetailResponse, TruthResult
 from app.models.project import Project
 from app.config import get_settings
 from app.config_phases import PROJECT_TYPE_PHASES, get_cli_command
@@ -198,6 +199,248 @@ async def get_phase_context_files(
         has_context=has_context,
         has_verification=has_verification,
     )
+
+
+def _parse_verification_summary_table(content: str) -> list[dict]:
+    """Parse the summary table from VERIFICATION.md into per-truth dicts.
+
+    Returns list of dicts:
+        {"description": str, "exists": str, "substantive": str,
+         "complete": str, "consistent": str, "standards": str, "status": str}
+
+    Checkmark mapping:
+        ✓ / ✔ -> "pass"
+        ⚠ / ⚠️  -> "gap"
+        "-"    -> "-"
+        "N/A"  -> "n/a"
+    """
+
+    def _map_cell(cell: str) -> str:
+        cell = cell.strip()
+        if cell in ("✓", "✔", "✅"):
+            return "pass"
+        if cell in ("⚠", "⚠️"):
+            return "gap"
+        if cell.upper() in ("N/A", "N\\A"):
+            return "n/a"
+        if cell == "-":
+            return "-"
+        # Fallback: lowercase normalise
+        if "pass" in cell.lower():
+            return "pass"
+        if "gap" in cell.lower():
+            return "gap"
+        return cell.lower() if cell else "-"
+
+    rows: list[dict] = []
+    in_table = False
+    header_seen = False
+
+    for line in content.splitlines():
+        stripped = line.strip()
+
+        # Detect header row
+        if not in_table and re.match(r'^\|\s*Truth', stripped, re.IGNORECASE):
+            in_table = True
+            header_seen = False
+            continue
+
+        if in_table:
+            # Skip separator row (---|--- pattern)
+            if re.match(r'^\|[-|\s]+\|', stripped):
+                header_seen = True
+                continue
+
+            # Stop at next section heading or blank line after data rows
+            if stripped.startswith("#") or (not stripped and rows):
+                break
+
+            if not stripped.startswith("|"):
+                if rows:
+                    break
+                continue
+
+            # Parse data row
+            cells = [c.strip() for c in stripped.split("|")]
+            # cells[0] is empty (before first |), cells[-1] is empty (after last |)
+            cells = [c for c in cells if c != ""][:]
+            if len(cells) < 7:
+                continue
+
+            description = cells[0].strip()
+            if not description or description.lower() in ("truth", "---"):
+                continue
+
+            row = {
+                "description": description,
+                "exists": _map_cell(cells[1]) if len(cells) > 1 else "-",
+                "substantive": _map_cell(cells[2]) if len(cells) > 2 else "-",
+                "complete": _map_cell(cells[3]) if len(cells) > 3 else "-",
+                "consistent": _map_cell(cells[4]) if len(cells) > 4 else "-",
+                "standards": _map_cell(cells[5]) if len(cells) > 5 else "-",
+                "status": cells[6].strip().upper() if len(cells) > 6 else "UNKNOWN",
+            }
+            rows.append(row)
+
+    return rows
+
+
+def _parse_verification_detail(content: str) -> VerificationDetailResponse:
+    """Parse full VERIFICATION.md content into VerificationDetailResponse."""
+
+    # Extract overall status
+    status_match = re.search(
+        r'\*\*Status:\*\*\s*(PASS|GAPS_FOUND(?:\s*\(ESCALATED\))?)',
+        content,
+        re.MULTILINE,
+    )
+    status = status_match.group(1).strip() if status_match else "UNKNOWN"
+    is_blocked = "ESCALATED" in status
+
+    # Extract cycle info
+    cycle_match = re.search(r'\*\*Cycle:\*\*\s*(\d+)\s+of\s+(\d+)', content, re.MULTILINE)
+    current_cycle = int(cycle_match.group(1)) if cycle_match else 1
+    max_cycles = int(cycle_match.group(2)) if cycle_match else 2
+
+    # Parse summary table for quick per-truth status
+    summary_rows = _parse_verification_summary_table(content)
+    summary_map: dict[str, dict] = {r["description"]: r for r in summary_rows}
+
+    # Split on ### Truth blocks for detailed findings
+    truth_blocks = re.split(r'(?=###\s+Truth\s+\d+)', content)
+
+    truths: list[TruthResult] = []
+
+    for block in truth_blocks:
+        if not re.match(r'###\s+Truth\s+\d+', block.strip()):
+            continue
+
+        # Extract truth title line to get description
+        title_match = re.match(r'###\s+Truth\s+\d+:\s*(.+)', block.strip())
+        if not title_match:
+            continue
+        truth_description = title_match.group(1).strip()
+
+        # Extract status from block
+        block_status_match = re.search(
+            r'\*\*Status:\*\*\s*(PASS|GAP(?:\s*\(Level\s*\d+\s*-\s*[^)]+\))?)',
+            block,
+        )
+        truth_status = "UNKNOWN"
+        failed_level: Optional[str] = None
+        if block_status_match:
+            raw = block_status_match.group(1).strip()
+            if raw == "PASS":
+                truth_status = "PASS"
+            else:
+                truth_status = "GAP"
+                level_match = re.search(r'Level\s*\d+\s*-\s*([^)]+)', raw)
+                if level_match:
+                    failed_level = level_match.group(0).strip()
+
+        # Extract gap description (between **Gap description:** and **Evidence:** or ---)
+        gap_description: Optional[str] = None
+        gap_match = re.search(
+            r'\*\*Gap description:\*\*\s*(.*?)(?=\*\*Evidence:\*\*|^---|\Z)',
+            block,
+            re.DOTALL | re.MULTILINE,
+        )
+        if gap_match:
+            gap_description = gap_match.group(1).strip() or None
+
+        # Extract evidence file paths
+        evidence_files: list[str] = []
+        evidence_section = re.search(
+            r'\*\*Evidence:\*\*\s*(.*?)(?=\*\*|^---|\Z)',
+            block,
+            re.DOTALL | re.MULTILINE,
+        )
+        if evidence_section:
+            evidence_files = re.findall(r'-\s*File:\s*(.+)', evidence_section.group(1))
+            evidence_files = [f.strip() for f in evidence_files]
+
+        # Extract standards violations from gap description
+        standards_violations: list[dict] = []
+        if gap_description:
+            violation_matches = re.findall(
+                r'((?:PackML|ISA-88|IEC|EN|NEN)\s*[§#]?[\d.]+(?:-[\d.]+)?)',
+                gap_description,
+                re.IGNORECASE,
+            )
+            for ref in violation_matches:
+                standards_violations.append({
+                    "reference": ref.strip(),
+                    "text": gap_description,
+                })
+
+        # Build per-level dict from summary table row (if available)
+        levels: dict = {}
+        if truth_description in summary_map:
+            row = summary_map[truth_description]
+            levels = {
+                "exists": row["exists"],
+                "substantive": row["substantive"],
+                "complete": row["complete"],
+                "consistent": row["consistent"],
+                "standards": row["standards"],
+            }
+
+        truths.append(TruthResult(
+            description=truth_description,
+            status=truth_status,
+            levels=levels,
+            failed_level=failed_level,
+            gap_description=gap_description,
+            evidence_files=evidence_files,
+            standards_violations=standards_violations,
+        ))
+
+    passed_count = sum(1 for t in truths if t.status == "PASS")
+    gap_count = sum(1 for t in truths if t.status == "GAP")
+
+    return VerificationDetailResponse(
+        has_verification=True,
+        status=status,
+        current_cycle=current_cycle,
+        max_cycles=max_cycles,
+        is_blocked=is_blocked,
+        truths=truths,
+        total_truths=len(truths),
+        passed_count=passed_count,
+        gap_count=gap_count,
+    )
+
+
+@router.get("/{phase_number}/verification-detail", response_model=VerificationDetailResponse)
+async def get_phase_verification_detail(
+    project_id: int,
+    phase_number: int,
+    db: AsyncSession = Depends(get_db),
+) -> VerificationDetailResponse:
+    """Return parsed VERIFICATION.md data for a phase as structured verification detail."""
+    result = await db.execute(select(Project).where(Project.id == project_id))
+    project = result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
+
+    project_dir = _get_project_dir(project_id)
+    planning_dir = project_dir / ".planning" / "phases"
+    phase_dirs = list(planning_dir.glob(f"{phase_number:02d}-*")) if planning_dir.exists() else []
+
+    if not phase_dirs:
+        return VerificationDetailResponse(has_verification=False)
+
+    phase_dir = phase_dirs[0]
+    verification_files = list(phase_dir.glob(f"{phase_number:02d}-VERIFICATION.md"))
+    if not verification_files:
+        return VerificationDetailResponse(has_verification=False)
+
+    try:
+        content = verification_files[0].read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return VerificationDetailResponse(has_verification=False)
+
+    return _parse_verification_detail(content)
 
 
 @router.get("/{phase_number}", response_model=PhaseStatusResponse)
