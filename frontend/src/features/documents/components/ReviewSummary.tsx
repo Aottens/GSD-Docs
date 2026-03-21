@@ -9,10 +9,11 @@ interface ReviewSummaryProps {
 
 export function ReviewSummary({ phaseNumber }: ReviewSummaryProps) {
   const ctx = useReviewContext()
+  const [copied, setCopied] = useState(false)
+
   if (!ctx) return null
 
   const { reviews, exportAsJson } = ctx
-  const [copied, setCopied] = useState(false)
 
   const allReviews = Object.values(reviews)
   if (allReviews.length === 0) return null

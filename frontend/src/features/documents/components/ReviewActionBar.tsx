@@ -12,16 +12,16 @@ interface ReviewActionBarProps {
 
 export function ReviewActionBar({ sectionId }: ReviewActionBarProps) {
   const ctx = useReviewContext()
+  const [activeAction, setActiveAction] = useState<SectionReview['status'] | null>(
+    ctx?.reviews[sectionId]?.status ?? null
+  )
+  const [feedback, setFeedback] = useState<string>(ctx?.reviews[sectionId]?.feedback ?? '')
+  const [saved, setSaved] = useState(false)
+
   if (!ctx) return null
 
   const { reviews, setReview } = ctx
   const existing = reviews[sectionId]
-
-  const [activeAction, setActiveAction] = useState<SectionReview['status'] | null>(
-    existing?.status ?? null
-  )
-  const [feedback, setFeedback] = useState<string>(existing?.feedback ?? '')
-  const [saved, setSaved] = useState(false)
 
   function handleGoedkeuren() {
     setActiveAction('goedgekeurd')
