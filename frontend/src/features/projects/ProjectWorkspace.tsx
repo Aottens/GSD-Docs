@@ -9,6 +9,7 @@ import { ProjectOverview } from './components/ProjectOverview'
 import { ReferenceManager } from '../files/components/ReferenceManager'
 import { PhaseTimeline } from '../timeline/components/PhaseTimeline'
 import { FaseringTab } from '../timeline/components/FaseringTab'
+import { DocumentsTab } from '../documents/components/DocumentsTab'
 import { useProject } from './queries'
 
 export function ProjectWorkspace() {
@@ -83,13 +84,19 @@ export function ProjectWorkspace() {
         </div>
 
         {/* Center Content */}
-        <div className="flex-1 overflow-auto p-6">
-          {activeSection === 'overview' && <ProjectOverview project={project} />}
+        <div className={`flex-1 overflow-hidden ${activeSection !== 'documents' ? 'overflow-auto p-6' : ''}`}>
+          {activeSection === 'overview' && (
+            <ProjectOverview project={project} onNavigate={setActiveSection} />
+          )}
           {activeSection === 'references' && <ReferenceManager projectId={project.id} />}
           {activeSection === 'fasering' && <FaseringTab projectId={project.id} />}
+          {activeSection === 'documents' && (
+            <DocumentsTab projectId={project.id} language={project.language} />
+          )}
           {activeSection !== 'overview' &&
             activeSection !== 'references' &&
-            activeSection !== 'fasering' && (
+            activeSection !== 'fasering' &&
+            activeSection !== 'documents' && (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center space-y-2">
                   <p className="text-muted-foreground">

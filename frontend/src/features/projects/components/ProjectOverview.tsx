@@ -8,6 +8,7 @@ import type { Project } from '@/types/project'
 
 interface ProjectOverviewProps {
   project: Project
+  onNavigate?: (section: string) => void
 }
 
 const typeLabels = {
@@ -36,7 +37,7 @@ const statusColors = {
   archived: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
 }
 
-export function ProjectOverview({ project }: ProjectOverviewProps) {
+export function ProjectOverview({ project, onNavigate }: ProjectOverviewProps) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('nl-NL', {
       year: 'numeric',
@@ -122,12 +123,10 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
           <Button
             variant="outline"
             className="h-auto py-4 flex-col gap-2"
-            disabled
-            title="Beschikbaar in fase 11"
+            onClick={() => onNavigate?.('documents')}
           >
             <FileText className="h-5 w-5" />
             <span className="text-sm">Documenten bekijken</span>
-            <span className="text-xs text-muted-foreground">Fase 11</span>
           </Button>
         </div>
       </Card>

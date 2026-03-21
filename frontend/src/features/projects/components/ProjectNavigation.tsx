@@ -56,7 +56,8 @@ export function ProjectNavigation({
           const isEnabled =
             section.id === 'overview' ||
             section.id === 'references' ||
-            section.id === 'fasering'
+            section.id === 'fasering' ||
+            section.id === 'documents'
 
           return (
             <button
