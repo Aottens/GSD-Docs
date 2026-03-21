@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: GUI
 status: unknown
-stopped_at: Completed 13-export-assembly 13-02-PLAN.md
-last_updated: "2026-03-21T19:04:24.397Z"
+stopped_at: Completed 13-export-assembly 13-04-PLAN.md
+last_updated: "2026-03-21T19:08:57.049Z"
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 17
-  completed_plans: 15
-  percent: 92
+  completed_plans: 16
+  percent: 88
 ---
 
 # STATE.md -- GSD-Docs Industrial
@@ -24,12 +24,12 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 
 ## Current Position
 
-Phase: 13 (export-assembly) — EXECUTING
-Plan: 2 of 4
+Phase: 13 (export-assembly) — COMPLETE
+Plan: 4 of 4
 
 ## Progress
 
-Progress: [█████████░] 88% (Phase 13 in progress — 2/4 plans done)
+Progress: [█████████░] 94% (Phase 13 complete — 4/4 plans done)
 
 v1.0 milestone: 7 phases, 33 plans - Complete ✓
 v2.0 milestone: 7 phases — Phases 8, 9, 10 complete. Old 10/10.1 superseded by cockpit pivot. Phases 11-14 not started.
@@ -177,6 +177,8 @@ Recent decisions affecting v2.0:
 - [Phase 13]: Version scheme FDS-v{major}.{minor}_{mode}_{language}.docx: minor increments per same mode+language run
 - [Phase 13-export-assembly]: BOOL=DI/DO, INT/REAL=AI/AO for CATALOG interface I/O counting (sds-service)
 - [Phase 13-export-assembly]: load_catalog returns None for empty typicals — triggers skeleton mode (sds-service)
+- [Phase 13-export-assembly]: Expandable table rows use sibling TableRow (colSpan=5) instead of Collapsible wrapper for cleaner HTML table structure
+- [Phase 13-export-assembly]: SdsTab uses overflow-auto without p-6 in workspace — component manages its own padding
 
 ### Roadmap Evolution
 
@@ -189,8 +191,8 @@ None — cockpit pivot clears all previous discussion-engine blockers.
 
 ## Session Continuity
 
-Last session: 2026-03-21T19:04:24.395Z
-Stopped at: Completed 13-export-assembly 13-02-PLAN.md
+Last session: 2026-03-21T19:08:57.046Z
+Stopped at: Completed 13-export-assembly 13-04-PLAN.md
 
 **Next step:** Start Phase 13 (Export Interface) — `/gsd:discuss-phase 13` or `/gsd:plan-phase 13`
 
