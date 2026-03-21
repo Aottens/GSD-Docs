@@ -105,9 +105,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 11-01-PLAN.md — Backend document API + type contracts: outline endpoint (fds-structure.json tree builder with Type C/D baseline handling), section content endpoint, PLAN.md frontmatter parser, Pydantic schemas, TypeScript types, pytest test scaffolding
-- [ ] 11-02-PLAN.md — Frontend document components: DocumentsTab (ResizablePanelGroup), OutlinePanel + OutlineNode (tree with status icons/wave badges), ContentPanel + SectionBlock (markdown rendering), MermaidDiagram (SVG with fallback), PlanCard + EmptySectionCard, React Query hooks with polling, scroll-spy
-- [ ] 11-03-PLAN.md — Workspace integration: enable Documents navigation, wire DocumentsTab into ProjectWorkspace, enable "Documenten bekijken" quick action, human verification checkpoint
+- [x] 11-01-PLAN.md — Backend document API + type contracts: outline endpoint (fds-structure.json tree builder with Type C/D baseline handling), section content endpoint, PLAN.md frontmatter parser, Pydantic schemas, TypeScript types, pytest test scaffolding
+- [x] 11-02-PLAN.md — Frontend document components: DocumentsTab (ResizablePanelGroup), OutlinePanel + OutlineNode (tree with status icons/wave badges), ContentPanel + SectionBlock (markdown rendering), MermaidDiagram (SVG with fallback), PlanCard + EmptySectionCard, React Query hooks with polling, scroll-spy
+- [x] 11-03-PLAN.md — Workspace integration: enable Documents navigation, wire DocumentsTab into ProjectWorkspace, enable "Documenten bekijken" quick action, human verification checkpoint
 
 #### Phase 12: Review Interface
 
@@ -126,12 +126,12 @@ Plans:
   6. Engineer can view PackML/ISA-88 standards compliance results
   7. Engineer can view standards violations with references to standard sections
 
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 12-01: TBD
-- [ ] 12-02: TBD
-- [ ] 12-03: TBD
+- [ ] 12-01-PLAN.md — Backend verification-detail endpoint + frontend type contracts, data hook, ReviewContext with localStorage persistence
+- [ ] 12-02-PLAN.md — Frontend review components: VerificationDetailPanel, ReviewActionBar, StandardsBadge, ReviewSummary, SectionBlock extension
+- [ ] 12-03-PLAN.md — Integration wiring: OutlineNode badge evolution, ContentPanel prop threading, DocumentsTab ReviewProvider, human verification
 
 #### Phase 13: Export & Assembly
 
@@ -191,10 +191,10 @@ Plans:
 | ~~10.1 Discussion behavior rework~~ | v2.0 | 7/9 | Superseded | - |
 | 10. Workflow Status & Cleanup | 2/2 | Complete    | 2026-03-20 | - |
 | 11. Document Preview & Outline | 3/3 | Complete    | 2026-03-21 | - |
-| 12. Review Interface | v2.0 | 0/3 | Not started | - |
+| 12. Review Interface | v2.0 | 0/3 | Planned | - |
 | 13. Export & Assembly | v2.0 | 0/2 | Not started | - |
 | 14. Production Deployment | v2.0 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-03-20 -- Phase 11 plans created*
+*Last updated: 2026-03-21 -- Phase 12 plans created*
