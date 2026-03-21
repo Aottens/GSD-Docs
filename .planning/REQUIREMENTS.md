@@ -19,8 +19,8 @@ Requirements for v2.0 release. Each maps to roadmap phases.
 
 - [x] **WORK-01**: Engineer can view phase timeline showing ROADMAP phases with completion status
 - [x] **WORK-02**: Engineer can view phase status and next recommended CLI command from the timeline
-- [ ] **WORK-03**: Engineer can view document outline tree with expandable/collapsible sections
-- [ ] **WORK-04**: Engineer can navigate to a specific section from the outline tree
+- [x] **WORK-03**: Engineer can view document outline tree with expandable/collapsible sections
+- [x] **WORK-04**: Engineer can navigate to a specific section from the outline tree
 
 ### Discussion
 
@@ -28,7 +28,7 @@ Requirements for v2.0 release. Each maps to roadmap phases.
 
 ### Document Generation
 
-- [ ] **DOCG-01**: Engineer can view generated section plans with wave assignments in the GUI
+- [x] **DOCG-01**: Engineer can view generated section plans with wave assignments in the GUI
 
 ~~DOCG-02 through DOCG-04 dropped — writing triggered via CLI (`/doc:write-phase`). GUI displays results.~~
 
@@ -118,13 +118,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROJ-05 | Phase 8 | Pending |
 | WORK-01 | Phase 10 | Complete |
 | WORK-02 | Phase 10 | Complete |
-| WORK-03 | Phase 11 | Pending |
-| WORK-04 | Phase 11 | Pending |
+| WORK-03 | Phase 11 | Complete |
+| WORK-04 | Phase 11 | Complete |
 | DISC-01 | Dropped | CLI |
 | DISC-02 | Dropped | CLI |
 | DISC-03 | Dropped | CLI |
 | DISC-04 | Dropped | CLI |
-| DOCG-01 | Phase 11 | Pending |
+| DOCG-01 | Phase 11 | Complete |
 | DOCG-02 | Dropped | CLI |
 | DOCG-03 | Dropped | CLI |
 | DOCG-04 | Dropped | CLI |

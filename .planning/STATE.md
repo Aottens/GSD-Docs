@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: GUI
 status: unknown
-stopped_at: Phase 11 context gathered
-last_updated: "2026-03-20T21:30:47.752Z"
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-03-21T07:49:56.559Z"
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 10
+  completed_plans: 8
   percent: 100
 ---
 
@@ -20,12 +20,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Engineers can create, manage, and review FDS/SDS projects through a visual web cockpit that handles status, preview, review, and export — AI operations stay in CLI
-**Current focus:** Phase 11 — Document Preview & Outline (Phase 10 complete)
+**Current focus:** Phase 11 — document-preview-outline
 
 ## Current Position
 
-Phase: 10 (discussion-workflow-chat-interface) — COMPLETE
-Plan: 2 of 2 — Phase complete, checkpoint approved 2026-03-20
+Phase: 11 (document-preview-outline) — EXECUTING
+Plan: 1 of 3
 
 ## Progress
 
@@ -160,6 +160,8 @@ Recent decisions affecting v2.0:
 - [Phase 10]: PhaseNode uses plain button element wrapped by PopoverTrigger — no onClick prop needed
 - [Phase 10]: usePhaseContextFiles enabled guard: isOpen AND has_context/has_verification — avoids API calls for phases without context files
 - [Phase 10]: CliCommandBlock defined locally in PhasePopover and FaseringTab — small component, no shared coupling needed
+- [Phase 11-01]: section_id:path type for FastAPI /sections/{section_id}/content route — dots in IDs handled correctly
+- [Phase 11-01]: _build_outline_sections returns list[dict] for testability; Pydantic conversion at endpoint boundary
 
 ### Roadmap Evolution
 
@@ -172,8 +174,8 @@ None — cockpit pivot clears all previous discussion-engine blockers.
 
 ## Session Continuity
 
-Last session: 2026-03-20T21:30:47.749Z
-Stopped at: Phase 11 context gathered
+Last session: 2026-03-21T07:49:56.557Z
+Stopped at: Completed 11-01-PLAN.md
 
 **Next step:** Start Phase 11 (Document Preview & Outline) — `/gsd:discuss-phase 11` or `/gsd:plan-phase 11`
 
