@@ -63,15 +63,18 @@ export function OutlineNode({ node, language, activeId, onSelect, depth }: Outli
   const ctx = useReviewContext()
   const reviewStatus = ctx?.reviews[node.id]?.status
 
+  const isEmpty = node.status === 'empty'
+
   return (
     <div>
       <div
         className={cn(
-          'flex items-center gap-1 px-2 py-1.5 rounded-md cursor-pointer min-h-[36px] hover:bg-accent',
-          isActive && 'bg-accent'
+          'flex items-center gap-1 px-2 py-1.5 rounded-md min-h-[36px]',
+          isEmpty ? 'opacity-40 cursor-default' : 'cursor-pointer hover:bg-accent',
+          isActive && !isEmpty && 'bg-accent'
         )}
         style={{ paddingLeft: `${8 + depth * 12}px` }}
-        onClick={() => onSelect(node.id)}
+        onClick={() => !isEmpty && onSelect(node.id)}
       >
         {/* Chevron toggle */}
         <button

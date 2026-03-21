@@ -91,7 +91,7 @@ export function ProjectWorkspace() {
         </div>
 
         {/* Center Content */}
-        <div className={`flex-1 overflow-hidden ${activeSection !== 'documents' ? 'overflow-auto p-6' : ''}`}>
+        <div className={`flex-1 ${activeSection === 'documents' ? 'overflow-hidden' : 'overflow-auto p-6'}`}>
           {activeSection === 'overview' && (
             <ProjectOverview project={project} onNavigate={setActiveSection} />
           )}
