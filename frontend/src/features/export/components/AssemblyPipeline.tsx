@@ -26,6 +26,8 @@ export function AssemblyPipeline({ projectId, mode, language }: AssemblyPipeline
     readiness?.unreviewed_phases &&
     readiness.unreviewed_phases.length > 0
 
+  const hasNoContent = readiness !== undefined && !readiness.has_content
+
   // When export completes, show toast and invalidate version history
   useEffect(() => {
     if (completedFilename) {
@@ -57,6 +59,16 @@ export function AssemblyPipeline({ projectId, mode, language }: AssemblyPipeline
         </Alert>
       )}
 
+      {hasNoContent && (
+        <Alert variant="default">
+          <AlertTitle>Geen inhoud beschikbaar</AlertTitle>
+          <AlertDescription>
+            Dit project heeft nog geen geschreven secties. Gebruik de CLI om eerst
+            inhoud te genereren voordat u kunt exporteren.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {isFinalBlocked && (
         <Alert variant="default">
           <AlertTitle>Definitief exporteren niet mogelijk</AlertTitle>
@@ -74,7 +86,7 @@ export function AssemblyPipeline({ projectId, mode, language }: AssemblyPipeline
           stage={{ ...stages[0], name: 'Samenstellen' }}
           actionLabel="Samenstellen starten"
           onAction={handleStart}
-          disabled={isRunning || !!isFinalBlocked || (pandocStatus !== undefined && !pandocStatus.installed)}
+          disabled={isRunning || !!isFinalBlocked || hasNoContent || (pandocStatus !== undefined && !pandocStatus.installed)}
         />
         <div className="flex items-center">
           <ChevronRight className="h-5 w-5 text-muted-foreground" />
