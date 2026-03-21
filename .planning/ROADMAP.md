@@ -129,9 +129,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 12-01-PLAN.md — Backend verification-detail endpoint + frontend type contracts, data hook, ReviewContext with localStorage persistence
-- [ ] 12-02-PLAN.md — Frontend review components: VerificationDetailPanel, ReviewActionBar, StandardsBadge, ReviewSummary, SectionBlock extension
-- [ ] 12-03-PLAN.md — Integration wiring: OutlineNode badge evolution, ContentPanel prop threading, DocumentsTab ReviewProvider, human verification
+- [x] 12-01-PLAN.md — Backend verification-detail endpoint + frontend type contracts, data hook, ReviewContext with localStorage persistence
+- [x] 12-02-PLAN.md — Frontend review components: VerificationDetailPanel, ReviewActionBar, StandardsBadge, ReviewSummary, SectionBlock extension
+- [x] 12-03-PLAN.md — Integration wiring: OutlineNode badge evolution, ContentPanel prop threading, DocumentsTab ReviewProvider, human verification
 
 #### Phase 13: Export & Assembly
 
@@ -191,10 +191,10 @@ Plans:
 | ~~10.1 Discussion behavior rework~~ | v2.0 | 7/9 | Superseded | - |
 | 10. Workflow Status & Cleanup | 2/2 | Complete    | 2026-03-20 | - |
 | 11. Document Preview & Outline | 3/3 | Complete    | 2026-03-21 | - |
-| 12. Review Interface | 2/3 | In Progress|  | - |
+| 12. Review Interface | 3/3 | Complete | 2026-03-21 | - |
 | 13. Export & Assembly | v2.0 | 0/2 | Not started | - |
 | 14. Production Deployment | v2.0 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-03-21 -- Phase 12 plans created*
+*Last updated: 2026-03-21 -- Phase 12 complete (3/3 plans)*

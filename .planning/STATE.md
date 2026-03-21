@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: GUI
 status: unknown
-stopped_at: Completed 12-review-interface-02-PLAN.md
-last_updated: "2026-03-21T13:54:19.472Z"
+stopped_at: Completed 12-review-interface-03-PLAN.md
+last_updated: "2026-03-21T18:40:00.000Z"
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 13
-  completed_plans: 12
-  percent: 85
+  completed_plans: 13
+  percent: 92
 ---
 
 # STATE.md -- GSD-Docs Industrial
@@ -24,12 +24,12 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 
 ## Current Position
 
-Phase: 12 (review-interface) — EXECUTING
-Plan: 2 of 3
+Phase: 12 (review-interface) — COMPLETE
+Plan: 3 of 3
 
 ## Progress
 
-Progress: [█████████░] 85% (Phase 12 in progress — plan 1/3 complete)
+Progress: [█████████░] 92% (Phase 12 complete — 3/3 plans done)
 
 v1.0 milestone: 7 phases, 33 plans - Complete ✓
 v2.0 milestone: 7 phases — Phases 8, 9, 10 complete. Old 10/10.1 superseded by cockpit pivot. Phases 11-14 not started.
@@ -48,9 +48,9 @@ v2.0 milestone: 7 phases — Phases 8, 9, 10 complete. Old 10/10.1 superseded by
 - Phase 9: 2/2 plans complete ✓
 - Phase 10 (old): 4/4 plans complete — superseded by cockpit pivot
 - Phase 10.1: 7/9 plans complete — superseded by cockpit pivot
-- New phases 10-14: Phase 10 complete, phases 11-14 not started
-- Files created: ~155
-- Last completed: Phase 10 Plan 02 — Frontend cleanup + timeline rework (2026-03-20)
+- New phases 10-14: Phases 10, 11, 12 complete; phases 13-14 not started
+- Files created: ~160
+- Last completed: Phase 12 Plan 03 — Review interface wiring end-to-end (2026-03-21)
 
 ## Accumulated Context
 
@@ -169,6 +169,10 @@ Recent decisions affecting v2.0:
 - [Phase 12-review-interface]: Standards violations extracted via regex matching PackML/ISA-88/IEC/EN/NEN references in gap description text
 - [Phase 12-review-interface]: Collapsible collapsed by default — engineer expands on demand, preserves reading flow
 - [Phase 12-review-interface]: Phase-level truths shown on all leaf sections by design — VERIFICATION.md verifies phase-level truths, evidence_files filtering deferred
+- [Phase 12-03]: Review status takes precedence over backend node.status in OutlineNode badge display per UI-SPEC Interaction Contract 5
+- [Phase 12-03]: ProjectWorkspace selects most recent phase with has_verification=true via usePhaseTimeline — automatic review activation, no mode switch needed
+- [Phase 12-03]: Conditional ReviewProvider in DocumentsTab — wraps content tree only when phaseNumber is defined, preserving backward compat for phases without verification
+- [Phase 12-03]: overflow-auto (not overflow-hidden) required on ProjectWorkspace tab panels to preserve scroll on Overview/Fases tabs
 
 ### Roadmap Evolution
 
@@ -181,10 +185,10 @@ None — cockpit pivot clears all previous discussion-engine blockers.
 
 ## Session Continuity
 
-Last session: 2026-03-21T13:54:11.756Z
-Stopped at: Completed 12-review-interface-02-PLAN.md
+Last session: 2026-03-21T18:40:00.000Z
+Stopped at: Completed 12-review-interface-03-PLAN.md
 
-**Next step:** Start Phase 11 (Document Preview & Outline) — `/gsd:discuss-phase 11` or `/gsd:plan-phase 11`
+**Next step:** Start Phase 13 (Export Interface) — `/gsd:discuss-phase 13` or `/gsd:plan-phase 13`
 
 ---
 *Last updated: 2026-03-20*
