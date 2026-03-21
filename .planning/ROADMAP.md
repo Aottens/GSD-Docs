@@ -5,7 +5,7 @@
 ## Milestones
 
 - ✅ **v1.0 CLI** - Phases 1-7 (shipped 2026-02-14)
-- 🚧 **v2.0 GUI** - Phases 8-14 (in progress)
+- 🚧 **v2.0 GUI** - Phases 8-15 (in progress)
 
 ## Phases
 
@@ -157,11 +157,33 @@ Plans:
 - [ ] 13-03-PLAN.md — Frontend Export tab: three-stage pipeline (Samenstellen/Exporteren/Downloaden), SSE progress hook, export options (mode/language), version history table, workspace navigation wiring
 - [ ] 13-04-PLAN.md — Frontend SDS tab: typicals matching table (sortable/filterable), confidence color coding, NIEUW TYPICAL NODIG badges, expandable match detail with CLI hints, workspace wiring
 
-#### Phase 14: Production Deployment
+#### Phase 14: Project Setup & CLI Handoff
+
+**Goal**: Engineers can create projects via GUI with guided reference document collection, then complete intelligent setup via CLI. Late-arriving documents can be added and re-processed.
+
+**Depends on**: Phase 13
+
+**Requirements**: PROJ-01, PROJ-02, PROJ-04
+
+**Success Criteria** (what must be TRUE):
+  1. Wizard step 4 shows document-type checklist (old FDS, P&ID, machine spec, risk assessment) instead of generic upload
+  2. Engineer can mark document types as "not available / will add later"
+  3. Project overview shows setup status: which reference docs are present vs missing, and CLI command to complete setup
+  4. Backend exposes project setup state endpoint (metadata + reference file paths + document type coverage) for CLI consumption
+  5. After CLI setup completes, GUI automatically reflects scaffolded phases, sections, and outline
+  6. Engineer can upload additional references later via Referenties tab and trigger re-analysis
+
+**Plans**: TBD
+
+Plans:
+- [ ] 14-01: TBD
+- [ ] 14-02: TBD
+
+#### Phase 15: Production Deployment (ON HOLD)
 
 **Goal**: Application deployed on VM with Nginx reverse proxy, crash recovery, and CLI compatibility verification.
 
-**Depends on**: Phase 13
+**Depends on**: Phase 14
 
 **Requirements**: SYST-01, SYST-02, SYST-03
 
@@ -173,8 +195,8 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 14-01: TBD
-- [ ] 14-02: TBD
+- [ ] 15-01: TBD
+- [ ] 15-02: TBD
 
 ## Progress
 
@@ -195,8 +217,9 @@ Plans:
 | 11. Document Preview & Outline | 3/3 | Complete    | 2026-03-21 | - |
 | 12. Review Interface | 3/3 | Complete    | 2026-03-21 | - |
 | 13. Export & Assembly | 4/4 | Complete    | 2026-03-21 | - |
-| 14. Production Deployment | v2.0 | 0/2 | Not started | - |
+| 14. Project Setup & CLI Handoff | v2.0 | 0/2 | Not started | - |
+| 15. Production Deployment | v2.0 | 0/2 | On hold | - |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-03-21 -- Phase 13 planned (4 plans in 2 waves)*
+*Last updated: 2026-03-21 -- Phase 14 inserted (Project Setup & CLI Handoff), Phase 15 (Production) on hold*
