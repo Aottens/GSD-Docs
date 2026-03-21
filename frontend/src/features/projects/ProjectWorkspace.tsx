@@ -12,6 +12,7 @@ import { FaseringTab } from '../timeline/components/FaseringTab'
 import { DocumentsTab } from '../documents/components/DocumentsTab'
 import { useProject } from './queries'
 import { usePhaseTimeline } from '../timeline/hooks/usePhaseStatus'
+import { SdsTab } from '../sds/components/SdsTab'
 
 export function ProjectWorkspace() {
   const { id } = useParams<{ id: string }>()
@@ -91,7 +92,7 @@ export function ProjectWorkspace() {
         </div>
 
         {/* Center Content */}
-        <div className={`flex-1 ${activeSection === 'documents' ? 'overflow-hidden' : 'overflow-auto p-6'}`}>
+        <div className={`flex-1 ${activeSection === 'documents' ? 'overflow-hidden' : activeSection === 'sds' ? 'overflow-auto' : 'overflow-auto p-6'}`}>
           {activeSection === 'overview' && (
             <ProjectOverview project={project} onNavigate={setActiveSection} />
           )}
@@ -104,10 +105,14 @@ export function ProjectWorkspace() {
               activePhaseNumber={activePhaseForReview}
             />
           )}
+          {activeSection === 'sds' && (
+            <SdsTab projectId={project.id} />
+          )}
           {activeSection !== 'overview' &&
             activeSection !== 'references' &&
             activeSection !== 'fasering' &&
-            activeSection !== 'documents' && (
+            activeSection !== 'documents' &&
+            activeSection !== 'sds' && (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center space-y-2">
                   <p className="text-muted-foreground">
