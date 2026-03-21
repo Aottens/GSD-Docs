@@ -1,41 +1,26 @@
 {
   "version": "1.0",
-  "timestamp": "2026-03-21T12:16:05.576Z",
-  "phase": "11",
-  "phase_name": "document-preview-outline",
-  "phase_dir": ".planning/phases/11-document-preview-outline",
+  "timestamp": "2026-03-21T17:51:33.223Z",
+  "phase": "12",
+  "phase_name": "review-interface",
+  "phase_dir": ".planning/phases/12-review-interface",
   "plan": 3,
   "task": 2,
   "total_tasks": 2,
-  "status": "paused",
+  "status": "complete",
   "completed_tasks": [
-    {"id": 1, "name": "Enable documents navigation + wire DocumentsTab into workspace", "status": "done", "commit": "8d9ed96"}
+    {"id": 1, "name": "Wire OutlineNode badge evolution, ContentPanel prop threading, DocumentsTab ReviewProvider, ProjectWorkspace phaseNumber prop", "status": "done", "commit": "26d2ef0"},
+    {"id": 2, "name": "Verify review interface end-to-end (human checkpoint)", "status": "done", "commit": "approved"}
   ],
-  "remaining_tasks": [
-    {"id": 2, "name": "Visual verification of document preview feature", "status": "in_progress", "progress": "Checkpoint reached — user testing revealed two bugs being fixed inline"}
-  ],
-  "blockers": [
-    {
-      "description": "ResizablePanelGroup handle can only resize smaller, not bigger. react-resizable-panels v4.6.4 Separator component renders and shows cursor change but drag-to-enlarge does not work. Multiple CSS approaches tried (simplified wrapper, wider hit area, removed conflicting flex). Root cause unclear — may be a flex layout conflict between library inline styles and Tailwind.",
-      "type": "technical",
-      "workaround": "Outline panel still functional at default 25% width, just not user-resizable to larger"
-    }
-  ],
+  "remaining_tasks": [],
+  "blockers": [],
   "human_actions_pending": [],
   "decisions": [
-    {"decision": "Backend _plan_references_section pattern tightened to require 'Section' prefix for heading matches", "rationale": "Prevented section '1' from falsely matching '1.1' in headings like 'Task 1: ...'", "phase": "11"},
-    {"decision": "Added _extract_section_content to slice SUMMARY.md per-section instead of returning full file", "rationale": "Multi-section SUMMARYs caused content duplication — each child section rendered the entire file", "phase": "11"},
-    {"decision": "SectionBlock only renders SectionContent for leaf nodes (no children)", "rationale": "Parent sections are structural containers, not content holders", "phase": "11"},
-    {"decision": "ContentPanel hasContent check made recursive", "rationale": "After fixing parent section status to 'empty', top-level check showed false empty state", "phase": "11"},
-    {"decision": "Fixed f-string {1,6} regex bug in _extract_section_content", "rationale": "Python f-string interpreted {1,6} as set literal instead of regex quantifier — needed {{1,6}}", "phase": "11"},
-    {"decision": "Set V1_DOCS_PATH to absolute path in backend/.env", "rationale": "Default relative path ./gsd-docs-industrial resolved from backend/ CWD, not project root", "phase": "11"}
+    {"decision": "Fixed Tailwind overflow-hidden vs overflow-auto class conflict in ProjectWorkspace by making them mutually exclusive", "rationale": "Both classes target the same CSS property; overflow-hidden always won, breaking scroll on overview/fases tabs", "phase": "12"},
+    {"decision": "Empty outline sections greyed out at 40% opacity with click disabled", "rationale": "Unwritten phases should be visually distinct and non-interactive since there's no content to display", "phase": "12"},
+    {"decision": "Moved useState calls above null guards in ReviewActionBar and ReviewSummary", "rationale": "React Rules of Hooks requires hooks to be called unconditionally", "phase": "12"}
   ],
-  "uncommitted_files": [
-    "backend/app/api/documents.py",
-    "frontend/src/components/ui/resizable.tsx",
-    "frontend/src/features/documents/components/ContentPanel.tsx",
-    "frontend/src/features/documents/components/SectionBlock.tsx"
-  ],
-  "next_action": "Fix the ResizablePanelGroup drag-to-enlarge issue. The Separator component from react-resizable-panels v4.6.4 allows shrinking the outline panel but not enlarging it. Investigate whether the library's inline flex styles conflict with the wrapper's className. Try removing all className from the Group wrapper and testing bare. Then commit all bugfixes, complete plan 11-03 SUMMARY, and run verification.",
-  "context_notes": "Plans 11-01 and 11-02 completed by executor agents (4 commits each). Plan 11-03 checkpoint paused at task 2 (visual verification). During user testing, found: (1) content duplication — fixed by adding section extraction and leaf-only rendering, (2) resize handle not working — partially debugged, cursor changes but drag only works in one direction. Also seeded project 2 with test data (PLAN/SUMMARY files in backend/projects/2/) and fixed backend .env for V1_DOCS_PATH. Backend servers were started manually during checkpoint."
+  "uncommitted_files": [],
+  "next_action": "Start phase 13 (export-assembly): /gsd:discuss-phase 13 or /gsd:plan-phase 13",
+  "context_notes": "Phase 12 fully complete and verified. All 3 plans executed (backend verification endpoint, review UI components, end-to-end wiring). Verification passed after fixing 2 hooks violations. Two bonus UI fixes shipped: scroll restoration and greyed-out empty sections. Test data seeded in backend/projects/2 for VERIFICATION.md review display. Phase 13 (export-assembly) is next — 2 remaining phases in v2.0 milestone."
 }
