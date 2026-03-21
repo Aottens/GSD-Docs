@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.database import engine, Base, async_session_maker
-from app.api import health, projects, files, folders, phases, documents
+from app.api import health, projects, files, folders, phases, documents, export, sds
 from app.services.file_storage import ensure_upload_dir
 from app.services.file_service import FolderService
 
@@ -68,6 +68,8 @@ app.include_router(files.router)
 app.include_router(folders.router)
 app.include_router(phases.router)
 app.include_router(documents.router)
+app.include_router(export.router)
+app.include_router(sds.router)
 
 
 if __name__ == "__main__":
