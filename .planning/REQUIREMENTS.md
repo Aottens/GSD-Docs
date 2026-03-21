@@ -53,7 +53,7 @@ Requirements for v2.0 release. Each maps to roadmap phases.
 
 ### Document Output
 
-- [ ] **OUTP-01**: Engineer can preview rendered document content with Mermaid diagram rendering
+- [x] **OUTP-01**: Engineer can preview rendered document content with Mermaid diagram rendering
 - [ ] **OUTP-02**: Engineer can trigger FDS assembly with cross-reference resolution
 - [ ] **OUTP-03**: Engineer can export FDS/SDS to DOCX with corporate styling
 - [ ] **OUTP-04**: Engineer can see export progress during DOCX generation
@@ -141,7 +141,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REFM-03 | Phase 9 | Pending |
 | REFM-04 | Phase 9 | Pending |
 | REFM-05 | Phase 9 | Pending |
-| OUTP-01 | Phase 11 | Pending |
+| OUTP-01 | Phase 11 | Complete |
 | OUTP-02 | Phase 13 | Pending |
 | OUTP-03 | Phase 13 | Pending |
 | OUTP-04 | Phase 13 | Pending |

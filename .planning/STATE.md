@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: GUI
 status: unknown
-stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-03-21T07:49:56.559Z"
+stopped_at: Completed 11-02-PLAN.md
+last_updated: "2026-03-21T07:56:15.213Z"
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 10
-  completed_plans: 8
+  completed_plans: 9
   percent: 100
 ---
 
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 ## Current Position
 
 Phase: 11 (document-preview-outline) — EXECUTING
-Plan: 1 of 3
+Plan: 2 of 3
 
 ## Progress
 
-Progress: [██████████] 100% (Phase 10 complete — all v2.0 phases 8-10 done)
+Progress: [█████████░] 90% (Phase 11 in progress — plan 2/3 complete)
 
 v1.0 milestone: 7 phases, 33 plans - Complete ✓
 v2.0 milestone: 7 phases — Phases 8, 9, 10 complete. Old 10/10.1 superseded by cockpit pivot. Phases 11-14 not started.
@@ -162,6 +162,8 @@ Recent decisions affecting v2.0:
 - [Phase 10]: CliCommandBlock defined locally in PhasePopover and FaseringTab — small component, no shared coupling needed
 - [Phase 11-01]: section_id:path type for FastAPI /sections/{section_id}/content route — dots in IDs handled correctly
 - [Phase 11-01]: _build_outline_sections returns list[dict] for testability; Pydantic conversion at endpoint boundary
+- [Phase 11-document-preview-outline]: SectionContent extracted as inner component in SectionBlock to isolate useSectionContent hook per section
+- [Phase 11-document-preview-outline]: mermaid initialized once via module-level mermaidInitialized flag — prevents re-init bugs with multiple diagrams
 
 ### Roadmap Evolution
 
@@ -174,8 +176,8 @@ None — cockpit pivot clears all previous discussion-engine blockers.
 
 ## Session Continuity
 
-Last session: 2026-03-21T07:49:56.557Z
-Stopped at: Completed 11-01-PLAN.md
+Last session: 2026-03-21T07:56:15.211Z
+Stopped at: Completed 11-02-PLAN.md
 
 **Next step:** Start Phase 11 (Document Preview & Outline) — `/gsd:discuss-phase 11` or `/gsd:plan-phase 11`
 
