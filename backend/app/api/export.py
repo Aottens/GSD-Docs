@@ -141,6 +141,10 @@ async def stream_export(
                 current_step = step_idx
                 current_step_name = step_name
 
+                # Step 1 is handled inside the step 0 block — skip duplicate yield
+                if step_idx == 1:
+                    continue
+
                 yield {
                     "event": "step_start",
                     "data": json.dumps({
@@ -188,10 +192,6 @@ async def stream_export(
                         "data": json.dumps({"step": 1}),
                     }
                     # Skip to step 2 in the loop
-                    continue
-
-                elif step_idx == 1:
-                    # Already handled above alongside step 0
                     continue
 
                 elif step_idx == 2:

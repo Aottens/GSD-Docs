@@ -28,30 +28,53 @@ export function useAssemblyStream(projectId: number) {
       const eventSource = new EventSource(url)
       eventSourceRef.current = eventSource
 
-      eventSource.onmessage = (event) => {
+      // Track whether we finished cleanly to ignore post-close error events
+      let finished = false
+
+      // SSE backend sends named events: step_start, step_done, complete, error, cancelled
+      eventSource.addEventListener('step_start', (event: MessageEvent) => {
         try {
           const data: ExportProgressEvent = JSON.parse(event.data)
+          setStages(prev =>
+            prev.map(s =>
+              s.step === data.step ? { ...s, status: 'running' } : s
+            )
+          )
+        } catch { /* ignore */ }
+      })
 
-          if (data.event === 'step_start') {
-            setStages(prev =>
-              prev.map(s =>
-                s.step === data.step ? { ...s, status: 'running' } : s
-              )
+      eventSource.addEventListener('step_done', (event: MessageEvent) => {
+        try {
+          const data: ExportProgressEvent = JSON.parse(event.data)
+          setStages(prev =>
+            prev.map(s =>
+              s.step === data.step ? { ...s, status: 'done' } : s
             )
-          } else if (data.event === 'step_done') {
-            setStages(prev =>
-              prev.map(s =>
-                s.step === data.step ? { ...s, status: 'done' } : s
-              )
-            )
-          } else if (data.event === 'complete') {
-            if (data.artifact_filename) {
-              setCompletedFilename(data.artifact_filename)
-            }
-            setIsRunning(false)
-            eventSource.close()
-            eventSourceRef.current = null
-          } else if (data.event === 'error') {
+          )
+        } catch { /* ignore */ }
+      })
+
+      eventSource.addEventListener('complete', (event: MessageEvent) => {
+        finished = true
+        try {
+          const data: ExportProgressEvent = JSON.parse(event.data)
+          if (data.artifact_filename) {
+            setCompletedFilename(data.artifact_filename)
+          }
+        } catch { /* ignore */ }
+        setIsRunning(false)
+        eventSource.close()
+        eventSourceRef.current = null
+      })
+
+      // Named "error" event from server (pipeline failure)
+      eventSource.addEventListener('error', (event) => {
+        if (finished) return
+        // Server-sent error events are MessageEvents with data
+        if (event instanceof MessageEvent && event.data) {
+          finished = true
+          try {
+            const data: ExportProgressEvent = JSON.parse(event.data)
             setStages(prev =>
               prev.map(s =>
                 s.step === data.step
@@ -59,21 +82,26 @@ export function useAssemblyStream(projectId: number) {
                   : s
               )
             )
-            setIsRunning(false)
-            eventSource.close()
-            eventSourceRef.current = null
-          } else if (data.event === 'cancelled') {
-            setStages(INITIAL_STAGES.map(s => ({ ...s, status: 'idle' as const })))
-            setIsRunning(false)
-            eventSource.close()
-            eventSourceRef.current = null
-          }
-        } catch {
-          // Ignore parse errors
+          } catch { /* ignore */ }
+          setIsRunning(false)
+          eventSource.close()
+          eventSourceRef.current = null
         }
-      }
+        // Native connection errors (Event, not MessageEvent) are handled by onerror below
+      })
 
+      eventSource.addEventListener('cancelled', () => {
+        finished = true
+        setStages(INITIAL_STAGES.map(s => ({ ...s, status: 'idle' as const })))
+        setIsRunning(false)
+        eventSource.close()
+        eventSourceRef.current = null
+      })
+
+      // Native connection error — fires when SSE connection drops
       eventSource.onerror = () => {
+        if (finished) return // Expected after complete/error/cancelled close
+        // Unexpected connection loss
         setIsRunning(false)
         eventSource.close()
         eventSourceRef.current = null
