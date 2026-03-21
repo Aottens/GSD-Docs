@@ -1,17 +1,22 @@
 import { SectionBlock } from './SectionBlock'
+import { ReviewSummary } from './ReviewSummary'
 import type { OutlineNode } from '../types/document'
+import type { VerificationDetail } from '../types/verification'
 
 interface ContentPanelProps {
   sections: OutlineNode[]
   language: 'nl' | 'en'
   projectId: number
+  phaseNumber?: number
+  phaseHasVerification?: boolean
+  verificationData?: VerificationDetail | null
 }
 
 function hasNonEmptyNode(nodes: OutlineNode[]): boolean {
   return nodes.some(n => n.status !== 'empty' || hasNonEmptyNode(n.children))
 }
 
-export function ContentPanel({ sections, language, projectId }: ContentPanelProps) {
+export function ContentPanel({ sections, language, projectId, phaseNumber, phaseHasVerification, verificationData }: ContentPanelProps) {
   const hasContent = sections.length > 0 && hasNonEmptyNode(sections)
 
   return (
@@ -31,9 +36,15 @@ export function ContentPanel({ sections, language, projectId }: ContentPanelProp
               node={section}
               language={language}
               projectId={projectId}
+              phaseNumber={phaseNumber}
+              phaseHasVerification={phaseHasVerification}
+              verificationData={verificationData}
               depth={1}
             />
           ))
+        )}
+        {phaseHasVerification && phaseNumber && (
+          <ReviewSummary phaseNumber={phaseNumber} />
         )}
       </div>
     </div>

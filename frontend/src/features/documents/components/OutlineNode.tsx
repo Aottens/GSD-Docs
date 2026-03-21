@@ -1,15 +1,36 @@
 import { useState } from 'react'
-import { ChevronRight, Circle, Clipboard, FileText, CheckCircle2 } from 'lucide-react'
+import { ChevronRight, Circle, Clipboard, FileText, CheckCircle2, MessageSquare, XCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import type { OutlineNode as OutlineNodeType } from '../types/document'
+import { useReviewContext } from '../context/ReviewContext'
+import type { SectionReview } from '../types/verification'
 
 function getWaveColor(wave: number): string {
   if (wave === 1) return 'bg-blue-500/10 text-blue-500 border-blue-500/20'
   if (wave === 2) return 'bg-green-500/10 text-green-500 border-green-500/20'
   if (wave === 3) return 'bg-amber-500/10 text-amber-500 border-amber-500/20'
   return 'bg-purple-500/10 text-purple-500 border-purple-500/20'
+}
+
+function getReviewIcon(reviewStatus: SectionReview['status']) {
+  switch (reviewStatus) {
+    case 'goedgekeurd':
+      return <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+    case 'opmerking':
+      return <MessageSquare className="h-4 w-4 text-amber-500 shrink-0" />
+    case 'afgewezen':
+      return <XCircle className="h-4 w-4 text-red-500 shrink-0" />
+  }
+}
+
+function getReviewTooltip(reviewStatus: SectionReview['status']): string {
+  switch (reviewStatus) {
+    case 'goedgekeurd': return 'Goedgekeurd'
+    case 'opmerking': return 'Opmerking toegevoegd'
+    case 'afgewezen': return 'Afgewezen'
+  }
 }
 
 function getStatusIcon(status: OutlineNodeType['status']) {
@@ -38,6 +59,10 @@ export function OutlineNode({ node, language, activeId, onSelect, depth }: Outli
   const hasChildren = node.children.length > 0
   const isActive = node.id === activeId
 
+  // Null-safe context access — returns null when not inside ReviewProvider
+  const ctx = useReviewContext()
+  const reviewStatus = ctx?.reviews[node.id]?.status
+
   return (
     <div>
       <div
@@ -64,8 +89,19 @@ export function OutlineNode({ node, language, activeId, onSelect, depth }: Outli
           <ChevronRight className="h-3 w-3" />
         </button>
 
-        {/* Status icon */}
-        {getStatusIcon(node.status)}
+        {/* Status icon — review status takes precedence */}
+        {reviewStatus ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>{getReviewIcon(reviewStatus)}</span>
+              </TooltipTrigger>
+              <TooltipContent>{getReviewTooltip(reviewStatus)}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          getStatusIcon(node.status)
+        )}
 
         {/* Title + snippet */}
         <div className="flex-1 min-w-0">

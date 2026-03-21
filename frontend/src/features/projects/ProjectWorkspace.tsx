@@ -11,6 +11,7 @@ import { PhaseTimeline } from '../timeline/components/PhaseTimeline'
 import { FaseringTab } from '../timeline/components/FaseringTab'
 import { DocumentsTab } from '../documents/components/DocumentsTab'
 import { useProject } from './queries'
+import { usePhaseTimeline } from '../timeline/hooks/usePhaseStatus'
 
 export function ProjectWorkspace() {
   const { id } = useParams<{ id: string }>()
@@ -18,6 +19,12 @@ export function ProjectWorkspace() {
   const [activeSection, setActiveSection] = useState('overview')
 
   const { data: project, isLoading, error, refetch } = useProject(id || '')
+
+  const { data: phaseTimelineData } = usePhaseTimeline(project?.id ?? 0)
+  // Find the most recent phase that has verification data (for review)
+  const activePhaseForReview = phaseTimelineData?.phases
+    ?.filter(p => p.has_verification)
+    ?.sort((a, b) => b.number - a.number)[0]?.number
 
   if (isLoading) {
     return (
@@ -91,7 +98,11 @@ export function ProjectWorkspace() {
           {activeSection === 'references' && <ReferenceManager projectId={project.id} />}
           {activeSection === 'fasering' && <FaseringTab projectId={project.id} />}
           {activeSection === 'documents' && (
-            <DocumentsTab projectId={project.id} language={project.language} />
+            <DocumentsTab
+              projectId={project.id}
+              language={project.language}
+              activePhaseNumber={activePhaseForReview}
+            />
           )}
           {activeSection !== 'overview' &&
             activeSection !== 'references' &&
