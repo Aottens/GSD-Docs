@@ -57,8 +57,8 @@ Requirements for v2.0 release. Each maps to roadmap phases.
 - [x] **OUTP-02**: Engineer can trigger FDS assembly with cross-reference resolution
 - [x] **OUTP-03**: Engineer can export FDS/SDS to DOCX with corporate styling
 - [x] **OUTP-04**: Engineer can see export progress during DOCX generation
-- [ ] **OUTP-05**: Engineer can trigger SDS scaffolding from completed FDS with typicals matching
-- [ ] **OUTP-06**: Engineer can see typicals matching confidence scores and "NEW TYPICAL NEEDED" indicators
+- [x] **OUTP-05**: Engineer can trigger SDS scaffolding from completed FDS with typicals matching
+- [x] **OUTP-06**: Engineer can see typicals matching confidence scores and "NEW TYPICAL NEEDED" indicators
 - [x] **OUTP-07**: Engineer can generate documents in Dutch or English based on project setting
 
 ### System & Deployment
@@ -145,8 +145,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OUTP-02 | Phase 13 | Complete |
 | OUTP-03 | Phase 13 | Complete |
 | OUTP-04 | Phase 13 | Complete |
-| OUTP-05 | Phase 13 | Pending |
-| OUTP-06 | Phase 13 | Pending |
+| OUTP-05 | Phase 13 | Complete |
+| OUTP-06 | Phase 13 | Complete |
 | OUTP-07 | Phase 13 | Complete |
 | SYST-01 | Phase 14 | Pending |
 | SYST-02 | Phase 14 | Pending |
