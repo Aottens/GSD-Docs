@@ -173,11 +173,12 @@ Plans:
   5. After CLI setup completes, GUI automatically reflects scaffolded phases, sections, and outline
   6. Engineer can upload additional references later via Referenties tab and trigger re-analysis
 
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 14-01: TBD
-- [ ] 14-02: TBD
+- [ ] 14-01-PLAN.md — Backend: DOC_TYPE_CONFIG, File.doc_type + Project.skipped_doc_types columns, Alembic migration, setup-state endpoint, doc-types endpoint, upload doc_type extension, tests
+- [ ] 14-02-PLAN.md — Frontend wizard + shared components: CliCommandBlock extraction, TypeScript types, useSetupState hook, useFileUpload doc_type extension, Step4DocTypeChecklist replacement
+- [ ] 14-03-PLAN.md — Frontend overview + referenties: SetupStatusSection in ProjectOverview, DocCoverageSection in Referenties tab, doc-type upload prompt, human verification checkpoint
 
 #### Phase 15: Production Deployment (ON HOLD)
 
@@ -217,9 +218,9 @@ Plans:
 | 11. Document Preview & Outline | 3/3 | Complete    | 2026-03-21 | - |
 | 12. Review Interface | 3/3 | Complete    | 2026-03-21 | - |
 | 13. Export & Assembly | 4/4 | Complete    | 2026-03-21 | - |
-| 14. Project Setup & CLI Handoff | v2.0 | 0/2 | Not started | - |
+| 14. Project Setup & CLI Handoff | v2.0 | 0/3 | Planned | - |
 | 15. Production Deployment | v2.0 | 0/2 | On hold | - |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-03-21 -- Phase 14 inserted (Project Setup & CLI Handoff), Phase 15 (Production) on hold*
+*Last updated: 2026-03-22 -- Phase 14 planned (3 plans in 2 waves)*
