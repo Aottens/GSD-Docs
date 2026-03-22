@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import type { Project } from '@/types/project'
+import { SetupStatusSection } from './SetupStatusSection'
 
 interface ProjectOverviewProps {
   project: Project
@@ -94,6 +95,11 @@ export function ProjectOverview({ project, onNavigate }: ProjectOverviewProps) {
             </div>
           </div>
         </div>
+      </Card>
+
+      {/* Setup Status */}
+      <Card className="p-6">
+        <SetupStatusSection projectId={project.id} />
       </Card>
 
       {/* Quick Actions */}
