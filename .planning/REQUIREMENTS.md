@@ -9,10 +9,10 @@ Requirements for v2.0 release. Each maps to roadmap phases.
 
 ### Project Setup
 
-- [ ] **PROJ-01**: Engineer can create a new FDS project through a guided wizard with type classification (A/B/C/D)
-- [ ] **PROJ-02**: Engineer can select project language (Dutch/English) during project creation
+- [x] **PROJ-01**: Engineer can create a new FDS project through a guided wizard with type classification (A/B/C/D)
+- [x] **PROJ-02**: Engineer can select project language (Dutch/English) during project creation
 - [ ] **PROJ-03**: Engineer can upload reference files during project creation
-- [ ] **PROJ-04**: Engineer can browse all projects in a dashboard with status and type indicators
+- [x] **PROJ-04**: Engineer can browse all projects in a dashboard with status and type indicators
 - [ ] **PROJ-05**: Engineer can open a project from the dashboard to its working view
 
 ### Workflow Navigation
@@ -111,10 +111,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROJ-01 | Phase 8 | Pending |
-| PROJ-02 | Phase 8 | Pending |
+| PROJ-01 | Phase 8 | Complete |
+| PROJ-02 | Phase 8 | Complete |
 | PROJ-03 | Phase 9 | Pending |
-| PROJ-04 | Phase 8 | Pending |
+| PROJ-04 | Phase 8 | Complete |
 | PROJ-05 | Phase 8 | Pending |
 | WORK-01 | Phase 10 | Complete |
 | WORK-02 | Phase 10 | Complete |

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: GUI
 status: unknown
-stopped_at: Phase 14 context gathered
-last_updated: "2026-03-22T07:09:21.215Z"
+stopped_at: Completed 14-01-PLAN.md
+last_updated: "2026-03-22T08:09:00.896Z"
 progress:
   total_phases: 8
   completed_phases: 6
-  total_plans: 17
-  completed_plans: 17
+  total_plans: 20
+  completed_plans: 18
   percent: 94
 ---
 
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Engineers can create, manage, and review FDS/SDS projects through a visual web cockpit that handles status, preview, review, and export — AI operations stay in CLI
-**Current focus:** Phase 13 — export-assembly
+**Current focus:** Phase 14 — project-setup-cli-handoff
 
 ## Current Position
 
-Phase: 13 (export-assembly) — COMPLETE
-Plan: 4 of 4
+Phase: 14 (project-setup-cli-handoff) — EXECUTING
+Plan: 2 of 3
 
 ## Progress
 
-Progress: [█████████░] 94% (Phase 13 complete — 4/4 plans done)
+Progress: [█████████░] 90% (Phase 14 in progress — 1/3 plans done)
 
 v1.0 milestone: 7 phases, 33 plans - Complete ✓
 v2.0 milestone: 7 phases — Phases 8, 9, 10 complete. Old 10/10.1 superseded by cockpit pivot. Phases 11-14 not started.
@@ -181,6 +181,8 @@ Recent decisions affecting v2.0:
 - [Phase 13-export-assembly]: SdsTab uses overflow-auto without p-6 in workspace — component manages its own padding
 - [Phase 13-export-assembly]: ExportTab owns mode/exportLanguage state — pipeline is single-tab, no cross-tab sharing needed (13-03)
 - [Phase 13-export-assembly]: useAssemblyStream uses EventSource with eventSourceRef for cancel/cleanup, onerror sets isRunning=false (13-03)
+- [Phase 14]: DOC_TYPE_CONFIG defines document type metadata for 4 project types (A/B/C/D) in config_phases.py
+- [Phase 14]: skipped_doc_types stored as JSON string in String(500) column for 'Niet beschikbaar' persistence
 
 ### Roadmap Evolution
 
@@ -193,8 +195,8 @@ None — cockpit pivot clears all previous discussion-engine blockers.
 
 ## Session Continuity
 
-Last session: 2026-03-22T07:09:21.212Z
-Stopped at: Phase 14 context gathered
+Last session: 2026-03-22T08:09:00.891Z
+Stopped at: Completed 14-01-PLAN.md
 
 **Next step:** Start Phase 13 (Export Interface) — `/gsd:discuss-phase 13` or `/gsd:plan-phase 13`
 

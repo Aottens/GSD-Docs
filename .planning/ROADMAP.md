@@ -218,7 +218,7 @@ Plans:
 | 11. Document Preview & Outline | 3/3 | Complete    | 2026-03-21 | - |
 | 12. Review Interface | 3/3 | Complete    | 2026-03-21 | - |
 | 13. Export & Assembly | 4/4 | Complete    | 2026-03-21 | - |
-| 14. Project Setup & CLI Handoff | v2.0 | 0/3 | Planned | - |
+| 14. Project Setup & CLI Handoff | 1/3 | In Progress|  | - |
 | 15. Production Deployment | v2.0 | 0/2 | On hold | - |
 
 ---
