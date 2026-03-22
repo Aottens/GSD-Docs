@@ -101,7 +101,7 @@ export function ProjectWorkspace() {
           {activeSection === 'overview' && (
             <ProjectOverview project={project} onNavigate={setActiveSection} />
           )}
-          {activeSection === 'references' && <ReferenceManager projectId={project.id} />}
+          {activeSection === 'references' && <ReferenceManager projectId={project.id} projectType={project.type} />}
           {activeSection === 'fasering' && <FaseringTab projectId={project.id} />}
           {activeSection === 'documents' && (
             <DocumentsTab

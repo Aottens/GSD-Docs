@@ -4,9 +4,10 @@ import { SharedLibraryTab } from './SharedLibraryTab'
 
 interface ReferenceManagerProps {
   projectId: number
+  projectType?: string
 }
 
-export function ReferenceManager({ projectId }: ReferenceManagerProps) {
+export function ReferenceManager({ projectId, projectType }: ReferenceManagerProps) {
   return (
     <div className="space-y-6">
       <div>
@@ -23,7 +24,7 @@ export function ReferenceManager({ projectId }: ReferenceManagerProps) {
         </TabsList>
 
         <TabsContent value="project" className="mt-6">
-          <ProjectFilesTab projectId={projectId} />
+          <ProjectFilesTab projectId={projectId} projectType={projectType} />
         </TabsContent>
 
         <TabsContent value="shared" className="mt-6">

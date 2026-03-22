@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { Search } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Input } from '@/components/ui/input'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -12,20 +15,30 @@ import { FileUploadZone } from './FileUploadZone'
 import { FolderNavigation } from './FolderNavigation'
 import { FileList } from './FileList'
 import { FilePreviewPanel } from './FilePreviewPanel'
+import { DocCoverageSection } from './DocCoverageSection'
 import { useFileUpload } from '../hooks/useFileUpload'
 import { useProjectFiles, useProjectFolders, useCreateFolder } from '../hooks/useFiles'
+import { useDocTypeConfig } from '@/features/projects/hooks/useSetupState'
 import type { FileMetadata } from '../types/file'
 
 interface ProjectFilesTabProps {
   projectId: number
+  projectType?: string
 }
 
-export function ProjectFilesTab({ projectId }: ProjectFilesTabProps) {
+export function ProjectFilesTab({ projectId, projectType }: ProjectFilesTabProps) {
   const [currentFolderId, setCurrentFolderId] = useState<number | null>(null)
   const [search, setSearch] = useState('')
   const [fileType, setFileType] = useState<string | undefined>(undefined)
   const [selectedFile, setSelectedFile] = useState<FileMetadata | null>(null)
   const [previewOpen, setPreviewOpen] = useState(false)
+
+  // Doc-type upload prompt state
+  const [pendingUploadFiles, setPendingUploadFiles] = useState<File[]>([])
+  const [pendingDocType, setPendingDocType] = useState<string>('')
+  const [showDocTypePrompt, setShowDocTypePrompt] = useState(false)
+
+  const queryClient = useQueryClient()
 
   // Queries
   const { data: filesData, refetch: refetchFiles } = useProjectFiles(
@@ -35,6 +48,7 @@ export function ProjectFilesTab({ projectId }: ProjectFilesTabProps) {
     search || undefined
   )
   const { data: folders = [] } = useProjectFolders(projectId)
+  const { data: docTypes } = useDocTypeConfig(projectType)
 
   // Mutations
   const createFolderMutation = useCreateFolder(projectId)
@@ -44,11 +58,33 @@ export function ProjectFilesTab({ projectId }: ProjectFilesTabProps) {
     projectId,
     onUploadComplete: () => {
       refetchFiles()
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'setup-state'] })
     },
   })
 
   const handleFilesSelected = (files: File[]) => {
-    uploadFiles(files, currentFolderId || undefined)
+    if (docTypes && docTypes.length > 0) {
+      setPendingUploadFiles(files)
+      setShowDocTypePrompt(true)
+    } else {
+      // No doc types configured — upload without classification
+      uploadFiles(files, currentFolderId || undefined)
+    }
+  }
+
+  const handleDocTypeConfirm = () => {
+    uploadFiles(pendingUploadFiles, currentFolderId || undefined, pendingDocType || undefined)
+    setPendingUploadFiles([])
+    setPendingDocType('')
+    setShowDocTypePrompt(false)
+  }
+
+  const handleDocTypeSkip = () => {
+    // Upload without doc_type
+    uploadFiles(pendingUploadFiles, currentFolderId || undefined)
+    setPendingUploadFiles([])
+    setPendingDocType('')
+    setShowDocTypePrompt(false)
   }
 
   const handleCreateFolder = (name: string) => {
@@ -65,6 +101,36 @@ export function ProjectFilesTab({ projectId }: ProjectFilesTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Document Coverage */}
+      {projectType && <DocCoverageSection projectId={projectId} />}
+
+      {/* Doc-type upload prompt */}
+      {showDocTypePrompt && (
+        <Card className="p-4 space-y-3">
+          <p className="text-sm font-medium">Documenttype</p>
+          <Select value={pendingDocType} onValueChange={setPendingDocType}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecteer type..." />
+            </SelectTrigger>
+            <SelectContent>
+              {docTypes?.map((dt) => (
+                <SelectItem key={dt.id} value={dt.id}>
+                  {dt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleDocTypeConfirm}>
+              Uploaden
+            </Button>
+            <Button size="sm" variant="ghost" onClick={handleDocTypeSkip}>
+              Zonder type
+            </Button>
+          </div>
+        </Card>
+      )}
+
       {/* Search and Filter */}
       <div className="flex gap-3">
         <div className="relative flex-1">
