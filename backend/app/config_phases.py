@@ -30,6 +30,34 @@ PROJECT_TYPE_PHASES = {
     ]
 }
 
+DOC_TYPE_CONFIG: dict[str, list[dict]] = {
+    "A": [
+        {"id": "fds_old",      "label": "Oude FDS / bestaande FDS",       "required": True},
+        {"id": "pid",          "label": "P&ID tekeningen",                "required": True},
+        {"id": "machine_spec", "label": "Machinespecificatie / PLC-spec", "required": True},
+        {"id": "risk_assess",  "label": "Risicobeoordeling / RA",         "required": False},
+        {"id": "standards",    "label": "Standaarden scope documenten",   "required": True},
+    ],
+    "B": [
+        {"id": "fds_old",      "label": "Oude FDS / bestaande FDS",       "required": False},
+        {"id": "pid",          "label": "P&ID tekeningen",                "required": True},
+        {"id": "machine_spec", "label": "Machinespecificatie / PLC-spec", "required": True},
+        {"id": "risk_assess",  "label": "Risicobeoordeling / RA",         "required": False},
+    ],
+    "C": [
+        {"id": "baseline",     "label": "BASELINE.md / bestaand FDS",     "required": True},
+        {"id": "pid",          "label": "P&ID tekeningen (bestaand + delta)", "required": True},
+        {"id": "machine_spec", "label": "Machinespecificatie / PLC-spec", "required": True},
+        {"id": "risk_assess",  "label": "Risicobeoordeling / RA",         "required": False},
+        {"id": "change_order", "label": "Wijzigingsopdracht / TWN",       "required": False},
+    ],
+    "D": [
+        {"id": "pid",          "label": "P&ID tekening (gewijzigd)",      "required": False},
+        {"id": "change_order", "label": "Wijzigingsopdracht / TWN",       "required": True},
+        {"id": "machine_spec", "label": "Machinespecificatie fragment",   "required": False},
+    ],
+}
+
 STATUS_CLI_COMMANDS: dict[str, Optional[str]] = {
     "not_started": "/doc:discuss-phase {n}",
     "discussed":   "/doc:plan-phase {n}",

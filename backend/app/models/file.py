@@ -64,6 +64,7 @@ class File(Base):
     project_id = Column(Integer, ForeignKey('projects.id'), nullable=True)
     folder_id = Column(Integer, ForeignKey('folders.id'), nullable=True)
     storage_path = Column(String(1000), nullable=False)
+    doc_type = Column(String(50), nullable=True, index=True)
     overrides_file_id = Column(Integer, ForeignKey('files.id'), nullable=True)
     uploaded_at = Column(DateTime, nullable=False, server_default=func.now())
     uploaded_by = Column(String(100), nullable=True)

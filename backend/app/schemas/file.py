@@ -19,6 +19,7 @@ class FileResponse(BaseModel):
     project_id: Optional[int] = None
     folder_id: Optional[int] = None
     overrides_file_id: Optional[int] = None
+    doc_type: Optional[str] = None
     uploaded_at: datetime
     uploaded_by: Optional[str] = None
     is_deleted: bool
@@ -34,6 +35,7 @@ class FileUploadResponse(BaseModel):
     filename: str  # safe_filename
     mime_type: str
     size_bytes: int
+    doc_type: Optional[str] = None
     uploaded_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

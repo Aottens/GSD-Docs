@@ -58,6 +58,7 @@ class Project(Base):
         onupdate=func.now()
     )
     last_accessed_at = Column(DateTime, nullable=True)
+    skipped_doc_types = Column(String(500), nullable=True)
 
     # Additional indexes for common queries
     __table_args__ = (
