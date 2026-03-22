@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: GUI
 status: unknown
-stopped_at: Completed 14-01-PLAN.md
-last_updated: "2026-03-22T08:09:00.896Z"
+stopped_at: Completed 14-02-PLAN.md
+last_updated: "2026-03-22T08:14:37.733Z"
 progress:
   total_phases: 8
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 20
-  completed_plans: 18
-  percent: 94
+  completed_plans: 20
+  percent: 90
 ---
 
 # STATE.md -- GSD-Docs Industrial
@@ -183,6 +183,10 @@ Recent decisions affecting v2.0:
 - [Phase 13-export-assembly]: useAssemblyStream uses EventSource with eventSourceRef for cancel/cleanup, onerror sets isRunning=false (13-03)
 - [Phase 14]: DOC_TYPE_CONFIG defines document type metadata for 4 project types (A/B/C/D) in config_phases.py
 - [Phase 14]: skipped_doc_types stored as JSON string in String(500) column for 'Niet beschikbaar' persistence
+- [Phase 14]: DocTypeRow extracted as local render function inside DocCoverageSection — avoids shared module for 5-line pattern
+- [Phase 14]: projectType threaded from ProjectWorkspace through ReferenceManager to ProjectFilesTab as optional prop — backward compat preserved
+- [Phase 14]: uploadFile exposed from useFileUpload return — needed for per-entry doc_type upload in wizard onSubmit
+- [Phase 14]: DocTypeFileEntry exported from Step4DocTypeChecklist — consumed by ProjectWizard for typed selectedFiles state
 
 ### Roadmap Evolution
 
@@ -195,8 +199,8 @@ None — cockpit pivot clears all previous discussion-engine blockers.
 
 ## Session Continuity
 
-Last session: 2026-03-22T08:09:00.891Z
-Stopped at: Completed 14-01-PLAN.md
+Last session: 2026-03-22T08:14:32.907Z
+Stopped at: Completed 14-02-PLAN.md
 
 **Next step:** Start Phase 13 (Export Interface) — `/gsd:discuss-phase 13` or `/gsd:plan-phase 13`
 
