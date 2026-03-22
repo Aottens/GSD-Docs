@@ -11,16 +11,20 @@ export function useFileUpload({ projectId, onUploadComplete }: UseFileUploadOpti
   const [isUploading, setIsUploading] = useState(false)
 
   const uploadFile = useCallback(
-    (file: File, folderId?: number): Promise<void> => {
+    (file: File, folderId?: number, docType?: string): Promise<void> => {
       return new Promise((resolve, reject) => {
         const formData = new FormData()
         formData.append('file', file)
 
-        // Build URL with folder query param if provided
+        // Build URL with query params if provided
         const baseUrl = projectId
           ? `/api/projects/${projectId}/files`
           : '/api/files/shared'
-        const url = folderId ? `${baseUrl}?folder_id=${folderId}` : baseUrl
+        const params = new URLSearchParams()
+        if (folderId) params.set('folder_id', String(folderId))
+        if (docType) params.set('doc_type', docType)
+        const queryString = params.toString()
+        const url = queryString ? `${baseUrl}?${queryString}` : baseUrl
 
         const xhr = new XMLHttpRequest()
 
@@ -100,7 +104,7 @@ export function useFileUpload({ projectId, onUploadComplete }: UseFileUploadOpti
   )
 
   const uploadFiles = useCallback(
-    async (files: File[], folderId?: number) => {
+    async (files: File[], folderId?: number, docType?: string) => {
       setIsUploading(true)
 
       // Initialize all files as pending
@@ -119,7 +123,7 @@ export function useFileUpload({ projectId, onUploadComplete }: UseFileUploadOpti
       // Upload sequentially to avoid overwhelming server
       for (const file of files) {
         try {
-          await uploadFile(file, folderId)
+          await uploadFile(file, folderId, docType)
         } catch (error) {
           console.error(`Failed to upload ${file.name}:`, error)
           // Continue with next file even if one fails
@@ -137,6 +141,7 @@ export function useFileUpload({ projectId, onUploadComplete }: UseFileUploadOpti
   }, [])
 
   return {
+    uploadFile,
     uploadFiles,
     progressMap,
     isUploading,
