@@ -49,14 +49,18 @@ Exceptions: none
 
 Matches established patterns from ProjectOverview.tsx, FaseringTab.tsx, and Step4ReferenceUpload.tsx.
 
+4-size scale, 2-weight scale. CLI mono text is a `font-mono` modifier on the Body size — not a separate size entry.
+
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
-| Display | 30px (text-3xl) | 700 (bold) | 1.2 | Project name heading in overview card |
-| Heading | 24px (text-2xl) | 700 (bold) | 1.2 | Wizard step heading, tab section headings |
+| Display | 30px (text-3xl) | 600 (semibold) | 1.2 | Project name heading in overview card |
+| Heading | 24px (text-2xl) | 600 (semibold) | 1.2 | Wizard step heading, tab section headings |
 | Subheading | 18px (text-lg) | 600 (semibold) | 1.3 | Card section titles (e.g. "Setup status", "Snelkoppelingen") |
-| Body | 14px (text-sm) | 400 (regular) | 1.5 | Checklist row labels, metadata text, description copy |
-| Caption | 12px (text-xs) | 400 (regular) | 1.5 | Muted helper text, file counts, "Niet beschikbaar" state label |
-| Mono | 12px (text-xs font-mono) | 400 (regular) | 1.5 | CLI command text inside CliCommandBlock |
+| Body | 14px (text-sm) | 400 (regular) | 1.5 | Checklist row labels, metadata text, description copy, file counts, muted helper text (`text-muted-foreground`), CLI command text (`font-mono` modifier) |
+
+**Modifiers on Body (14px / 400):**
+- Captions and muted helper text: add `text-muted-foreground` class — no separate size
+- CLI command text in `CliCommandBlock`: add `font-mono` class — no separate size
 
 ---
 
