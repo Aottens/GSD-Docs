@@ -10,7 +10,8 @@ import { StepIndicator } from './components/StepIndicator'
 import { Step1NameDescription } from './components/Step1NameDescription'
 import { Step2TypeClassification } from './components/Step2TypeClassification'
 import { Step3LanguageConfirm } from './components/Step3LanguageConfirm'
-import { Step4ReferenceUpload } from './components/Step4ReferenceUpload'
+import { Step4DocTypeChecklist } from './components/Step4DocTypeChecklist'
+import type { DocTypeFileEntry } from './components/Step4DocTypeChecklist'
 import { useCreateProject } from '@/features/projects/queries'
 import { useFileUpload } from '@/features/files/hooks/useFileUpload'
 import type { WizardFormData, WizardStep } from './types'
@@ -34,7 +35,8 @@ export function ProjectWizard() {
   const navigate = useNavigate()
   const [currentStep, setCurrentStep] = useState<WizardStep>(1)
   const [direction, setDirection] = useState(0)
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [selectedFiles, setSelectedFiles] = useState<DocTypeFileEntry[]>([])
+  const [skippedDocTypes, setSkippedDocTypes] = useState<string[]>([])
 
   const {
     register,
@@ -57,7 +59,7 @@ export function ProjectWizard() {
   const [createdProjectId, setCreatedProjectId] = useState<number | null>(null)
 
   // File upload hook (only active after project creation)
-  const { uploadFiles, progressMap, isUploading } = useFileUpload({
+  const { uploadFile, progressMap, isUploading } = useFileUpload({
     projectId: createdProjectId || undefined,
     onUploadComplete: () => {
       if (createdProjectId) {
@@ -104,8 +106,12 @@ export function ProjectWizard() {
     }
   }
 
-  const handleFilesSelected = (files: File[]) => {
-    setSelectedFiles((prev) => [...prev, ...files])
+  const handleFilesChanged = (entries: DocTypeFileEntry[]) => {
+    setSelectedFiles(entries)
+  }
+
+  const handleSkippedChanged = (skipped: string[]) => {
+    setSkippedDocTypes(skipped)
   }
 
   const onSubmit = async (data: WizardFormData) => {
@@ -117,9 +123,25 @@ export function ProjectWizard() {
       })
       setCreatedProjectId(newProject.id)
 
-      // Upload files if any were selected
+      // Persist skipped doc types if any
+      if (skippedDocTypes.length > 0) {
+        await fetch(`/api/projects/${newProject.id}/skipped-doc-types`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ skipped: skippedDocTypes }),
+        })
+      }
+
+      // Upload files if any were selected, each with its doc_type
       if (selectedFiles.length > 0) {
-        uploadFiles(selectedFiles)
+        for (const entry of selectedFiles) {
+          try {
+            await uploadFile(entry.file, undefined, entry.docType)
+          } catch (error) {
+            console.error(`Failed to upload ${entry.file.name}:`, error)
+          }
+        }
+        navigate(`/projects/${newProject.id}`)
       } else {
         navigate(`/projects/${newProject.id}`)
       }
@@ -225,8 +247,10 @@ export function ProjectWizard() {
                     exit="exit"
                     transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                   >
-                    <Step4ReferenceUpload
-                      onFilesSelected={handleFilesSelected}
+                    <Step4DocTypeChecklist
+                      projectType={formData.type || 'A'}
+                      onFilesChanged={handleFilesChanged}
+                      onSkippedChanged={handleSkippedChanged}
                       progressMap={progressMap}
                     />
                   </motion.div>
