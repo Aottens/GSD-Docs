@@ -64,6 +64,7 @@ app.add_middleware(
 # Register routers
 app.include_router(health.router)
 app.include_router(projects.router)
+app.include_router(projects.doc_types_router)
 app.include_router(files.router)
 app.include_router(folders.router)
 app.include_router(phases.router)

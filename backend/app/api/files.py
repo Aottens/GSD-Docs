@@ -60,6 +60,7 @@ async def upload_project_file(
     project_id: int,
     file: UploadFile = FastAPIFile(...),
     folder_id: Optional[int] = Query(None, description="Folder ID"),
+    doc_type: Optional[str] = Query(None, max_length=50, description="Document type classification"),
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings)
 ):
@@ -120,6 +121,7 @@ async def upload_project_file(
         'project_id': project_id,
         'folder_id': folder_id,
         'storage_path': storage_path,
+        'doc_type': doc_type,
     })
 
     return FileUploadResponse(
@@ -128,6 +130,7 @@ async def upload_project_file(
         filename=file_record.safe_filename,
         mime_type=file_record.mime_type,
         size_bytes=file_record.size_bytes,
+        doc_type=file_record.doc_type,
         uploaded_at=file_record.uploaded_at
     )
 
