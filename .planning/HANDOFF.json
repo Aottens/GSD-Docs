@@ -1,26 +1,40 @@
 {
   "version": "1.0",
-  "timestamp": "2026-03-21T17:51:33.223Z",
-  "phase": "12",
-  "phase_name": "review-interface",
-  "phase_dir": ".planning/phases/12-review-interface",
+  "timestamp": "2026-03-22T13:57:45.125Z",
+  "phase": "14",
+  "phase_name": "project-setup-cli-handoff",
+  "phase_dir": ".planning/phases/14-project-setup-cli-handoff",
   "plan": 3,
-  "task": 2,
-  "total_tasks": 2,
-  "status": "complete",
+  "task": 5,
+  "total_tasks": 5,
+  "status": "verified_human_needed",
   "completed_tasks": [
-    {"id": 1, "name": "Wire OutlineNode badge evolution, ContentPanel prop threading, DocumentsTab ReviewProvider, ProjectWorkspace phaseNumber prop", "status": "done", "commit": "26d2ef0"},
-    {"id": 2, "name": "Verify review interface end-to-end (human checkpoint)", "status": "done", "commit": "approved"}
+    {"id": 1, "name": "14-01: Backend foundation — doc-type metadata, setup-state endpoint, upload extension", "status": "done", "commit": "55ca81e"},
+    {"id": 2, "name": "14-02: Frontend wizard Step 4 doc-type checklist, shared CliCommandBlock, useSetupState hook", "status": "done", "commit": "a6cc040"},
+    {"id": 3, "name": "14-03: SetupStatusSection, DocCoverageSection, ProjectOverview + Referenties wiring", "status": "done", "commit": "83b5ea5"},
+    {"id": 4, "name": "Verification — automated checks (5/6 criteria passed)", "status": "done"},
+    {"id": 5, "name": "Human verification — CLI auto-refresh polling observation", "status": "not_started"}
   ],
-  "remaining_tasks": [],
+  "remaining_tasks": [
+    {"id": 5, "name": "Human verification: CLI-triggered auto-refresh of setup status section", "status": "not_started"}
+  ],
   "blockers": [],
-  "human_actions_pending": [],
-  "decisions": [
-    {"decision": "Fixed Tailwind overflow-hidden vs overflow-auto class conflict in ProjectWorkspace by making them mutually exclusive", "rationale": "Both classes target the same CSS property; overflow-hidden always won, breaking scroll on overview/fases tabs", "phase": "12"},
-    {"decision": "Empty outline sections greyed out at 40% opacity with click disabled", "rationale": "Unwritten phases should be visually distinct and non-interactive since there's no content to display", "phase": "12"},
-    {"decision": "Moved useState calls above null guards in ReviewActionBar and ReviewSummary", "rationale": "React Rules of Hooks requires hooks to be called unconditionally", "phase": "12"}
+  "human_actions_pending": [
+    {
+      "action": "Verify CLI auto-refresh: Open project overview in browser, run CLI to create .planning/ directory, observe setup status section updates within 5-10s without page refresh",
+      "context": "useSetupState polls at 5s interval — need to confirm has_scaffolding flag and next_cli_command update in real time after CLI writes to disk",
+      "blocking": false
+    }
   ],
-  "uncommitted_files": [],
-  "next_action": "Start phase 13 (export-assembly): /gsd:discuss-phase 13 or /gsd:plan-phase 13",
-  "context_notes": "Phase 12 fully complete and verified. All 3 plans executed (backend verification endpoint, review UI components, end-to-end wiring). Verification passed after fixing 2 hooks violations. Two bonus UI fixes shipped: scroll restoration and greyed-out empty sections. Test data seeded in backend/projects/2 for VERIFICATION.md review display. Phase 13 (export-assembly) is next — 2 remaining phases in v2.0 milestone."
+  "decisions": [
+    {"decision": "Extracted CliCommandBlock as shared component", "rationale": "Reused across FaseringTab and SetupStatusSection, avoids duplication", "phase": "14"},
+    {"decision": "5-second polling interval for useSetupState", "rationale": "Balance between responsiveness and API load; staleTime 3s prevents redundant fetches", "phase": "14"},
+    {"decision": "Doc-type upload prompt in Referenties tab uses Select dropdown", "rationale": "Non-modal approach — user picks doc type inline before upload completes; Zonder type fallback available", "phase": "14"}
+  ],
+  "uncommitted_files": [
+    ".planning/phases/10.1-discussion-behavior-rework/10.1-09-PLAN.md",
+    "frontend/src/components/ui/resizable.tsx"
+  ],
+  "next_action": "Phase 14 is complete (verified). Next phase is 15 (Production Deployment — ON HOLD). Run /gsd:progress to decide next step, or proceed to Phase 15 planning if ready.",
+  "context_notes": "Phase 14 was the last feature phase before deployment. All 3 plans executed successfully across 2 waves. Verification scored 5/6 — one criterion (CLI auto-refresh) needs live runtime testing. The uncommitted resizable.tsx change is from Phase 10.1 work, not Phase 14."
 }
