@@ -84,9 +84,7 @@ Each task was committed atomically:
 
 1. **Task 1: SetupStatusSection and ProjectOverview integration** - `b259be4` (feat)
 2. **Task 2: DocCoverageSection and Referenties tab doc-type upload prompt** - `ed915e5` (feat)
-3. **Task 3: Human verification checkpoint** - awaiting human verification
-
-**Plan metadata:** pending (after checkpoint)
+3. **Task 3: Human verification checkpoint** - APPROVED (visual verification passed)
 
 ## Files Created/Modified
 - `frontend/src/features/projects/components/SetupStatusSection.tsx` - New: doc-type coverage checklist with loading/error/empty/data states, CliCommandBlock integration
@@ -123,10 +121,22 @@ Each task was committed atomically:
 ## Issues Encountered
 None — TypeScript compilation passed cleanly after all changes.
 
-## Next Phase Readiness
-- Task 3 (human-verify checkpoint) awaits visual verification
-- Backend server + frontend dev server must be started for verification
-- After verification approval, plan is complete and Phase 14 is done
+## Self-Check: PASSED
+
+- SetupStatusSection.tsx exists and committed in b259be4
+- DocCoverageSection.tsx exists and committed in ed915e5
+- Human verification checkpoint approved — all features confirmed working:
+  - Wizard Step 4 doc-type checklist renders with 5 rows for Type A
+  - Setup Status section shows in ProjectOverview with doc-type coverage and CLI command
+  - Referenties tab has Document dekking section
+  - No console errors, APIs responding correctly
+
+## Phase 14 Complete
+
+Phase 14 (project-setup-cli-handoff) is complete. All 3 plans delivered:
+- Plan 01: Backend setup-state endpoint, DOC_TYPE_CONFIG, skipped_doc_types DB column, Step 4 wizard checklist
+- Plan 02: useSetupState hook, CliCommandBlock, Step 4 integration in ProjectWizard with upload
+- Plan 03: SetupStatusSection in ProjectOverview, DocCoverageSection in Referenties tab, doc-type upload prompt
 
 ---
 *Phase: 14-project-setup-cli-handoff*

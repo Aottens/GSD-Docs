@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: GUI
 status: unknown
-stopped_at: Completed 14-02-PLAN.md
-last_updated: "2026-03-22T08:14:37.733Z"
+stopped_at: Completed 14-03-PLAN.md
+last_updated: "2026-03-22T08:27:41.378Z"
 progress:
   total_phases: 8
   completed_phases: 7
   total_plans: 20
   completed_plans: 20
-  percent: 90
+  percent: 100
 ---
 
 # STATE.md -- GSD-Docs Industrial
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Engineers can create, manage, and review FDS/SDS projects through a visual web cockpit that handles status, preview, review, and export — AI operations stay in CLI
-**Current focus:** Phase 14 — project-setup-cli-handoff
+**Current focus:** Phase 14 complete — v2.0 milestone DONE
 
 ## Current Position
 
-Phase: 14 (project-setup-cli-handoff) — EXECUTING
+Phase: 14 (project-setup-cli-handoff) — COMPLETE
 Plan: 3 of 3
 
 ## Progress
 
-Progress: [██████████] 100% (Phase 14 in progress — 2/3 plans done)
+Progress: [██████████] 100% (Phase 14 complete — all 20 plans done)
 
 v1.0 milestone: 7 phases, 33 plans - Complete ✓
 v2.0 milestone: 7 phases — Phases 8, 9, 10 complete. Old 10/10.1 superseded by cockpit pivot. Phases 11-14 not started.
@@ -50,7 +50,7 @@ v2.0 milestone: 7 phases — Phases 8, 9, 10 complete. Old 10/10.1 superseded by
 - Phase 10.1: 7/9 plans complete — superseded by cockpit pivot
 - New phases 10-14: Phases 10, 11, 12 complete; phases 13-14 not started
 - Files created: ~160
-- Last completed: Phase 12 Plan 03 — Review interface wiring end-to-end (2026-03-21)
+- Last completed: Phase 14 Plan 03 — SetupStatusSection, DocCoverageSection, doc-type upload prompt (2026-03-22)
 
 ## Accumulated Context
 
@@ -187,6 +187,7 @@ Recent decisions affecting v2.0:
 - [Phase 14]: projectType threaded from ProjectWorkspace through ReferenceManager to ProjectFilesTab as optional prop — backward compat preserved
 - [Phase 14]: uploadFile exposed from useFileUpload return — needed for per-entry doc_type upload in wizard onSubmit
 - [Phase 14]: DocTypeFileEntry exported from Step4DocTypeChecklist — consumed by ProjectWizard for typed selectedFiles state
+- [Phase 14]: DocTypeRow extracted as local render component inside DocCoverageSection — avoids shared module for a 5-line render pattern
 
 ### Roadmap Evolution
 
@@ -199,10 +200,10 @@ None — cockpit pivot clears all previous discussion-engine blockers.
 
 ## Session Continuity
 
-Last session: 2026-03-22T08:14:32.907Z
-Stopped at: Completed 14-02-PLAN.md
+Last session: 2026-03-22T08:27:08.424Z
+Stopped at: Completed 14-03-PLAN.md
 
-**Next step:** Start Phase 13 (Export Interface) — `/gsd:discuss-phase 13` or `/gsd:plan-phase 13`
+**Next step:** v2.0 milestone complete. All 8 phases, 20 plans delivered. Ready for production deployment or next milestone planning.
 
 ---
 *Last updated: 2026-03-20*
