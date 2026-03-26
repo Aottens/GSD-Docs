@@ -79,7 +79,10 @@ export function ProjectWorkspace() {
       </div>
 
       {/* Phase Timeline Bar */}
-      <PhaseTimeline projectId={project.id} />
+      <PhaseTimeline
+        projectId={project.id}
+        onNavigateToDocs={() => setActiveSection('documents')}
+      />
 
       {/* Two-Panel Layout: Fixed Sidebar + Content */}
       <div className="flex flex-1 overflow-hidden">
