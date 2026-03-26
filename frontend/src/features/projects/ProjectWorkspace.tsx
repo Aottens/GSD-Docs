@@ -13,7 +13,7 @@ import { DocumentsTab } from '../documents/components/DocumentsTab'
 import { ExportTab } from '../export/components/ExportTab'
 import { SdsTab } from '../sds/components/SdsTab'
 import { useProject } from './queries'
-import { usePhaseTimeline } from '../timeline/hooks/usePhaseStatus'
+import { usePhaseTimelineWithNotification } from '../timeline/hooks/usePhaseTimelineWithNotification'
 
 export function ProjectWorkspace() {
   const { id } = useParams<{ id: string }>()
@@ -22,7 +22,7 @@ export function ProjectWorkspace() {
 
   const { data: project, isLoading, error, refetch } = useProject(id || '')
 
-  const { data: phaseTimelineData } = usePhaseTimeline(project?.id ?? 0)
+  const { data: phaseTimelineData } = usePhaseTimelineWithNotification(project?.id ?? 0)
   // Find the most recent phase that has verification data (for review)
   const activePhaseForReview = phaseTimelineData?.phases
     ?.filter(p => p.has_verification)

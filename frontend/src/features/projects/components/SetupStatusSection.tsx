@@ -1,14 +1,14 @@
 import { CheckCircle2, Clock, Circle } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CliCommandBlock } from '@/features/timeline/components/CliCommandBlock'
-import { useSetupState } from '../hooks/useSetupState'
+import { useSetupStateWithNotification } from '../hooks/useSetupStateWithNotification'
 
 interface SetupStatusSectionProps {
   projectId: number
 }
 
 export function SetupStatusSection({ projectId }: SetupStatusSectionProps) {
-  const { data, isLoading, isError } = useSetupState(projectId)
+  const { data, isLoading, isError } = useSetupStateWithNotification(projectId)
 
   if (isLoading) {
     return (

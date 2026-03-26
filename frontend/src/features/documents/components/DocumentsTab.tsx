@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { GripVerticalIcon } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useDocumentOutline } from '../hooks/useDocumentOutline'
+import { useDocumentOutlineWithNotification } from '../hooks/useDocumentOutlineWithNotification'
 import { useScrollSpy } from '../hooks/useScrollSpy'
 import { ReviewProvider } from '../context/ReviewContext'
 import { useVerificationData } from '../hooks/useVerificationData'
@@ -32,7 +32,7 @@ function collectSectionIds(sections: OutlineNode[]): string[] {
 }
 
 export function DocumentsTab({ projectId, language, activePhaseNumber }: DocumentsTabProps) {
-  const { data, isLoading, error } = useDocumentOutline(projectId)
+  const { data, isLoading, error } = useDocumentOutlineWithNotification(projectId)
   const [outlineWidth, setOutlineWidth] = useState(DEFAULT_WIDTH)
   const isDragging = useRef(false)
   const containerRef = useRef<HTMLDivElement>(null)
