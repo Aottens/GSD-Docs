@@ -197,7 +197,11 @@ Plans:
   4. EmptySectionCard and PhasePopover import shared CliCommandBlock instead of private duplicates
   5. Orphaned ChatContextPanel.tsx removed
 
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 15.1-01-PLAN.md — UI cleanup: remove discussion button, wire referenties uploaden, deduplicate CliCommandBlock, add Bekijk documenten link, delete ChatContextPanel
+- [ ] 15.1-02-PLAN.md — Change notification hooks: useRef-based polling change detection for setup-state, phase timeline, document outline with sonner toasts
 
 #### Phase 15.2: Review Flow Safety (Gap Closure)
 
@@ -255,7 +259,7 @@ Plans:
 | 12. Review Interface | 3/3 | Complete    | 2026-03-21 | - |
 | 13. Export & Assembly | 4/4 | Complete    | 2026-03-21 | - |
 | 14. Project Setup & CLI Handoff | 3/3 | Complete   | 2026-03-22 | - |
-| 15.1 CLI ↔ GUI UX Polish | v2.0 | 0/? | Gap closure | - |
+| 15.1 CLI ↔ GUI UX Polish | v2.0 | 0/2 | Gap closure | - |
 | 15.2 Review Flow Safety | v2.0 | 0/? | Gap closure | - |
 | 15. Production Deployment | v2.0 | 0/2 | On hold | - |
 
