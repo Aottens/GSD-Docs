@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: GUI
 status: unknown
-stopped_at: Completed 15.1-01-PLAN.md
-last_updated: "2026-03-26T21:14:27.162Z"
+stopped_at: Completed 15.1-02-PLAN.md
+last_updated: "2026-03-26T21:17:18.599Z"
 progress:
   total_phases: 10
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 22
-  completed_plans: 21
+  completed_plans: 22
   percent: 100
 ---
 
@@ -191,6 +191,8 @@ Recent decisions affecting v2.0:
 - [Phase 15.1]: CliCommandBlock deduplication: remove private copies from PhasePopover and EmptySectionCard, import shared component from @/features/timeline/components/CliCommandBlock
 - [Phase 15.1]: Discussie starten button removed entirely (not disabled) — cockpit pivot makes discussion engine obsolete
 - [Phase 15.1]: Bekijk documenten link in PhasePopover: shown only when phase.has_content AND onNavigateToDocs truthy, closes popover on click, prop threaded ProjectWorkspace -> PhaseTimeline -> PhasePopover
+- [Phase 15.1]: Wrapper hook pattern for polling change-notification: wraps existing query hook, tracks prev fingerprint via useRef, returns same query object unchanged
+- [Phase 15.1]: PhaseTimeline.tsx retains usePhaseTimeline directly — only ProjectWorkspace uses notification wrapper to prevent duplicate phase status toasts
 
 ### Roadmap Evolution
 
@@ -203,8 +205,8 @@ None — cockpit pivot clears all previous discussion-engine blockers.
 
 ## Session Continuity
 
-Last session: 2026-03-26T21:14:18.720Z
-Stopped at: Completed 15.1-01-PLAN.md
+Last session: 2026-03-26T21:17:18.597Z
+Stopped at: Completed 15.1-02-PLAN.md
 
 **Next step:** v2.0 milestone complete. All 8 phases, 20 plans delivered. Ready for production deployment or next milestone planning.
 

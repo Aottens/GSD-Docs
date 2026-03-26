@@ -259,7 +259,7 @@ Plans:
 | 12. Review Interface | 3/3 | Complete    | 2026-03-21 | - |
 | 13. Export & Assembly | 4/4 | Complete    | 2026-03-21 | - |
 | 14. Project Setup & CLI Handoff | 3/3 | Complete   | 2026-03-22 | - |
-| 15.1 CLI ↔ GUI UX Polish | 1/2 | In Progress|  | - |
+| 15.1 CLI ↔ GUI UX Polish | 2/2 | Complete   | 2026-03-26 | - |
 | 15.2 Review Flow Safety | v2.0 | 0/? | Gap closure | - |
 | 15. Production Deployment | v2.0 | 0/2 | On hold | - |
 
