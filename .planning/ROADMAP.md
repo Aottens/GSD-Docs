@@ -180,11 +180,47 @@ Plans:
 - [ ] 14-02-PLAN.md — Frontend wizard + shared components: CliCommandBlock extraction, TypeScript types, useSetupState hook, useFileUpload doc_type extension, Step4DocTypeChecklist replacement
 - [ ] 14-03-PLAN.md — Frontend overview + referenties: SetupStatusSection in ProjectOverview, DocCoverageSection in Referenties tab, doc-type upload prompt, human verification checkpoint
 
+#### Phase 15.1: CLI ↔ GUI UX Polish (Gap Closure)
+
+**Goal**: Smooth the CLI↔GUI handoff experience — add change notifications, clean up stale UI, deduplicate components.
+
+**Depends on**: Phase 14
+
+**Requirements**: SYST-01 (partial)
+
+**Gap Closure**: Closes gaps from v2.0 milestone audit (2026-03-26)
+
+**Success Criteria** (what must be TRUE):
+  1. When polled data changes (setup-state, phase status, document outline), a toast notification appears alerting the engineer
+  2. Phase popover includes "Bekijk documenten" link that navigates to Documenten tab filtered to that phase's sections
+  3. ProjectOverview quick actions: "Discussie starten" button removed (feature deleted in cockpit pivot), "Referenties uploaden" navigates to Referenties tab
+  4. EmptySectionCard and PhasePopover import shared CliCommandBlock instead of private duplicates
+  5. Orphaned ChatContextPanel.tsx removed
+
+**Plans**: TBD
+
+#### Phase 15.2: Review Flow Safety (Gap Closure)
+
+**Goal**: Prevent export of unreviewed content and enable multi-phase review.
+
+**Depends on**: Phase 15.1
+
+**Requirements**: QUAL-04, QUAL-05, QUAL-06
+
+**Gap Closure**: Closes gaps from v2.0 milestone audit (2026-03-26)
+
+**Success Criteria** (what must be TRUE):
+  1. Export assembly shows warning banner when any section has "rejected" or "unreviewed" review status, with option to proceed or return to review
+  2. DocumentsTab allows selecting which phase to review (dropdown or tabs) instead of only the highest-numbered verified phase
+  3. Review decisions persist across tab navigation and page refresh (localStorage verified)
+
+**Plans**: TBD
+
 #### Phase 15: Production Deployment (ON HOLD)
 
 **Goal**: Application deployed on VM with Nginx reverse proxy, crash recovery, and CLI compatibility verification.
 
-**Depends on**: Phase 14
+**Depends on**: Phase 15.2
 
 **Requirements**: SYST-01, SYST-02, SYST-03
 
@@ -219,8 +255,10 @@ Plans:
 | 12. Review Interface | 3/3 | Complete    | 2026-03-21 | - |
 | 13. Export & Assembly | 4/4 | Complete    | 2026-03-21 | - |
 | 14. Project Setup & CLI Handoff | 3/3 | Complete   | 2026-03-22 | - |
+| 15.1 CLI ↔ GUI UX Polish | v2.0 | 0/? | Gap closure | - |
+| 15.2 Review Flow Safety | v2.0 | 0/? | Gap closure | - |
 | 15. Production Deployment | v2.0 | 0/2 | On hold | - |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-03-22 -- Phase 14 planned (3 plans in 2 waves)*
+*Last updated: 2026-03-26 -- Gap closure phases 15.1-15.2 added from milestone audit*

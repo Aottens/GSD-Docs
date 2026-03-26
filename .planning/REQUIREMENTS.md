@@ -11,9 +11,9 @@ Requirements for v2.0 release. Each maps to roadmap phases.
 
 - [x] **PROJ-01**: Engineer can create a new FDS project through a guided wizard with type classification (A/B/C/D)
 - [x] **PROJ-02**: Engineer can select project language (Dutch/English) during project creation
-- [ ] **PROJ-03**: Engineer can upload reference files during project creation
+- [x] **PROJ-03**: Engineer can upload reference files during project creation
 - [x] **PROJ-04**: Engineer can browse all projects in a dashboard with status and type indicators
-- [ ] **PROJ-05**: Engineer can open a project from the dashboard to its working view
+- [x] **PROJ-05**: Engineer can open a project from the dashboard to its working view
 
 ### Workflow Navigation
 
@@ -45,11 +45,11 @@ Requirements for v2.0 release. Each maps to roadmap phases.
 
 ### Reference Management
 
-- [ ] **REFM-01**: Engineer can upload reference files via drag-and-drop (PDF, DOCX, images)
-- [ ] **REFM-02**: Engineer can view and manage per-project reference files
-- [ ] **REFM-03**: Engineer can access shared reference library (read-only, admin-managed)
-- [ ] **REFM-04**: Engineer can override shared references with project-specific uploads
-- [ ] **REFM-05**: Admin can manage shared reference library (add, remove, categorize files)
+- [x] **REFM-01**: Engineer can upload reference files via drag-and-drop (PDF, DOCX, images)
+- [x] **REFM-02**: Engineer can view and manage per-project reference files
+- [x] **REFM-03**: Engineer can access shared reference library (read-only, admin-managed)
+- [x] **REFM-04**: Engineer can override shared references with project-specific uploads
+- [x] **REFM-05**: Admin can manage shared reference library (add, remove, categorize files)
 
 ### Document Output
 
@@ -66,7 +66,7 @@ Requirements for v2.0 release. Each maps to roadmap phases.
 - [ ] **SYST-01**: System detects incomplete phases and offers resume from last checkpoint
 - [ ] **SYST-02**: Application deploys on VM with Nginx reverse proxy and systemd services
 - [ ] **SYST-03**: Project files remain compatible with v1.0 CLI /doc:* commands
-- [ ] **SYST-04**: LLM provider abstracted behind interface for future local model support
+- [x] **SYST-04**: LLM provider abstracted behind interface for future local model support
 
 ## v2 Requirements
 
@@ -113,9 +113,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | PROJ-01 | Phase 8 | Complete |
 | PROJ-02 | Phase 8 | Complete |
-| PROJ-03 | Phase 9 | Pending |
+| PROJ-03 | Phase 9 | Complete |
 | PROJ-04 | Phase 8 | Complete |
-| PROJ-05 | Phase 8 | Pending |
+| PROJ-05 | Phase 8 | Complete |
 | WORK-01 | Phase 10 | Complete |
 | WORK-02 | Phase 10 | Complete |
 | WORK-03 | Phase 11 | Complete |
@@ -136,11 +136,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | QUAL-06 | Phase 12 | Complete |
 | QUAL-07 | Phase 12 | Complete |
 | QUAL-08 | Phase 12 | Complete |
-| REFM-01 | Phase 9 | Pending |
-| REFM-02 | Phase 9 | Pending |
-| REFM-03 | Phase 9 | Pending |
-| REFM-04 | Phase 9 | Pending |
-| REFM-05 | Phase 9 | Pending |
+| REFM-01 | Phase 9 | Complete |
+| REFM-02 | Phase 9 | Complete |
+| REFM-03 | Phase 9 | Complete |
+| REFM-04 | Phase 9 | Complete |
+| REFM-05 | Phase 9 | Complete |
 | OUTP-01 | Phase 11 | Complete |
 | OUTP-02 | Phase 13 | Complete |
 | OUTP-03 | Phase 13 | Complete |
@@ -148,10 +148,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OUTP-05 | Phase 13 | Complete |
 | OUTP-06 | Phase 13 | Complete |
 | OUTP-07 | Phase 13 | Complete |
-| SYST-01 | Phase 14 | Pending |
-| SYST-02 | Phase 14 | Pending |
-| SYST-03 | Phase 14 | Pending |
-| SYST-04 | Phase 8 | Pending |
+| SYST-01 | Phase 15.1 (partial), Phase 15 | Pending |
+| SYST-02 | Phase 15 | Pending |
+| SYST-03 | Phase 15 | Pending |
+| SYST-04 | Phase 8 | Complete |
 
 **Coverage:**
 - v1 requirements: 41 total
@@ -162,4 +162,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-14*
-*Last updated: 2026-03-20 -- Cockpit pivot: phases 10-14 confirmed, 7 requirements dropped*
+*Last updated: 2026-03-26 -- Milestone audit: 8 checkboxes updated, SYST-01 reassigned to Phase 15.1*
