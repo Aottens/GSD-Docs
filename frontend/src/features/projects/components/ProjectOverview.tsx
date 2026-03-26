@@ -1,4 +1,4 @@
-import { FileText, Upload, MessageSquare } from 'lucide-react'
+import { FileText, Upload } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -105,26 +105,14 @@ export function ProjectOverview({ project, onNavigate }: ProjectOverviewProps) {
       {/* Quick Actions */}
       <Card className="p-6">
         <h3 className="font-semibold text-lg mb-4">Snelkoppelingen</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Button
             variant="outline"
             className="h-auto py-4 flex-col gap-2"
-            disabled
-            title="Beschikbaar in fase 10"
-          >
-            <MessageSquare className="h-5 w-5" />
-            <span className="text-sm">Discussie starten</span>
-            <span className="text-xs text-muted-foreground">Fase 10</span>
-          </Button>
-          <Button
-            variant="outline"
-            className="h-auto py-4 flex-col gap-2"
-            disabled
-            title="Beschikbaar in fase 9"
+            onClick={() => onNavigate?.('references')}
           >
             <Upload className="h-5 w-5" />
             <span className="text-sm">Referenties uploaden</span>
-            <span className="text-xs text-muted-foreground">Fase 9</span>
           </Button>
           <Button
             variant="outline"

@@ -1,32 +1,5 @@
-import { Copy } from 'lucide-react'
-import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-
-interface CliCommandBlockProps {
-  command: string
-}
-
-function CliCommandBlock({ command }: CliCommandBlockProps) {
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(command)
-    toast.success('Gekopieerd!')
-  }
-  return (
-    <div className="flex items-center gap-2 bg-muted rounded px-3 py-2">
-      <code className="text-sm font-mono flex-1 text-foreground">{command}</code>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-6 w-6 shrink-0"
-        onClick={handleCopy}
-        title="Kopieer naar klembord"
-      >
-        <Copy className="h-3 w-3" />
-      </Button>
-    </div>
-  )
-}
+import { CliCommandBlock } from '@/features/timeline/components/CliCommandBlock'
 
 interface EmptySectionCardProps {
   sectionId: string

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, Copy, AlertTriangle, ShieldCheck } from 'lucide-react'
+import { Check, AlertTriangle, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -7,39 +7,18 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { toast } from 'sonner'
 import type { PhaseStatus } from '../types/phase'
 import { usePhaseContextFiles } from '../hooks/usePhaseStatus'
+import { CliCommandBlock } from '@/features/timeline/components/CliCommandBlock'
 
 interface PhasePopoverProps {
   phase: PhaseStatus
   projectId: number
   children: React.ReactNode
+  onNavigateToDocs?: () => void
 }
 
-function CliCommandBlock({ command }: { command: string }) {
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(command)
-    toast.success('Gekopieerd!')
-  }
-
-  return (
-    <div className="flex items-center gap-2 bg-muted rounded px-3 py-2">
-      <code className="text-xs font-mono flex-1 text-foreground">{command}</code>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-6 w-6 shrink-0"
-        onClick={handleCopy}
-        title="Kopieer naar klembord"
-      >
-        <Copy className="h-3 w-3" />
-      </Button>
-    </div>
-  )
-}
-
-export function PhasePopover({ phase, projectId, children }: PhasePopoverProps) {
+export function PhasePopover({ phase, projectId, children, onNavigateToDocs }: PhasePopoverProps) {
   const [isOpen, setIsOpen] = useState(false)
   const { data: contextData } = usePhaseContextFiles(
     projectId,
@@ -150,6 +129,21 @@ export function PhasePopover({ phase, projectId, children }: PhasePopoverProps) 
                   </li>
                 )}
               </ul>
+            </div>
+          )}
+
+          {/* Bekijk documenten link */}
+          {phase.has_content && onNavigateToDocs && (
+            <div>
+              <button
+                className="text-xs text-primary hover:underline"
+                onClick={() => {
+                  onNavigateToDocs()
+                  setIsOpen(false)
+                }}
+              >
+                Bekijk documenten voor fase {phase.number} →
+              </button>
             </div>
           )}
         </div>
