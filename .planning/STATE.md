@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: GUI
 status: unknown
-stopped_at: Completed 14-03-PLAN.md
-last_updated: "2026-03-22T08:27:41.378Z"
+stopped_at: Completed 15.1-01-PLAN.md
+last_updated: "2026-03-26T21:14:27.162Z"
 progress:
-  total_phases: 8
+  total_phases: 10
   completed_phases: 7
-  total_plans: 20
-  completed_plans: 20
+  total_plans: 22
+  completed_plans: 21
   percent: 100
 ---
 
@@ -20,12 +20,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Engineers can create, manage, and review FDS/SDS projects through a visual web cockpit that handles status, preview, review, and export — AI operations stay in CLI
-**Current focus:** Phase 14 complete — v2.0 milestone DONE
+**Current focus:** Phase 15.1 — cli-gui-ux-polish
 
 ## Current Position
 
-Phase: 14 (project-setup-cli-handoff) — COMPLETE
-Plan: 3 of 3
+Phase: 15.1 (cli-gui-ux-polish) — EXECUTING
+Plan: 1 of 2
 
 ## Progress
 
@@ -188,6 +188,9 @@ Recent decisions affecting v2.0:
 - [Phase 14]: uploadFile exposed from useFileUpload return — needed for per-entry doc_type upload in wizard onSubmit
 - [Phase 14]: DocTypeFileEntry exported from Step4DocTypeChecklist — consumed by ProjectWizard for typed selectedFiles state
 - [Phase 14]: DocTypeRow extracted as local render component inside DocCoverageSection — avoids shared module for a 5-line render pattern
+- [Phase 15.1]: CliCommandBlock deduplication: remove private copies from PhasePopover and EmptySectionCard, import shared component from @/features/timeline/components/CliCommandBlock
+- [Phase 15.1]: Discussie starten button removed entirely (not disabled) — cockpit pivot makes discussion engine obsolete
+- [Phase 15.1]: Bekijk documenten link in PhasePopover: shown only when phase.has_content AND onNavigateToDocs truthy, closes popover on click, prop threaded ProjectWorkspace -> PhaseTimeline -> PhasePopover
 
 ### Roadmap Evolution
 
@@ -200,8 +203,8 @@ None — cockpit pivot clears all previous discussion-engine blockers.
 
 ## Session Continuity
 
-Last session: 2026-03-22T08:27:08.424Z
-Stopped at: Completed 14-03-PLAN.md
+Last session: 2026-03-26T21:14:18.720Z
+Stopped at: Completed 15.1-01-PLAN.md
 
 **Next step:** v2.0 milestone complete. All 8 phases, 20 plans delivered. Ready for production deployment or next milestone planning.
 

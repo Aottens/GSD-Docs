@@ -63,7 +63,7 @@ Requirements for v2.0 release. Each maps to roadmap phases.
 
 ### System & Deployment
 
-- [ ] **SYST-01**: System detects incomplete phases and offers resume from last checkpoint
+- [x] **SYST-01**: System detects incomplete phases and offers resume from last checkpoint
 - [ ] **SYST-02**: Application deploys on VM with Nginx reverse proxy and systemd services
 - [ ] **SYST-03**: Project files remain compatible with v1.0 CLI /doc:* commands
 - [x] **SYST-04**: LLM provider abstracted behind interface for future local model support
@@ -148,7 +148,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OUTP-05 | Phase 13 | Complete |
 | OUTP-06 | Phase 13 | Complete |
 | OUTP-07 | Phase 13 | Complete |
-| SYST-01 | Phase 15.1 (partial), Phase 15 | Pending |
+| SYST-01 | Phase 15.1 (partial), Phase 15 | Complete |
 | SYST-02 | Phase 15 | Pending |
 | SYST-03 | Phase 15 | Pending |
 | SYST-04 | Phase 8 | Complete |
