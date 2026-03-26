@@ -114,4 +114,4 @@ Engineers can create, manage, and review FDS/SDS projects through a visual web i
 | Mock + Ollama for dev, no paid API | Zero cost during development; MockLLMProvider for canned responses + Ollama/LiteLLM for local models (DeepSeek, Llama). Paid API only at production deploy | -- Pending |
 
 ---
-*Last updated: 2026-03-21 -- Phase 13 complete: FDS assembly pipeline with SSE streaming, versioned DOCX export, SDS scaffolding with typicals matching. Export and SDS tabs wired into workspace.*
+*Last updated: 2026-03-26 -- Phase 15.1 complete: UX polish — removed stale discussion UI, wired reference-upload navigation, deduplicated CliCommandBlock, added document-navigation link in PhasePopover, added change-notification toasts for polled data sources.*
