@@ -56,6 +56,8 @@ export function ReviewSummary({ phaseNumber }: ReviewSummaryProps) {
           )}
         </Button>
       </div>
+
+      <p className="text-xs text-muted-foreground mt-2">Sessie opgeslagen in browser</p>
     </div>
   )
 }
