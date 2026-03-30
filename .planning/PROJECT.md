@@ -114,4 +114,4 @@ Engineers can create, manage, and review FDS/SDS projects through a visual web i
 | Mock + Ollama for dev, no paid API | Zero cost during development; MockLLMProvider for canned responses + Ollama/LiteLLM for local models (DeepSeek, Llama). Paid API only at production deploy | -- Pending |
 
 ---
-*Last updated: 2026-03-30 -- Phase 15.2 complete: Review flow safety — export warning banner for rejected sections (cross-phase counting via reviewStorage), multi-phase review selector in DocumentsTab, persistence indicator in ReviewSummary.*
+*Last updated: 2026-03-30 -- Phase 15.3 complete: Fix override file bug — added missing project_id query parameter to useOverrideFile mutation, resolving HTTP 422 on shared library file overrides.*
