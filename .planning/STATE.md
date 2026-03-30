@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: GUI
 status: unknown
-stopped_at: Completed 15.2-01-PLAN.md
-last_updated: "2026-03-30T05:53:51.869Z"
+stopped_at: Completed 15.2-02-PLAN.md
+last_updated: "2026-03-30T05:56:54.673Z"
 progress:
   total_phases: 10
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 24
-  completed_plans: 23
+  completed_plans: 24
   percent: 100
 ---
 
@@ -195,6 +195,8 @@ Recent decisions affecting v2.0:
 - [Phase 15.1]: PhaseTimeline.tsx retains usePhaseTimeline directly — only ProjectWorkspace uses notification wrapper to prevent duplicate phase status toasts
 - [Phase 15.2]: countAllRejected iterates Object.keys(localStorage) with prefix filter — works across all phases without knowing phase count
 - [Phase 15.2]: Warning banner in AssemblyPipeline is non-blocking with local dismissed state that resets on re-mount
+- [Phase 15.2]: selectedPhaseNumber is user-controlled state — useEffect only syncs activePhaseNumber prop when undefined, polling never overrides manual selection
+- [Phase 15.2]: ReviewProvider key stability via selectedPhaseNumber: phaseNumber prop derived from user selection, not polling-derived activePhaseNumber, eliminating mid-session re-mount instability (QUAL-06)
 
 ### Roadmap Evolution
 
@@ -207,8 +209,8 @@ None — cockpit pivot clears all previous discussion-engine blockers.
 
 ## Session Continuity
 
-Last session: 2026-03-30T05:53:51.867Z
-Stopped at: Completed 15.2-01-PLAN.md
+Last session: 2026-03-30T05:56:54.670Z
+Stopped at: Completed 15.2-02-PLAN.md
 
 **Next step:** v2.0 milestone complete. All 8 phases, 20 plans delivered. Ready for production deployment or next milestone planning.
 
