@@ -113,7 +113,7 @@ export function useOverrideFile(projectId: number) {
     mutationFn: ({ fileId, newFile }: { fileId: number; newFile: File }) => {
       const formData = new FormData()
       formData.append('file', newFile)
-      return api.postForm<FileMetadata>(`/files/${fileId}/override`, formData)
+      return api.postForm<FileMetadata>(`/files/${fileId}/override?project_id=${projectId}`, formData)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: fileKeys.projectFiles(projectId) })
