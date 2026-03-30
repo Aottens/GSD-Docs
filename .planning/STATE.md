@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: GUI
 status: unknown
-stopped_at: Completed 15.2-02-PLAN.md
-last_updated: "2026-03-30T06:09:15.237Z"
+stopped_at: Completed 15.3-01-PLAN.md
+last_updated: "2026-03-30T08:06:30.614Z"
 progress:
-  total_phases: 10
-  completed_phases: 9
-  total_plans: 24
-  completed_plans: 24
+  total_phases: 11
+  completed_phases: 10
+  total_plans: 25
+  completed_plans: 25
   percent: 100
 ---
 
@@ -20,12 +20,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Engineers can create, manage, and review FDS/SDS projects through a visual web cockpit that handles status, preview, review, and export — AI operations stay in CLI
-**Current focus:** Phase 15.2 — review-flow-safety
+**Current focus:** Phase 15.3 — fix-override-file-bug
 
 ## Current Position
 
-Phase: 15.2 (review-flow-safety) — EXECUTING
-Plan: 1 of 2
+Phase: 15.3 (fix-override-file-bug) — EXECUTING
+Plan: 1 of 1
 
 ## Progress
 
@@ -197,6 +197,7 @@ Recent decisions affecting v2.0:
 - [Phase 15.2]: Warning banner in AssemblyPipeline is non-blocking with local dismissed state that resets on re-mount
 - [Phase 15.2]: selectedPhaseNumber is user-controlled state — useEffect only syncs activePhaseNumber prop when undefined, polling never overrides manual selection
 - [Phase 15.2]: ReviewProvider key stability via selectedPhaseNumber: phaseNumber prop derived from user selection, not polling-derived activePhaseNumber, eliminating mid-session re-mount instability (QUAL-06)
+- [Phase 15.3]: project_id appended as URL query string in useOverrideFile — FastAPI Query(...) reads from URL, not FormData body
 
 ### Roadmap Evolution
 
@@ -209,8 +210,8 @@ None — cockpit pivot clears all previous discussion-engine blockers.
 
 ## Session Continuity
 
-Last session: 2026-03-30T05:56:54.670Z
-Stopped at: Completed 15.2-02-PLAN.md
+Last session: 2026-03-30T08:06:26.819Z
+Stopped at: Completed 15.3-01-PLAN.md
 
 **Next step:** v2.0 milestone complete. All 8 phases, 20 plans delivered. Ready for production deployment or next milestone planning.
 
