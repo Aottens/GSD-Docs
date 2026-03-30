@@ -38,19 +38,18 @@ created: 2026-03-30
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 16-01-01 | 01 | 1 | QUAL-01 | unit | `npx vitest run src/features/documents/utils/filterTruthsForSection.test.ts` | ❌ W0 | ⬜ pending |
-| 16-01-02 | 01 | 1 | QUAL-01 | unit | same file | ❌ W0 | ⬜ pending |
-| 16-01-03 | 01 | 1 | QUAL-02 | unit | `npx vitest run src/features/documents/components/VerificationDetailPanel.test.tsx` | ❌ W0 | ⬜ pending |
-| 16-01-04 | 01 | 1 | QUAL-02 | unit | same file | ❌ W0 | ⬜ pending |
+| 16-01-01 | 01 | 1 | QUAL-01 | unit | `npx vitest run src/features/documents/utils/filterTruthsForSection.test.ts` | W0 | pending |
+| 16-01-02 | 01 | 1 | QUAL-01, QUAL-02 | acceptance | `grep + tsc --noEmit + vitest run` | n/a | pending |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+*Status: pending / green / red / flaky*
+
+**QUAL-02 coverage note:** Empty-state rendering (QUAL-02) is verified through Task 2 acceptance criteria (grep checks for empty-state text, class, and conditional structure in SectionBlock.tsx) plus manual visual verification (see below). A dedicated VerificationDetailPanel component test is not included because it would require jsdom + @testing-library/react setup, which is out of scope for this focused plan. The filterTruthsForSection unit tests (QUAL-01) verify the filtering logic that drives the empty-state branch.
 
 ---
 
 ## Wave 0 Requirements
 
 - [ ] `frontend/src/features/documents/utils/filterTruthsForSection.test.ts` — stubs for QUAL-01 section filtering logic
-- [ ] `frontend/src/features/documents/components/VerificationDetailPanel.test.tsx` — stubs for QUAL-02 empty-state rendering
 
 *Existing infrastructure covers framework setup — only test files need creation.*
 
