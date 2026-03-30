@@ -224,6 +224,25 @@ Plans:
 - [ ] 15.2-01-PLAN.md — Export warning banner: reviewStorage utility, rejected-sections Alert in AssemblyPipeline, onNavigateToDocs prop threading
 - [ ] 15.2-02-PLAN.md — Multi-phase selector + persistence: phase Select dropdown in DocumentsTab, user-controlled selectedPhaseNumber state, persistence indicator in ReviewSummary
 
+#### Phase 15.3: Fix Override File Bug (Gap Closure)
+
+**Goal**: Fix useOverrideFile mutation that sends override requests without project_id, causing HTTP 422 on every shared library file override.
+
+**Depends on**: Phase 15.2
+
+**Requirements**: REFM-03 (protects existing satisfaction)
+
+**Gap Closure**: Closes integration gap (Phase 9 → backend override endpoint) and flow gap ("Override shared library file") from v2.0 milestone audit (2026-03-30)
+
+**Success Criteria** (what must be TRUE):
+  1. Override file mutation includes project_id query parameter in API call
+  2. Shared library file override flow completes without HTTP 422
+
+**Plans**: 1 plan
+
+Plans:
+- [ ] 15.3-01-PLAN.md — Add project_id query param to useOverrideFile postForm URL in useFiles.ts
+
 #### Phase 15: Production Deployment (ON HOLD)
 
 **Goal**: Application deployed on VM with Nginx reverse proxy, crash recovery, and CLI compatibility verification.
@@ -265,8 +284,9 @@ Plans:
 | 14. Project Setup & CLI Handoff | 3/3 | Complete   | 2026-03-22 | - |
 | 15.1 CLI ↔ GUI UX Polish | 2/2 | Complete    | 2026-03-26 | - |
 | 15.2 Review Flow Safety | 2/2 | Complete    | 2026-03-30 | - |
+| 15.3 Fix Override File Bug | v2.0 | 0/1 | Pending | - |
 | 15. Production Deployment | v2.0 | 0/2 | On hold | - |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-03-30 -- Phase 15.2 plans created*
+*Last updated: 2026-03-30 -- Phase 15.3 added (gap closure from milestone audit)*
