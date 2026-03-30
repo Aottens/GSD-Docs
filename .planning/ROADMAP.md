@@ -257,10 +257,10 @@ Plans:
   1. VerificationDetailPanel shows only truths relevant to the current section, not all phase truths
   2. Sections without verification findings show "no issues" state instead of unrelated phase truths
 
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 16-01-PLAN.md — TBD
+- [ ] 16-01-PLAN.md — filterTruthsForSection utility + SectionBlock wiring + vitest setup + empty-state rendering
 
 #### Phase 15: Production Deployment (ON HOLD)
 
@@ -275,7 +275,7 @@ Plans:
   2. Application deploys on VM with Nginx reverse proxy and systemd services
   3. Project files remain compatible with v1.0 CLI /doc:* commands
 
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
 - [ ] 15-01: TBD
