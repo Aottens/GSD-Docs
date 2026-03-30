@@ -114,7 +114,11 @@ export function ProjectWorkspace() {
             />
           )}
           {activeSection === 'export' && (
-            <ExportTab projectId={project.id} language={project.language} />
+            <ExportTab
+              projectId={project.id}
+              language={project.language}
+              onNavigateToDocs={() => setActiveSection('documents')}
+            />
           )}
           {activeSection === 'sds' && (
             <SdsTab projectId={project.id} />

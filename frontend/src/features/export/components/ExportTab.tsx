@@ -7,9 +7,10 @@ import { VersionHistory } from './VersionHistory'
 interface ExportTabProps {
   projectId: number
   language: string
+  onNavigateToDocs?: () => void
 }
 
-export function ExportTab({ projectId, language }: ExportTabProps) {
+export function ExportTab({ projectId, language, onNavigateToDocs }: ExportTabProps) {
   const [mode, setMode] = useState('draft')
   const [exportLanguage, setExportLanguage] = useState(language)
 
@@ -25,7 +26,7 @@ export function ExportTab({ projectId, language }: ExportTabProps) {
         disabled={false}
       />
 
-      <AssemblyPipeline projectId={projectId} mode={mode} language={exportLanguage} />
+      <AssemblyPipeline projectId={projectId} mode={mode} language={exportLanguage} onNavigateToDocs={onNavigateToDocs} />
 
       <Separator />
 

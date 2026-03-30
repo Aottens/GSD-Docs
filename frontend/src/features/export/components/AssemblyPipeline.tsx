@@ -7,15 +7,17 @@ import { useAssemblyStream } from '../hooks/useAssemblyStream'
 import { usePandocStatus, useAssemblyReadiness } from '../hooks/useExportApi'
 import { PipelineStage } from './PipelineStage'
 import { ExportProgressBar } from './ExportProgressBar'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { countAllRejected } from '../../documents/utils/reviewStorage'
 
 interface AssemblyPipelineProps {
   projectId: number
   mode: string
   language: string
+  onNavigateToDocs?: () => void
 }
 
-export function AssemblyPipeline({ projectId, mode, language }: AssemblyPipelineProps) {
+export function AssemblyPipeline({ projectId, mode, language, onNavigateToDocs }: AssemblyPipelineProps) {
   const queryClient = useQueryClient()
   const { stages, isRunning, start, cancel, completedFilename } = useAssemblyStream(projectId)
   const { data: pandocStatus } = usePandocStatus(projectId)
@@ -27,6 +29,9 @@ export function AssemblyPipeline({ projectId, mode, language }: AssemblyPipeline
     readiness.unreviewed_phases.length > 0
 
   const hasNoContent = readiness !== undefined && !readiness.has_content
+
+  const [bannerDismissed, setBannerDismissed] = useState(false)
+  const rejectedCount = countAllRejected(projectId)
 
   // When export completes, show toast and invalidate version history
   useEffect(() => {
@@ -76,6 +81,26 @@ export function AssemblyPipeline({ projectId, mode, language }: AssemblyPipeline
             Alle fases moeten zijn gereviewd voor een definitieve export. Open het
             Documenten-tabblad om de review te voltooien.
           </AlertDescription>
+        </Alert>
+      )}
+
+      {rejectedCount > 0 && !bannerDismissed && (
+        <Alert variant="default">
+          <AlertTitle>Secties afgewezen in review</AlertTitle>
+          <AlertDescription>
+            {rejectedCount} {rejectedCount === 1 ? 'sectie is' : 'secties zijn'} afgewezen.
+            Overweeg de review af te ronden voordat u exporteert.
+          </AlertDescription>
+          <div className="mt-3 flex gap-2">
+            {onNavigateToDocs && (
+              <Button size="sm" variant="outline" onClick={onNavigateToDocs}>
+                Terug naar documenten
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" onClick={() => setBannerDismissed(true)}>
+              Toch doorgaan
+            </Button>
+          </div>
         </Alert>
       )}
 
