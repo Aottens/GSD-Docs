@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { GripVerticalIcon } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDocumentOutlineWithNotification } from '../hooks/useDocumentOutlineWithNotification'
@@ -7,6 +7,8 @@ import { ReviewProvider } from '../context/ReviewContext'
 import { useVerificationData } from '../hooks/useVerificationData'
 import { OutlinePanel } from './OutlinePanel'
 import { ContentPanel } from './ContentPanel'
+import { usePhaseTimeline } from '../../timeline/hooks/usePhaseStatus'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import type { OutlineNode } from '../types/document'
 
 interface DocumentsTabProps {
@@ -37,7 +39,23 @@ export function DocumentsTab({ projectId, language, activePhaseNumber }: Documen
   const isDragging = useRef(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const phaseNumber = activePhaseNumber ?? undefined
+  // Phase selector for multi-phase review (QUAL-05)
+  const { data: phaseData } = usePhaseTimeline(projectId)
+  const verifiedPhases = useMemo(
+    () => (phaseData?.phases ?? []).filter(p => p.has_verification),
+    [phaseData]
+  )
+
+  const [selectedPhaseNumber, setSelectedPhaseNumber] = useState<number | undefined>(activePhaseNumber)
+
+  // Sync from prop only when user hasn't selected yet
+  useEffect(() => {
+    if (activePhaseNumber !== undefined && selectedPhaseNumber === undefined) {
+      setSelectedPhaseNumber(activePhaseNumber)
+    }
+  }, [activePhaseNumber, selectedPhaseNumber])
+
+  const phaseNumber = selectedPhaseNumber
   const { data: verificationData } = useVerificationData(
     projectId,
     phaseNumber ?? 0,
@@ -96,32 +114,54 @@ export function DocumentsTab({ projectId, language, activePhaseNumber }: Documen
   }
 
   const content = (
-    <div ref={containerRef} className="flex h-full overflow-hidden">
-      <div style={{ width: outlineWidth, minWidth: MIN_WIDTH, maxWidth: MAX_WIDTH }} className="shrink-0 overflow-hidden">
-        <OutlinePanel
-          sections={data.sections}
-          language={language}
-          activeId={activeId}
-          onSelect={scrollToSection}
-        />
-      </div>
-      <div
-        onMouseDown={handleMouseDown}
-        className="relative flex w-1.5 shrink-0 items-center justify-center bg-border/50 hover:bg-border transition-colors cursor-col-resize select-none"
-      >
-        <div className="z-10 flex h-6 w-3.5 items-center justify-center rounded-sm border bg-border">
-          <GripVerticalIcon className="size-3" />
+    <div className="flex flex-col h-full overflow-hidden">
+      {verifiedPhases.length > 1 && (
+        <div className="shrink-0 border-b px-4 py-2 flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">Review fase:</span>
+          <Select
+            value={selectedPhaseNumber !== undefined ? String(selectedPhaseNumber) : undefined}
+            onValueChange={(v) => setSelectedPhaseNumber(Number(v))}
+          >
+            <SelectTrigger className="w-64 h-8 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {verifiedPhases.map(p => (
+                <SelectItem key={p.number} value={String(p.number)}>
+                  Fase {p.number}: {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      </div>
-      <div className="flex-1 overflow-hidden">
-        <ContentPanel
-          sections={data.sections}
-          language={language}
-          projectId={projectId}
-          phaseNumber={phaseNumber}
-          phaseHasVerification={phaseHasVerification}
-          verificationData={verificationData ?? null}
-        />
+      )}
+      <div ref={containerRef} className="flex flex-1 overflow-hidden">
+        <div style={{ width: outlineWidth, minWidth: MIN_WIDTH, maxWidth: MAX_WIDTH }} className="shrink-0 overflow-hidden">
+          <OutlinePanel
+            sections={data.sections}
+            language={language}
+            activeId={activeId}
+            onSelect={scrollToSection}
+          />
+        </div>
+        <div
+          onMouseDown={handleMouseDown}
+          className="relative flex w-1.5 shrink-0 items-center justify-center bg-border/50 hover:bg-border transition-colors cursor-col-resize select-none"
+        >
+          <div className="z-10 flex h-6 w-3.5 items-center justify-center rounded-sm border bg-border">
+            <GripVerticalIcon className="size-3" />
+          </div>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <ContentPanel
+            sections={data.sections}
+            language={language}
+            projectId={projectId}
+            phaseNumber={phaseNumber}
+            phaseHasVerification={phaseHasVerification}
+            verificationData={verificationData ?? null}
+          />
+        </div>
       </div>
     </div>
   )
