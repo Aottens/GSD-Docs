@@ -5,7 +5,7 @@
 ## Milestones
 
 - ✅ **v1.0 CLI** - Phases 1-7 (shipped 2026-02-14)
-- 🚧 **v2.0 GUI** - Phases 8-15 (in progress)
+- 🚧 **v2.0 GUI** - Phases 8-16 (in progress)
 
 ## Phases
 
@@ -243,6 +243,25 @@ Plans:
 Plans:
 - [ ] 15.3-01-PLAN.md — Add project_id query param to useOverrideFile postForm URL in useFiles.ts
 
+#### Phase 16: Per-Section Verification Display (Gap Closure)
+
+**Goal**: Fix VerificationDetailPanel to show section-specific truths instead of dumping all phase-level truths on every leaf section.
+
+**Depends on**: Phase 15.3
+
+**Requirements**: QUAL-01, QUAL-02 (UX refinement of existing satisfaction)
+
+**Gap Closure**: Closes integration gap (Phase 12 → Phase 11 semantic mismatch) from v2.0 milestone audit (2026-03-30)
+
+**Success Criteria** (what must be TRUE):
+  1. VerificationDetailPanel shows only truths relevant to the current section, not all phase truths
+  2. Sections without verification findings show "no issues" state instead of unrelated phase truths
+
+**Plans**: TBD
+
+Plans:
+- [ ] 16-01-PLAN.md — TBD
+
 #### Phase 15: Production Deployment (ON HOLD)
 
 **Goal**: Application deployed on VM with Nginx reverse proxy, crash recovery, and CLI compatibility verification.
@@ -285,8 +304,9 @@ Plans:
 | 15.1 CLI ↔ GUI UX Polish | 2/2 | Complete    | 2026-03-26 | - |
 | 15.2 Review Flow Safety | 2/2 | Complete    | 2026-03-30 | - |
 | 15.3 Fix Override File Bug | 1/1 | Complete    | 2026-03-30 | - |
+| 16. Per-Section Verification Display | v2.0 | 0/1 | Pending | - |
 | 15. Production Deployment | v2.0 | 0/2 | On hold | - |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-03-30 -- Phase 15.3 added (gap closure from milestone audit)*
+*Last updated: 2026-03-30 -- Phase 16 added (gap closure), SYST-04 dropped*

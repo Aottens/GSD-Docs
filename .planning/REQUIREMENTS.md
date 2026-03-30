@@ -66,7 +66,7 @@ Requirements for v2.0 release. Each maps to roadmap phases.
 - [x] **SYST-01**: System detects incomplete phases and offers resume from last checkpoint
 - [ ] **SYST-02**: Application deploys on VM with Nginx reverse proxy and systemd services
 - [ ] **SYST-03**: Project files remain compatible with v1.0 CLI /doc:* commands
-- [x] **SYST-04**: LLM provider abstracted behind interface for future local model support
+~~SYST-04 dropped — LLM abstraction removed during cockpit pivot (Phase 10). GUI doesn't need LLM; CLI handles all AI operations. Deferred to v3.0 (ADVN-03).~~
 
 ## v2 Requirements
 
@@ -151,15 +151,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SYST-01 | Phase 15.1 (partial), Phase 15 | Complete |
 | SYST-02 | Phase 15 | Pending |
 | SYST-03 | Phase 15 | Pending |
-| SYST-04 | Phase 8 | Complete |
+| SYST-04 | Dropped | CLI (v3.0 ADVN-03) |
 
 **Coverage:**
 - v1 requirements: 41 total
-- Mapped to phases: 34
-- Dropped (CLI handles): 7 (DISC-01–04, DOCG-02–04)
+- Mapped to phases: 33
+- Dropped (CLI handles): 8 (DISC-01–04, DOCG-02–04, SYST-04)
 
 **Coverage validation:** 100% — All GUI requirements mapped to phases 8-14. Dropped requirements handled by v1.0 CLI.
 
 ---
 *Requirements defined: 2026-02-14*
-*Last updated: 2026-03-26 -- Milestone audit: 8 checkboxes updated, SYST-01 reassigned to Phase 15.1*
+*Last updated: 2026-03-30 -- Gap closure: SYST-04 dropped (cockpit pivot), Phase 16 added for verification display fix*
