@@ -10,6 +10,7 @@ import { PlanCard } from './PlanCard'
 import { EmptySectionCard } from './EmptySectionCard'
 import { VerificationDetailPanel } from './VerificationDetailPanel'
 import { ReviewActionBar } from './ReviewActionBar'
+import { filterTruthsForSection } from '../utils/filterTruthsForSection'
 import type { OutlineNode } from '../types/document'
 import type { Components } from 'react-markdown'
 import type { VerificationDetail } from '../types/verification'
@@ -181,20 +182,29 @@ export function SectionBlock({ node, language, projectId, phaseNumber, phaseHasV
       )}
 
       {/* Verification detail + Review controls — leaf nodes only, when phase has verification */}
-      {phaseHasVerification && verificationData?.has_verification && node.children.length === 0 && (
-        <div className="transition-all duration-150">
-          {/* Verification detail panel — sibling to review bar, not nested */}
-          <VerificationDetailPanel
-            truths={verificationData.truths}
-            currentCycle={verificationData.current_cycle}
-            maxCycles={verificationData.max_cycles}
-            isBlocked={verificationData.is_blocked}
-            phaseNumber={phaseNumber!}
-          />
-          {/* Review action bar — always below verification panel */}
-          <ReviewActionBar sectionId={node.id} />
-        </div>
-      )}
+      {phaseHasVerification && verificationData?.has_verification && node.children.length === 0 && (() => {
+        const sectionTruths = filterTruthsForSection(verificationData.truths, node.id)
+        return (
+          <div className="transition-all duration-150">
+            {sectionTruths.length > 0 ? (
+              /* Verification detail panel — sibling to review bar, not nested */
+              <VerificationDetailPanel
+                truths={sectionTruths}
+                currentCycle={verificationData.current_cycle}
+                maxCycles={verificationData.max_cycles}
+                isBlocked={verificationData.is_blocked}
+                phaseNumber={phaseNumber!}
+              />
+            ) : (
+              <p className="text-xs text-muted-foreground mt-4">
+                Geen verificatiebevindingen voor deze sectie.
+              </p>
+            )}
+            {/* Review action bar — always below verification panel */}
+            <ReviewActionBar sectionId={node.id} />
+          </div>
+        )
+      })()}
 
       {/* Children */}
       {node.children.map(child => (
