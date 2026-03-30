@@ -284,7 +284,7 @@ Plans:
 | 14. Project Setup & CLI Handoff | 3/3 | Complete   | 2026-03-22 | - |
 | 15.1 CLI ↔ GUI UX Polish | 2/2 | Complete    | 2026-03-26 | - |
 | 15.2 Review Flow Safety | 2/2 | Complete    | 2026-03-30 | - |
-| 15.3 Fix Override File Bug | 1/1 | Complete   | 2026-03-30 | - |
+| 15.3 Fix Override File Bug | 1/1 | Complete    | 2026-03-30 | - |
 | 15. Production Deployment | v2.0 | 0/2 | On hold | - |
 
 ---
