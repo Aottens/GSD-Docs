@@ -218,7 +218,11 @@ Plans:
   2. DocumentsTab allows selecting which phase to review (dropdown or tabs) instead of only the highest-numbered verified phase
   3. Review decisions persist across tab navigation and page refresh (localStorage verified)
 
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 15.2-01-PLAN.md — Export warning banner: reviewStorage utility, rejected-sections Alert in AssemblyPipeline, onNavigateToDocs prop threading
+- [ ] 15.2-02-PLAN.md — Multi-phase selector + persistence: phase Select dropdown in DocumentsTab, user-controlled selectedPhaseNumber state, persistence indicator in ReviewSummary
 
 #### Phase 15: Production Deployment (ON HOLD)
 
@@ -260,9 +264,9 @@ Plans:
 | 13. Export & Assembly | 4/4 | Complete    | 2026-03-21 | - |
 | 14. Project Setup & CLI Handoff | 3/3 | Complete   | 2026-03-22 | - |
 | 15.1 CLI ↔ GUI UX Polish | 2/2 | Complete    | 2026-03-26 | - |
-| 15.2 Review Flow Safety | v2.0 | 0/? | Gap closure | - |
+| 15.2 Review Flow Safety | v2.0 | 0/2 | Gap closure | - |
 | 15. Production Deployment | v2.0 | 0/2 | On hold | - |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-03-26 -- Gap closure phases 15.1-15.2 added from milestone audit*
+*Last updated: 2026-03-30 -- Phase 15.2 plans created*
