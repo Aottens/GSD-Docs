@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: GUI
 status: unknown
-stopped_at: Completed 15.1-02-PLAN.md
-last_updated: "2026-03-26T21:20:14.919Z"
+stopped_at: Completed 15.2-01-PLAN.md
+last_updated: "2026-03-30T05:53:51.869Z"
 progress:
   total_phases: 10
   completed_phases: 8
-  total_plans: 22
-  completed_plans: 22
+  total_plans: 24
+  completed_plans: 23
   percent: 100
 ---
 
@@ -20,11 +20,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Engineers can create, manage, and review FDS/SDS projects through a visual web cockpit that handles status, preview, review, and export — AI operations stay in CLI
-**Current focus:** Phase 15.1 — cli-gui-ux-polish
+**Current focus:** Phase 15.2 — review-flow-safety
 
 ## Current Position
 
-Phase: 15.1 (cli-gui-ux-polish) — EXECUTING
+Phase: 15.2 (review-flow-safety) — EXECUTING
 Plan: 1 of 2
 
 ## Progress
@@ -193,6 +193,8 @@ Recent decisions affecting v2.0:
 - [Phase 15.1]: Bekijk documenten link in PhasePopover: shown only when phase.has_content AND onNavigateToDocs truthy, closes popover on click, prop threaded ProjectWorkspace -> PhaseTimeline -> PhasePopover
 - [Phase 15.1]: Wrapper hook pattern for polling change-notification: wraps existing query hook, tracks prev fingerprint via useRef, returns same query object unchanged
 - [Phase 15.1]: PhaseTimeline.tsx retains usePhaseTimeline directly — only ProjectWorkspace uses notification wrapper to prevent duplicate phase status toasts
+- [Phase 15.2]: countAllRejected iterates Object.keys(localStorage) with prefix filter — works across all phases without knowing phase count
+- [Phase 15.2]: Warning banner in AssemblyPipeline is non-blocking with local dismissed state that resets on re-mount
 
 ### Roadmap Evolution
 
@@ -205,8 +207,8 @@ None — cockpit pivot clears all previous discussion-engine blockers.
 
 ## Session Continuity
 
-Last session: 2026-03-26T21:17:18.597Z
-Stopped at: Completed 15.1-02-PLAN.md
+Last session: 2026-03-30T05:53:51.867Z
+Stopped at: Completed 15.2-01-PLAN.md
 
 **Next step:** v2.0 milestone complete. All 8 phases, 20 plans delivered. Ready for production deployment or next milestone planning.
 
