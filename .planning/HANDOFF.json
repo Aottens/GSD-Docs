@@ -1,40 +1,30 @@
 {
   "version": "1.0",
-  "timestamp": "2026-03-22T13:57:45.125Z",
-  "phase": "14",
-  "phase_name": "project-setup-cli-handoff",
-  "phase_dir": ".planning/phases/14-project-setup-cli-handoff",
-  "plan": 3,
-  "task": 5,
-  "total_tasks": 5,
-  "status": "verified_human_needed",
-  "completed_tasks": [
-    {"id": 1, "name": "14-01: Backend foundation — doc-type metadata, setup-state endpoint, upload extension", "status": "done", "commit": "55ca81e"},
-    {"id": 2, "name": "14-02: Frontend wizard Step 4 doc-type checklist, shared CliCommandBlock, useSetupState hook", "status": "done", "commit": "a6cc040"},
-    {"id": 3, "name": "14-03: SetupStatusSection, DocCoverageSection, ProjectOverview + Referenties wiring", "status": "done", "commit": "83b5ea5"},
-    {"id": 4, "name": "Verification — automated checks (5/6 criteria passed)", "status": "done"},
-    {"id": 5, "name": "Human verification — CLI auto-refresh polling observation", "status": "not_started"}
-  ],
-  "remaining_tasks": [
-    {"id": 5, "name": "Human verification: CLI-triggered auto-refresh of setup status section", "status": "not_started"}
-  ],
+  "timestamp": "2026-03-30T20:11:31.815Z",
+  "phase": null,
+  "phase_name": "between-milestones",
+  "phase_dir": null,
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
+  "status": "milestone_complete",
+  "completed_tasks": [],
+  "remaining_tasks": [],
   "blockers": [],
-  "human_actions_pending": [
+  "human_actions_pending": [],
+  "decisions": [
     {
-      "action": "Verify CLI auto-refresh: Open project overview in browser, run CLI to create .planning/ directory, observe setup status section updates within 5-10s without page refresh",
-      "context": "useSetupState polls at 5s interval — need to confirm has_scaffolding flag and next_cli_command update in real time after CLI writes to disk",
-      "blocking": false
+      "decision": "Defer Phase 15 (Production Deployment) — SYST-02/SYST-03 accepted as tech debt",
+      "rationale": "Local development has priority over VM deployment",
+      "phase": "v2.0"
+    },
+    {
+      "decision": "Revisit v1 docs backend items next",
+      "rationale": "User has unfinished items from v1.0 CLI docs backend to address before new milestone work",
+      "phase": "next"
     }
   ],
-  "decisions": [
-    {"decision": "Extracted CliCommandBlock as shared component", "rationale": "Reused across FaseringTab and SetupStatusSection, avoids duplication", "phase": "14"},
-    {"decision": "5-second polling interval for useSetupState", "rationale": "Balance between responsiveness and API load; staleTime 3s prevents redundant fetches", "phase": "14"},
-    {"decision": "Doc-type upload prompt in Referenties tab uses Select dropdown", "rationale": "Non-modal approach — user picks doc type inline before upload completes; Zonder type fallback available", "phase": "14"}
-  ],
-  "uncommitted_files": [
-    ".planning/phases/10.1-discussion-behavior-rework/10.1-09-PLAN.md",
-    "frontend/src/components/ui/resizable.tsx"
-  ],
-  "next_action": "Phase 14 is complete (verified). Next phase is 15 (Production Deployment — ON HOLD). Run /gsd:progress to decide next step, or proceed to Phase 15 planning if ready.",
-  "context_notes": "Phase 14 was the last feature phase before deployment. All 3 plans executed successfully across 2 waves. Verification scored 5/6 — one criterion (CLI auto-refresh) needs live runtime testing. The uncommitted resizable.tsx change is from Phase 10.1 work, not Phase 14."
+  "uncommitted_files": [],
+  "next_action": "/gsd:new-milestone — start next milestone. User wants to revisit v1 docs backend items as part of or before next milestone.",
+  "context_notes": "v2.0 GUI milestone shipped 2026-03-30. 11 phases, 26 plans, 56 tasks, ~14,652 LOC. 31/33 requirements satisfied (SYST-02/SYST-03 deferred). Tag v2.0 pushed to origin. Phase directories archived to milestones/v2.0-phases/. REQUIREMENTS.md deleted (fresh for next milestone). RETROSPECTIVE.md created. User mentioned wanting to revisit v1 docs backend items — saved as memory."
 }
