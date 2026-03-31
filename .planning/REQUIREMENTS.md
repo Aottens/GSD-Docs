@@ -1,92 +1,73 @@
-# Requirements: GSD-Docs Industrial v2.0 GUI
+# Requirements: GSD-Docs Industrial v3.0 Docs Engine Rearchitecture
 
-**Defined:** 2026-02-14
-**Core Value:** Engineers can create, manage, and review FDS/SDS projects through a visual web interface that guides them through the full document lifecycle
+**Defined:** 2026-03-31
+**Core Value:** Rearchitect the docs backend from rigid EM-first structure to flexible system-first approach, add LLM provider abstraction, and create engine visibility for engineers
 
 ## v1 Requirements
 
-Requirements for v2.0 release. Each maps to roadmap phases.
+Requirements for v3.0 release. Each maps to roadmap phases.
 
-### Project Setup
+### Flexible Structure
 
-- [x] **PROJ-01**: Engineer can create a new FDS project through a guided wizard with type classification (A/B/C/D)
-- [x] **PROJ-02**: Engineer can select project language (Dutch/English) during project creation
-- [x] **PROJ-03**: Engineer can upload reference files during project creation
-- [x] **PROJ-04**: Engineer can browse all projects in a dashboard with status and type indicators
-- [x] **PROJ-05**: Engineer can open a project from the dashboard to its working view
+- [ ] **FLEX-01**: Engineer classifies project type (A/B/C/D) first, then describes the system functionally before choosing a decomposition model
+- [ ] **FLEX-02**: Engineer can select a decomposition model (isa88_em, functional, process_flow, hybrid) after system discovery
+- [ ] **FLEX-03**: Decomposition model is stored in PROJECT.md and read by all downstream commands
+- [ ] **FLEX-04**: ROADMAP generation adapts phase structure based on both project type AND decomposition model
+- [ ] **FLEX-05**: Section templates are selected based on decomposition model at write time
+- [ ] **FLEX-06**: Project type (A/B/C/D) and decomposition model are independent dimensions — any type can use any model
+- [ ] **FLEX-07**: Hybrid decomposition allows per-phase model selection (e.g., Phase 2 = isa88_em, Phase 3 = functional)
+- [ ] **FLEX-08**: Standards checking (PackML/ISA-88) applies only to isa88_em and hybrid-EM phases
+- [ ] **FLEX-09**: During decomposition model selection, the system explains each model and shows a preview of the resulting FDS structure
+- [ ] **FLEX-10**: Engineer can create a custom decomposition model via `/doc:create-decomposition` that defines section types, hierarchy, and phase structure
+- [ ] **FLEX-11**: Engineer can extract a decomposition model from an existing FDS document via `/doc:extract-decomposition`
 
-### Workflow Navigation
+### LLM Abstraction
 
-- [x] **WORK-01**: Engineer can view phase timeline showing ROADMAP phases with completion status
-- [x] **WORK-02**: Engineer can view phase status and next recommended CLI command from the timeline
-- [x] **WORK-03**: Engineer can view document outline tree with expandable/collapsible sections
-- [x] **WORK-04**: Engineer can navigate to a specific section from the outline tree
+- [ ] **LLM-01**: All CLI commands use a single provider abstraction interface instead of direct Anthropic SDK calls
+- [ ] **LLM-02**: LLM provider and model are configured per project in PROJECT.md
+- [ ] **LLM-03**: Claude (Anthropic) works as a provider through the abstraction layer
+- [ ] **LLM-04**: OpenAI/GPT works as a provider through the abstraction layer
+- [ ] **LLM-05**: Local models via Ollama work as a provider through the abstraction layer
+- [ ] **LLM-06**: API keys are managed via environment variables, never stored in project files
+- [ ] **LLM-07**: Misconfigured provider gives a clear error message before any LLM call
+- [ ] **LLM-08**: Fallback chain allows automatic failover between providers
+- [ ] **LLM-09**: Token usage and cost are logged per project
+- [ ] **LLM-10**: Context budget enforcement prevents silent truncation on smaller-context models
 
-### Discussion
+### Engine Visibility
 
-~~DISC-01 through DISC-04 dropped — discussions handled by CLI (`/doc:discuss-phase`). GUI is a cockpit, not a conversation engine.~~
-
-### Document Generation
-
-- [x] **DOCG-01**: Engineer can view generated section plans with wave assignments in the GUI
-
-~~DOCG-02 through DOCG-04 dropped — writing triggered via CLI (`/doc:write-phase`). GUI displays results.~~
-
-### Quality & Review
-
-- [x] **QUAL-01**: Engineer can view verification results from CLI output in the GUI
-- [x] **QUAL-02**: Engineer can view gaps, severity, and recommendations from verification
-- [x] **QUAL-03**: Engineer can see gap closure cycle status (verify → re-plan → re-write)
-- [x] **QUAL-04**: Engineer can approve or reject verification results before proceeding
-- [x] **QUAL-05**: Engineer can conduct review-phase with approve/reject/request-changes per section
-- [x] **QUAL-06**: Engineer can provide text feedback during review that feeds back into the workflow
-- [x] **QUAL-07**: Engineer can view PackML/ISA-88 standards compliance results in the GUI
-- [x] **QUAL-08**: Engineer can view standards violations with references to standard sections
-
-### Reference Management
-
-- [x] **REFM-01**: Engineer can upload reference files via drag-and-drop (PDF, DOCX, images)
-- [x] **REFM-02**: Engineer can view and manage per-project reference files
-- [x] **REFM-03**: Engineer can access shared reference library (read-only, admin-managed)
-- [x] **REFM-04**: Engineer can override shared references with project-specific uploads
-- [x] **REFM-05**: Admin can manage shared reference library (add, remove, categorize files)
-
-### Document Output
-
-- [x] **OUTP-01**: Engineer can preview rendered document content with Mermaid diagram rendering
-- [x] **OUTP-02**: Engineer can trigger FDS assembly with cross-reference resolution
-- [x] **OUTP-03**: Engineer can export FDS/SDS to DOCX with corporate styling
-- [x] **OUTP-04**: Engineer can see export progress during DOCX generation
-- [x] **OUTP-05**: Engineer can trigger SDS scaffolding from completed FDS with typicals matching
-- [x] **OUTP-06**: Engineer can see typicals matching confidence scores and "NEW TYPICAL NEEDED" indicators
-- [x] **OUTP-07**: Engineer can generate documents in Dutch or English based on project setting
-
-### System & Deployment
-
-- [x] **SYST-01**: System detects incomplete phases and offers resume from last checkpoint
-- [ ] **SYST-02**: Application deploys on VM with Nginx reverse proxy and systemd services
-- [ ] **SYST-03**: Project files remain compatible with v1.0 CLI /doc:* commands
-~~SYST-04 dropped — LLM abstraction removed during cockpit pivot (Phase 10). GUI doesn't need LLM; CLI handles all AI operations. Deferred to v3.0 (ADVN-03).~~
+- [ ] **ENGV-01**: Engineer can browse all templates, commands, and workflows in a read-only GUI viewer
+- [ ] **ENGV-02**: Engineer can see per-project config summary (provider, model, decomposition model, standards flags)
+- [ ] **ENGV-03**: Generated sections show which template and prompts were used (template_ref/prompt_ref in PLAN.md)
+- [ ] **ENGV-04**: Engineer can browse command documentation rendered as readable pages
+- [ ] **ENGV-05**: Engine version is displayed in GUI header and exported document frontmatter
+- [ ] **ENGV-06**: Engineer can view changelog of engine updates via git history
+- [ ] **ENGV-07**: Engineer can browse verification criteria per section type
+- [ ] **ENGV-08**: Template health indicators flag stale or incomplete templates
 
 ## v2 Requirements
 
-Deferred to v2.x releases. Tracked but not in current roadmap.
+Deferred to v3.x releases. Tracked but not in current roadmap.
 
-### Enhanced Navigation
+### Extended Structure
 
-- **ENAV-01**: Engineer can batch export multiple variants (draft, final, with/without diagrams)
+- **XFLEX-01**: Structure evolution / late promotion — project starts functional, promotes to ISA-88 mid-project
+- **XFLEX-02**: ISA-88 conformance check on functional projects — suggest EM/CM boundaries from functional description
 
-### Team Features
+### Extended LLM
 
-- **TEAM-01**: Role-based access control for projects
-- **TEAM-02**: Project sharing with activity logs
-- **TEAM-03**: Client portal with read-only review access
+- **XLLM-01**: Per-phase provider override via environment variable
+- **XLLM-02**: OpenAI-compatible custom endpoint support (Azure OpenAI, self-hosted gateways)
 
-### Advanced Features
+### Extended Visibility
 
-- **ADVN-01**: Version comparison UI (diff between FDS versions)
-- **ADVN-02**: Full-text search across all projects
-- **ADVN-03**: Local LLM support via provider swap (v3.0 milestone)
+- **XENGV-01**: Usage statistics per template across all projects
+- **XENGV-02**: Template comparison view (diff between versions)
+
+### Deferred from v2.0
+
+- **SYST-02**: VM deployment with Nginx reverse proxy and systemd services
+- **SYST-03**: CLI compatibility verification
 
 ## Out of Scope
 
@@ -94,16 +75,15 @@ Explicitly excluded. Documented to prevent scope creep.
 
 | Feature | Reason |
 |---------|--------|
-| Real-time collaborative editing | Single-engineer workflow by design; review-phase handles collaboration |
-| Full auto-generation (zero human input) | Equipment details cannot be inferred; results in hallucinated/unsafe content |
-| Inline Markdown editing in GUI | Creates divergence from file-backed state; breaks CLI compatibility |
-| Database-backed document storage | STATE.md must remain human-readable and git-trackable; SQLite for metadata only |
-| Live DOCX preview (Word-perfect) | Requires Word rendering engine; Markdown preview sufficient |
-| AI provider selection per project | Single provider per deployment; v3.0 adds local model support |
-| Undo/redo for AI operations | Forward-only by design; review-phase and gap closure handle corrections |
-| Mobile/tablet UI | Engineering work is desktop-based; no field use cases identified |
-| PLC code generation | SDS describes design, not executable code; safety risk |
-| P&ID / electrical diagram generation | Engineering Package items requiring CAD tools |
+| Free-form structure (no decomposition model) | No structure = no templates, no verification criteria, no consistent output |
+| Automatic structure detection from description | LLM classification unreliable; wrong choice poisons entire project ROADMAP |
+| GUI-driven structure editor (drag-and-drop) | Massive scope; breaks file-backed state; CLI incompatibility |
+| GUI-based provider configuration | GUI has no LLM operations (cockpit pivot decision); provider config stays in CLI/PROJECT.md |
+| Real-time model comparison (A/B output) | Doubles token cost; creates decision fatigue; FDS content should be deterministic |
+| Fine-tuned models | Training data management, infrastructure, and retraining cycles are enormous scope |
+| In-GUI template editing | File-backed templates are SSOT; GUI edits create divergence and break version control |
+| Per-project template overrides | Template divergence across projects makes QA impossible |
+| AI-assisted template improvement | Meta-prompting loop; safety risk for standards-adjacent content |
 
 ## Traceability
 
@@ -111,55 +91,40 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROJ-01 | Phase 8 | Complete |
-| PROJ-02 | Phase 8 | Complete |
-| PROJ-03 | Phase 9 | Complete |
-| PROJ-04 | Phase 8 | Complete |
-| PROJ-05 | Phase 8 | Complete |
-| WORK-01 | Phase 10 | Complete |
-| WORK-02 | Phase 10 | Complete |
-| WORK-03 | Phase 11 | Complete |
-| WORK-04 | Phase 11 | Complete |
-| DISC-01 | Dropped | CLI |
-| DISC-02 | Dropped | CLI |
-| DISC-03 | Dropped | CLI |
-| DISC-04 | Dropped | CLI |
-| DOCG-01 | Phase 11 | Complete |
-| DOCG-02 | Dropped | CLI |
-| DOCG-03 | Dropped | CLI |
-| DOCG-04 | Dropped | CLI |
-| QUAL-01 | Phase 12 | Complete |
-| QUAL-02 | Phase 12 | Complete |
-| QUAL-03 | Phase 12 | Complete |
-| QUAL-04 | Phase 12 | Complete |
-| QUAL-05 | Phase 12 | Complete |
-| QUAL-06 | Phase 12 | Complete |
-| QUAL-07 | Phase 12 | Complete |
-| QUAL-08 | Phase 12 | Complete |
-| REFM-01 | Phase 9 | Complete |
-| REFM-02 | Phase 9 | Complete |
-| REFM-03 | Phase 9 | Complete |
-| REFM-04 | Phase 9 | Complete |
-| REFM-05 | Phase 9 | Complete |
-| OUTP-01 | Phase 11 | Complete |
-| OUTP-02 | Phase 13 | Complete |
-| OUTP-03 | Phase 13 | Complete |
-| OUTP-04 | Phase 13 | Complete |
-| OUTP-05 | Phase 13 | Complete |
-| OUTP-06 | Phase 13 | Complete |
-| OUTP-07 | Phase 13 | Complete |
-| SYST-01 | Phase 15.1 (partial), Phase 15 | Complete |
-| SYST-02 | Phase 15 | Pending |
-| SYST-03 | Phase 15 | Pending |
-| SYST-04 | Dropped | CLI (v3.0 ADVN-03) |
+| FLEX-01 | TBD | Pending |
+| FLEX-02 | TBD | Pending |
+| FLEX-03 | TBD | Pending |
+| FLEX-04 | TBD | Pending |
+| FLEX-05 | TBD | Pending |
+| FLEX-06 | TBD | Pending |
+| FLEX-07 | TBD | Pending |
+| FLEX-08 | TBD | Pending |
+| FLEX-09 | TBD | Pending |
+| FLEX-10 | TBD | Pending |
+| FLEX-11 | TBD | Pending |
+| LLM-01 | TBD | Pending |
+| LLM-02 | TBD | Pending |
+| LLM-03 | TBD | Pending |
+| LLM-04 | TBD | Pending |
+| LLM-05 | TBD | Pending |
+| LLM-06 | TBD | Pending |
+| LLM-07 | TBD | Pending |
+| LLM-08 | TBD | Pending |
+| LLM-09 | TBD | Pending |
+| LLM-10 | TBD | Pending |
+| ENGV-01 | TBD | Pending |
+| ENGV-02 | TBD | Pending |
+| ENGV-03 | TBD | Pending |
+| ENGV-04 | TBD | Pending |
+| ENGV-05 | TBD | Pending |
+| ENGV-06 | TBD | Pending |
+| ENGV-07 | TBD | Pending |
+| ENGV-08 | TBD | Pending |
 
 **Coverage:**
-- v1 requirements: 41 total
-- Mapped to phases: 33
-- Dropped (CLI handles): 8 (DISC-01–04, DOCG-02–04, SYST-04)
-
-**Coverage validation:** 100% — All GUI requirements mapped to phases 8-14. Dropped requirements handled by v1.0 CLI.
+- v1 requirements: 29 total
+- Mapped to phases: 0 (pending roadmap creation)
+- Deferred (v3.x): 7
 
 ---
-*Requirements defined: 2026-02-14*
-*Last updated: 2026-03-30 -- Gap closure: SYST-04 dropped (cockpit pivot), Phase 16 added for verification display fix*
+*Requirements defined: 2026-03-31*
