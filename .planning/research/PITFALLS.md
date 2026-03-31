@@ -1,434 +1,352 @@
 # Pitfalls Research
 
-**Domain:** Web GUI for AI-Powered CLI Document Generation Tool
-**Researched:** 2026-02-14
+**Domain:** Docs Engine Rearchitecture — Flexible FDS Structure, LLM Provider Abstraction, Engine Visibility
+**Researched:** 2026-03-31
 **Confidence:** HIGH
 
-## Critical Pitfalls
+---
 
-### Pitfall 1: WebSocket Connection Drops During Long-Running LLM Tasks
-
-**What goes wrong:**
-Engineers start a document generation task that triggers multiple Claude API calls taking 2-5 minutes total. The WebSocket connection drops mid-stream due to network hiccup, laptop closure, or browser refresh. The frontend loses connection, but the backend continues processing and burning API tokens. The user sees a frozen UI, refreshes, and starts the same task again, creating duplicate processing and wasted Claude API costs. The original results are lost even though processing completed.
-
-**Why it happens:**
-Developers treat WebSocket connections as reliable channels and tightly couple task execution to the connection lifecycle. The natural inclination is to stream LLM responses directly through the WebSocket, which works perfectly in development (stable laptop, same network) but fails in production (changing networks, browser refreshes, laptops closing). Platform limitations exacerbate this: Heroku enforces a 30-second initial response timeout, Vercel's hobby tier allows only 10 seconds for serverless functions, and even paid plans max out at 5-13 minutes.
-
-**How to avoid:**
-Implement the separation of concerns pattern: decouple task execution from client connections. Use Redis Streams for persistent storage of each LLM response chunk as it's generated, Redis Pub/Sub for notifying connected clients of new chunks, and automatic reconnection logic on the client side that fetches all chunks from the last received position. This ensures generation always continues uninterrupted, clients can reconnect and receive all content without duplicates or missing chunks, and multiple clients can follow the same generation task.
-
-Add heartbeat keepalive signals every 15 seconds to detect disconnects early and implement client-side reconnection with exponential backoff (starting at 1 second, max 30 seconds). Store task state server-side with a unique task ID so clients can resume by ID after reconnection.
-
-**Warning signs:**
-- "It works on my laptop but not for remote team members"
-- Users report seeing "Connection lost" then restarting tasks
-- CloudWatch/monitoring shows duplicate Claude API calls within minutes
-- WebSocket connections in logs show frequent disconnects/reconnects
-- Users ask "Can I close my laptop while this runs?"
-
-**Phase to address:**
-Phase 1 (Core Infrastructure). This is an architectural decision that must be made upfront. Retrofitting persistent task storage after building direct WebSocket streaming requires significant rework. The phase must deliver WebSocket manager with Redis-backed persistence and reconnection logic as a foundational service.
+## PILLAR 1: Flexible FDS Structure
 
 ---
 
-### Pitfall 2: Blocking FastAPI Event Loop with Synchronous File Operations
+### Pitfall 1: Destroying the EM-First Domain Knowledge Encoded in 194 Files
 
 **What goes wrong:**
-During file upload (reference documents) or document generation output (saving PDFs), developers use synchronous operations like `file.write()`, `shutil.copyfileobj()`, or `open().read()`. When an engineer uploads a 50MB reference document or the system generates a large technical document, the FastAPI worker thread blocks for several seconds. All other requests queue up. The entire application becomes unresponsive. Other team members trying to use the system see timeout errors. Under concurrent load (3-4 engineers working simultaneously), response times spike from 200ms to 20+ seconds.
+The new "system-first discovery" approach requires changing how templates and workflows trigger their EM-centric sections. Developers read this as "replace the equipment module structure" and refactor section templates to be decomposition-neutral. In doing so, they strip ISA-88 terminology, PackML state names, and EM-specific subsections (interlocks, I/O table, operating states) from the templates. The result: templates that look flexible but have lost the interlock logic, signal-range patterns, and fail-safe state definitions that took years to accumulate.
 
 **Why it happens:**
-Most FastAPI tutorials and file upload examples use synchronous file I/O because it's simpler to understand and works fine for small files in demos. Developers don't realize that FastAPI runs on an async event loop, and any synchronous blocking operation blocks the entire worker. The "it works on my machine" effect happens because testing is typically done with small files and no concurrent load.
+"System-first" sounds like an architectural inversion. Developers conflate the discovery order (what gets asked first) with the structure of what gets written. The EM section template is assumed to be ISA-88-specific when it is actually standard-agnostic industrial domain knowledge. ISA-88 is opt-in; the template content (interlocks, I/O, states) is always needed.
 
 **How to avoid:**
-Use `aiofiles` for all file operations. Replace `open()` with `aiofiles.open()`, use async context managers (`async with`), and await all read/write operations. For large file uploads, implement streaming with chunked processing rather than loading entire files into memory.
-
-Specifically:
-```python
-# BAD - Blocks event loop
-with open(filepath, 'wb') as f:
-    shutil.copyfileobj(upload_file.file, f)
-
-# GOOD - Non-blocking async I/O
-async with aiofiles.open(filepath, 'wb') as f:
-    while chunk := await upload_file.read(8192):
-        await f.write(chunk)
-```
-
-Set file size limits (e.g., 100MB max) and validate them before processing. Implement upload progress tracking through separate endpoint polling rather than holding connections open. Real-world measurements show 40% throughput gain and 28% latency reduction (215ms P95) with async file operations.
+Treat EM sections as a composable section type — not an ISA-88 artifact. The flexible structure change is in the ROADMAP scaffolding logic (what phases exist and in what order) and the discovery conversation (what the engineer is asked), NOT in the section content templates. Audit: every `{PLACEHOLDER}` in `section-equipment-module.md` maps to actual hardware. Do not remove any of these. Add section types (process-flow unit, functional block, loop) alongside the existing EM type.
 
 **Warning signs:**
-- API response times spike during file uploads
-- Concurrent user requests queue behind file operations
-- Single large file upload makes entire app unresponsive
-- Logs show worker timeout warnings
-- Team members report "the app freezes when someone uploads files"
+- Section template PRs that remove subsections from `section-equipment-module.md`
+- Template headers losing `standards: [packml, isa88]` frontmatter
+- `EQUIPMENT-HIERARCHY.md` or `STATE-MODEL.md` references being removed from context-loading rules
+- New section types created as blank-slate replacements rather than additions
 
 **Phase to address:**
-Phase 1 (Core Infrastructure). File handling patterns must be established from the start. Include in API endpoint implementation guidelines and enforce through code review. Create reusable utility functions for async file operations that all phases use.
+Flexible Structure foundation phase. Define section type catalogue (EM, functional-block, process-flow-unit, loop) before any template changes. Lock `section-equipment-module.md` as read-only for this milestone.
 
 ---
 
-### Pitfall 3: Claude API Rate Limits Without Retry-After Header Handling
+### Pitfall 2: Breaking `doc:write-phase` Wave Assignments When ROADMAP Structure Changes
 
 **What goes wrong:**
-The system makes multiple concurrent Claude API calls during document generation (analyzing requirements, generating content sections, reviewing outputs). When the team hits the API rate limit (50 requests/minute on Tier 1, 30,000 input tokens/minute), the API returns 429 errors. The naive implementation retries immediately or with simple exponential backoff, ignoring the `retry-after` header. This creates a thundering herd where all queued requests retry simultaneously, making the congestion worse. Engineers see "Rate limit exceeded" errors, document generation fails mid-process, and the system burns through retry attempts without recovering.
+Wave-based parallelism (`write-phase.md`) reads ROADMAP.md to find phase entries and then resolves `PLAN.md` files for wave-dependency graphs. If the new flexible ROADMAP templates use different heading formats or phase naming conventions, `write-phase.md` fails silently — sections get written in the wrong order or sequentially instead of in parallel. Engineers don't notice until a Type A project with 8 EMs runs 40% slower.
 
 **Why it happens:**
-Developers implement retry logic based on generic best practices (exponential backoff) without reading Claude API's specific error responses. The Claude API returns a `retry-after` header that specifies exactly how many seconds to wait, but this is ignored. When multiple concurrent tasks hit rate limits simultaneously, they all retry at the same time (synchronized by the same backoff algorithm), creating waves of retries that perpetuate the problem.
+The write-phase workflow uses grep-based ROADMAP parsing (`grep -A 5 "^## Phase ${PHASE}:"`). Any new ROADMAP template that uses a different phase heading format (`## Phase 2 — System Discovery` instead of `## Phase 2: System Discovery`) silently breaks the dependency resolver.
 
 **How to avoid:**
-Implement Claude-specific error handling that reads and respects the `retry-after` header as the primary recovery signal. Combine this with exponential backoff as a fallback when the header is missing. Add jitter (random variation) to prevent synchronized retries.
-
-Production pattern:
-```python
-import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential
-
-async def call_claude_with_retry(prompt):
-    for attempt in range(5):
-        try:
-            response = await client.post("https://api.anthropic.com/v1/messages", ...)
-            return response
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 429:
-                retry_after = int(e.response.headers.get('retry-after', 0))
-                if retry_after:
-                    await asyncio.sleep(retry_after)
-                else:
-                    # Fallback: exponential backoff with jitter
-                    wait_time = (2 ** attempt) + random.uniform(0, 1)
-                    await asyncio.sleep(wait_time)
-            else:
-                raise
-```
-
-Implement request queuing with rate limit tracking to prevent hitting limits in the first place. Monitor token usage across all team members and implement per-user or per-project quotas. Use circuit breakers to stop retrying when the system is clearly overloaded.
+Define a single canonical ROADMAP heading format in the template authoring guide before writing any new ROADMAP templates. Add an explicit format-validation step to `new-fds.md`: after scaffolding a ROADMAP, parse all phase headings and verify they match the expected pattern before writing the file to disk. Do not change the parsing pattern in `write-phase.md` — change the templates to fit it.
 
 **Warning signs:**
-- Repeated 429 errors in logs despite retry logic
-- Document generation tasks fail with "rate limit" errors
-- Multiple retry attempts happen within seconds of each other
-- API costs spike due to failed requests counting toward quota
-- Team reports "randomly fails during generation"
+- New ROADMAP templates using different heading punctuation than existing Type A/B/C/D templates
+- `write-phase.md` tests passing on Type A but not on a new "system-first" ROADMAP
+- Sections written without SUMMARY.md files (indicates silent failure in wave orchestration)
 
 **Phase to address:**
-Phase 1 (Core Infrastructure). The LLM provider abstraction layer must implement this correctly from the start. Create a shared `LLMClient` service that all phases use, with built-in rate limit handling, retry logic, and circuit breakers.
+ROADMAP template authoring phase. Add ROADMAP schema validation to `new-fds.md` as a post-scaffolding check.
 
 ---
 
-### Pitfall 4: Shared State Divergence Between CLI and Web Application
+### Pitfall 3: Dynamic Structure Discovery Creating an Undetermined ROADMAP at Project Start
 
 **What goes wrong:**
-The CLI tool maintains project state in `.fds/project.yaml` using a synchronous Python data model. The web application needs concurrent access from multiple users, real-time updates, and WebSocket broadcasting. Developers duplicate the state management logic with subtle differences: the CLI uses file-based locking and immediate writes, the web app uses in-memory state with periodic saves, they handle validation differently, they parse YAML differently. A project created via CLI doesn't appear correctly in the web UI. Changes made in the web UI corrupt the CLI project structure. Two team members editing the same project simultaneously via web UI create race conditions. The CLI and web app drift into incompatible implementations.
+The v1.0 system commits a complete ROADMAP at `/doc:new-fds` time. The new system-first approach discovers structure during Phase 1-2 conversations. Developers implement this as: "don't write ROADMAP.md until Phase 2 completes." This breaks every downstream command that reads ROADMAP.md at startup (`discuss-phase`, `plan-phase`, `verify-phase` all assume ROADMAP.md exists and is complete).
 
 **Why it happens:**
-The temptation is to "quickly add a web layer" by creating new state management code rather than refactoring the existing CLI code to work in both contexts. The CLI was designed for single-user, single-process, synchronous file operations. The web app needs multi-user, multi-process, async operations. These seem incompatible, so developers create parallel implementations. The differences start small (async vs sync) but grow over time (different validation, different defaults, different error handling).
+"Dynamic structure" sounds like a deferred commitment. But the existing commands are built on the forward-only pattern: ROADMAP is the contract between phases. Making it dynamic in discovery doesn't mean it should be absent.
 
 **How to avoid:**
-Create a shared state management layer that both CLI and web use as a library. This layer provides:
-
-1. **Abstract storage interface**: Implementations for file-based (CLI) and Redis/database (web)
-2. **Unified validation**: Single source of truth for project schema
-3. **Transactional updates**: Atomic operations that work across storage backends
-4. **Event emission**: State changes emit events that web UI can subscribe to
-
-The CLI imports this library and uses the file-based storage. The web app imports the same library and uses Redis storage. Both use identical validation and business logic.
-
-```python
-# Shared library (used by both CLI and web)
-class ProjectState:
-    def __init__(self, storage: StorageBackend):
-        self.storage = storage
-
-    async def update_phase(self, project_id: str, phase_data: PhaseData):
-        # Validation (same for CLI and web)
-        validated = PhaseSchema.validate(phase_data)
-        # Atomic update (backend-agnostic)
-        await self.storage.atomic_update(project_id, "phase", validated)
-        # Event emission (CLI ignores, web broadcasts)
-        await self.emit_event("phase_updated", project_id, validated)
-```
-
-Implement migration tools to convert existing CLI projects to web-compatible storage. Add integration tests that verify CLI and web operations produce identical results.
+Write a provisional ROADMAP at `/doc:new-fds` time with placeholder phase entries. Use the existing `expand-roadmap` mechanism (already exists for >5 units discovered) as the contract for how the ROADMAP evolves — it emits a user-confirmed ROADMAP update, not a partial omission. The `expand-roadmap.md` workflow is the correct pattern to follow for dynamic structure.
 
 **Warning signs:**
-- "Works in CLI but not in web" bug reports
-- Data corruption when switching between CLI and web
-- Duplicate validation logic in two places
-- Different error messages for the same validation failure
-- "Which version is right?" questions about state format
+- `new-fds.md` changes that skip ROADMAP.md generation until "after discovery"
+- `discuss-phase.md` failing with "ROADMAP.md not found"
+- Engineers reporting that `/doc:status` shows 0 phases after project creation
 
 **Phase to address:**
-Phase 1 (Core Infrastructure). This is foundational architecture. Attempting to retrofit shared state management after building separate implementations is extremely costly. The phase must deliver the shared state library and storage abstraction before building CLI compatibility features or web UI features.
+Flexible structure design phase. The ROADMAP format spec must define how provisional entries are represented before any command changes.
 
 ---
 
-### Pitfall 5: Unvalidated File Uploads with Content-Type Spoofing
+### Pitfall 4: Mixed Decomposition Projects Losing ISA-88 Compliance Selectively
 
 **What goes wrong:**
-Engineers upload reference documents (PDFs, Word docs, markdown) for the document generation system to reference. The validation checks only the `Content-Type` header from the HTTP request. A malicious or compromised file has `Content-Type: application/pdf` but contains executable code. The system accepts it, stores it, and potentially processes it with document parsing libraries. This creates security vulnerabilities: remote code execution through malicious PDFs, server-side request forgery through crafted documents, denial of service through ZIP bombs or billion laughs XML attacks. Reference files stored on the team server become attack vectors.
+A project uses functional decomposition for high-level phases but drops to EM-level for a sub-system that requires PackML compliance. The system generates a Phase 3 (Functional Units) and a Phase 4 (Equipment Modules for Filling Station). The `check-standards.md` command checks ISA-88 compliance per section but doesn't know that Phase 3 sections are intentionally not EM-structured. It either flags false positives (non-EM sections fail ISA-88 check) or the developer disables standards checking for the whole project to avoid the noise.
 
 **Why it happens:**
-The `Content-Type` header is sent by the client and trivially spoofed. Beginner tutorials validate file uploads by checking this header because it's simple and works for honest users. Developers don't realize that accepting user-supplied files is a severe security risk. The "it's just our team" mindset creates a false sense of security—one compromised laptop or malicious engineer can exploit the entire system.
+Standards compliance is currently project-scoped (on/off in PROJECT.md). A hybrid decomposition project needs section-scoped standards applicability. The current design has no way to mark "this section is a functional block, ISA-88 does not apply here."
 
 **How to avoid:**
-Implement defense-in-depth file validation:
-
-1. **Magic number validation**: Read the first 8-16 bytes and verify they match expected file signatures using `python-magic`
-2. **File extension whitelist**: Only accept `.pdf`, `.docx`, `.md`, `.txt` extensions
-3. **Size limits**: Enforce maximum file size (e.g., 100MB) before reading content
-4. **Filename sanitization**: Generate UUIDs for storage, never use client-provided filenames
-5. **Sandboxed parsing**: Process uploaded files in isolated processes with resource limits
-6. **Virus scanning**: Integrate ClamAV or similar for malware detection
-
-```python
-import magic
-import uuid
-from pathlib import Path
-
-async def validate_and_store_upload(upload_file: UploadFile):
-    # Size check first (before reading)
-    upload_file.file.seek(0, 2)  # Seek to end
-    size = upload_file.file.tell()
-    upload_file.file.seek(0)  # Reset
-    if size > 100 * 1024 * 1024:  # 100MB
-        raise HTTPException(413, "File too large")
-
-    # Read first chunk for magic number validation
-    header = await upload_file.read(8192)
-    mime = magic.from_buffer(header, mime=True)
-
-    # Whitelist validation
-    allowed_types = {
-        'application/pdf': ['.pdf'],
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-        'text/markdown': ['.md'],
-        'text/plain': ['.txt']
-    }
-
-    if mime not in allowed_types:
-        raise HTTPException(400, f"File type {mime} not allowed")
-
-    # Generate safe storage path
-    storage_id = uuid.uuid4()
-    extension = allowed_types[mime][0]
-    storage_path = UPLOAD_DIR / f"{storage_id}{extension}"
-
-    # Stream to disk (async, with size limit enforced)
-    upload_file.file.seek(0)
-    async with aiofiles.open(storage_path, 'wb') as f:
-        await f.write(header)  # Write header we already read
-        while chunk := await upload_file.read(8192):
-            await f.write(chunk)
-
-    return storage_id, mime
-```
-
-Store uploads in a directory outside the web server document root. Never serve uploaded files directly—always proxy through an endpoint that sets proper `Content-Disposition` headers.
+Add `standards_applicability` to section PLAN.md frontmatter: `isa88: false` for functional-block sections. Update `check-standards.md` to read this flag before applying ISA-88 checks. This is a small extension, not a redesign — the opt-in principle is preserved.
 
 **Warning signs:**
-- File validation only checks `Content-Type` header
-- Uploaded files stored with original filenames
-- Upload directory is within static file serving path
-- No file size limits enforced
-- "What could go wrong?" attitude about team-only access
+- `check-standards.md` generating compliance warnings on functional-block sections
+- Engineers disabling `standards.isa88.enabled` for projects that need ISA-88 on some sections
+- VERIFICATION.md files full of ignored ISA-88 warnings
 
 **Phase to address:**
-Phase 2 (File Management). Must be implemented before allowing any file uploads. This is a security gate—the phase cannot be considered complete without proper upload validation. Include security review and penetration testing in phase verification.
+Standards integration phase within flexible structure work. Document this as a known extension point.
 
 ---
 
-### Pitfall 6: Missing Resumption Points for Interrupted AI Workflows
-
-**What goes wrong:**
-Document generation follows a multi-step workflow: analyze requirements → generate outline → generate sections → review/polish → compile PDF. Each step involves Claude API calls taking 30-120 seconds. An engineer starts generation, the process fails at step 3 (generate sections) due to rate limit, network error, or server restart. The system restarts the entire workflow from step 1, re-doing analysis and outline generation, wasting time and API tokens. There's no way to manually intervene mid-workflow to fix issues. If the engineer disagrees with the AI's analysis, they must complete the entire workflow before providing feedback.
-
-**Why it happens:**
-Developers design AI workflows as linear pipelines without checkpointing. The pattern is: `step1().then(step2).then(step3).then(step4)`. This works perfectly when everything succeeds but fails catastrophically on any error. Adding checkpointing later requires redesigning the workflow engine, migrating existing projects, and handling partial state. The effort seems excessive for "occasional failures," so it gets deferred until failure rates increase and user frustration peaks.
-
-**How to avoid:**
-Design workflows with explicit state machines and persistent checkpoints from the start. Each workflow step:
-
-1. **Saves output to persistent storage** (database/Redis) before proceeding
-2. **Records completion status** with timestamp and responsible agent
-3. **Emits events** that web UI can display for progress tracking
-4. **Supports manual override** allowing users to edit intermediate results
-5. **Allows resumption** from any completed checkpoint
-
-Implement workflow state as a table/document:
-
-```python
-WorkflowState = {
-    "project_id": "uuid",
-    "phase": "generation",
-    "current_step": "generate_sections",
-    "checkpoints": {
-        "analyze_requirements": {
-            "status": "completed",
-            "completed_at": "2026-02-14T10:30:00Z",
-            "output": {...},
-            "tokens_used": 1250
-        },
-        "generate_outline": {
-            "status": "completed",
-            "completed_at": "2026-02-14T10:32:15Z",
-            "output": {...},
-            "tokens_used": 2100
-        },
-        "generate_sections": {
-            "status": "in_progress",
-            "started_at": "2026-02-14T10:33:00Z",
-            "partial_output": {...}
-        }
-    },
-    "can_resume_from": ["generate_outline", "analyze_requirements"]
-}
-```
-
-Provide UI controls for: viewing checkpoint outputs, editing checkpoint results before continuing, manually retrying failed steps, and resuming from specific checkpoints.
-
-Modern agentic workflow systems implement this via checkpointing that enables recovery and resumption of long-running processes by saving workflow states, with workflows that can start, pause, and resume statefully on demand. Some systems support human-in-the-loop controls where operators can trigger interrupt commands, take over browser control, and pass control back to the agent to continue from the current state.
-
-**Warning signs:**
-- "Failed at 90% complete, had to restart from scratch" complaints
-- No way to see what the AI did at intermediate steps
-- Total workflow time appears in single log entry (no step-by-step tracking)
-- Users can't provide feedback until entire workflow completes
-- Workflow code is single async function with no state persistence
-
-**Phase to address:**
-Phase 3 (Phase Orchestration). The workflow engine is the heart of phase execution. This must support checkpointing before implementing complex multi-step phase workflows. Include checkpoint recovery testing and manual intervention testing in phase verification.
+## PILLAR 2: LLM Provider Abstraction
 
 ---
 
-### Pitfall 7: Server-Sent Events vs WebSockets Mismatch for One-Way Streaming
+### Pitfall 5: Lowest-Common-Denominator Prompts That Work Everywhere But Poorly
 
 **What goes wrong:**
-Developers implement real-time progress updates for LLM streaming using WebSockets because "WebSockets are for real-time communication." This creates unnecessary complexity: WebSocket connection management, bidirectional protocol overhead, connection state synchronization, binary framing overhead. The application only needs server-to-client streaming (LLM tokens, progress updates). The extra complexity of WebSockets creates more failure modes without providing value. More code to debug, more edge cases (client sends unexpected messages), higher resource usage per connection.
+Developers abstract the LLM provider and then "normalize" prompts to work across Claude, GPT-4, and local models. They remove Claude-specific instruction patterns (role headers in `<role>` tags, `<context>` blocks, structured output guidance). They shorten prompts to fit GPT's tighter context window. They remove multi-step reasoning instructions because "the local model can't follow them." The resulting prompts produce technically valid FDS content that lacks the engineering precision and interlock completeness the domain requires. An EM section that previously had 12 interlocks now generates 4.
 
 **Why it happens:**
-WebSockets are the well-known "real-time web" technology. Developers reach for them instinctively when they see "real-time" in requirements. Server-Sent Events (SSE) are less well-known despite being simpler and more appropriate for one-way streaming. The React ecosystem has more WebSocket examples and libraries than SSE examples. Once the initial WebSocket implementation is built, the sunk cost fallacy prevents reconsidering.
+Prompt portability does not exist — this is confirmed industry consensus as of 2025. If you change models, you must re-evaluate and re-tune all prompts. The temptation to normalize prompts for portability is a false economy: you pay in output quality, which in an industrial safety document context is not acceptable.
 
 **How to avoid:**
-Use Server-Sent Events for one-way server-to-client streaming. SSE provides:
+Implement provider-specific prompt profiles. The abstraction layer routes to the correct provider; each provider has its own prompt variant for each workflow step. The domain knowledge (what an EM section must contain) is shared. The instruction style (how to address each model) is provider-specific. Claude prompts keep their XML structure and multi-step reasoning. GPT prompts use its system/user message conventions. Local model prompts use simpler instruction patterns with more explicit output examples.
 
-- Simpler HTTP-based protocol (no upgrade handshake)
-- Automatic reconnection built into browser EventSource API
-- Lower overhead than WebSocket framing
-- Better compatibility with proxies and load balancers
-- Text-based format (easier debugging)
-
-Reserve WebSockets for scenarios requiring bidirectional communication (collaborative editing, chat with replies).
-
-For LLM streaming, document generation progress, and phase timeline updates, SSE is superior:
-
-```python
-# FastAPI SSE endpoint
-from sse_starlette.sse import EventSourceResponse
-
-@app.get("/stream/generation/{task_id}")
-async def stream_generation(task_id: str):
-    async def event_generator():
-        # Subscribe to Redis pub/sub for this task
-        async for message in subscribe_to_task(task_id):
-            yield {
-                "event": "token",
-                "data": message["content"],
-                "id": message["sequence"]
-            }
-
-    return EventSourceResponse(event_generator())
-```
-
-```javascript
-// React client
-const eventSource = new EventSource(`/stream/generation/${taskId}`);
-
-eventSource.onmessage = (event) => {
-    setContent(prev => prev + event.data);
-};
-
-eventSource.onerror = (error) => {
-    // Browser automatically reconnects with Last-Event-ID header
-    console.log("Connection lost, reconnecting...");
-};
-```
-
-The browser's EventSource API handles reconnection automatically, sending the `Last-Event-ID` header so the server can resume from the last received event. This eliminates custom reconnection logic.
-
-Use WebSockets only when you genuinely need client-to-server messages during streaming (like pause/resume controls, user interruptions of AI workflows). For most document generation scenarios, SSE is simpler and more reliable.
+Use a prompt registry: `prompts/write-em-section/{claude,gpt,local}.md`. The provider abstraction selects the correct variant at runtime.
 
 **Warning signs:**
-- WebSocket implementation but server never receives messages from client
-- Complex WebSocket state management code
-- Difficulty debugging connection issues
-- Connection drops more frequently than expected
-- "Why are we using WebSockets for this?" questions during code review
+- Prompt commits that "simplify" or "generalize" existing workflows
+- EM sections generated via GPT missing interlock tables
+- Verification pass rates dropping after provider switch
+- Engineers reporting "the output looks thinner" on non-Claude providers
 
 **Phase to address:**
-Phase 1 (Core Infrastructure). Choose the streaming protocol early and build the real-time communication abstraction around it. If starting with WebSockets, plan migration path to SSE for one-way scenarios. Document which scenarios use which protocol.
+LLM abstraction design phase (before any provider integration). The prompt registry pattern must be defined before writing provider connectors.
 
 ---
 
-### Pitfall 8: Ignoring Context Window Limits in Multi-Step Document Generation
+### Pitfall 6: Context Window Differences Silently Truncating SPECIFICATION.md Context
 
 **What goes wrong:**
-Document generation accumulates context across multiple steps: requirements → outline → section 1 → section 2 → section 3 → review. Each step's output becomes input for the next step. By step 5, the prompt includes requirements + outline + all previous sections + current instructions, totaling 180K tokens. This exceeds Claude's context window (200K for Sonnet 4.5). The API call fails with "context_length_exceeded" error. The workflow crashes. Even when it fits, the massive context inflates costs: each generation step pays for all previous content as input tokens.
-
-Developers either didn't track cumulative token usage or assumed "200K is plenty." Real documents with extensive requirements and reference materials exceed limits quickly. FDS/SDS documents include technical specifications, equipment lists, safety procedures—all context-heavy.
+Claude (200K tokens) handles the full SPECIFICATION.md (48,700 lines ≈ ~130K tokens) as context without issue. GPT-4o (128K tokens) clips the tail of the document silently. Local models (Llama 3.1 8B: 8K-32K effective context) cannot load even a single phase's context without truncation. The system appears to work — API calls succeed — but the model is generating content from a truncated context. Engineers only notice when sections reference concepts from the beginning of the SPECIFICATION but miss critical details from sections that were cut off.
 
 **Why it happens:**
-The "conversation" mental model encourages appending everything to context. It works in ChatGPT UI where history is automatic. Developers replicate this pattern in programmatic workflows. Token counting seems tedious, so it's skipped until production failures. The nonlinear relationship between content length and token count makes estimation difficult (code/technical content has higher token density than natural language).
+Context window limits are not enforced at the application layer. The prompt builder assembles context and sends it. The LLM silently truncates. No error is raised.
 
 **How to avoid:**
-Implement explicit context management with token budgeting:
+Add context budget enforcement to the prompt builder. Each provider registers its `max_context_tokens`. The prompt builder calculates token estimates before sending, and if context exceeds budget: (1) trigger selective context loading (only relevant sections from SPECIFICATION), (2) log a warning, (3) do NOT truncate silently. For local models, selective context loading is mandatory by default — load only the relevant section template, standards references, and project-specific context. Do not attempt to load the full SPECIFICATION.
 
-1. **Token counting before API calls**: Use `anthropic.count_tokens()` to measure before sending
-2. **Context windowing**: Keep only essential context from previous steps
-3. **Summarization**: Compress previous outputs into summaries for subsequent steps
-4. **Reference storage**: Store full content in database, pass only IDs and summaries to API
-5. **Prompt engineering**: Use structured output formats that reduce token usage
-
-```python
-class ContextBudget:
-    def __init__(self, max_tokens=190000):  # Leave 10K buffer
-        self.max_tokens = max_tokens
-        self.system_prompt_tokens = 0
-        self.context_tokens = 0
-        self.reserved_output_tokens = 4000
-
-    def add_context(self, text: str, priority: int = 1):
-        tokens = anthropic.count_tokens(text)
-        if self.available_input_tokens() < tokens:
-            if priority > 5:
-                # High priority: summarize existing context
-                self.context_tokens = self._summarize_context()
-            else:
-                raise ContextBudgetExceeded()
-        self.context_tokens += tokens
-
-    def available_input_tokens(self):
-        return self.max_tokens - self.system_prompt_tokens - self.context_tokens - self.reserved_output_tokens
+Provide per-provider context budget configuration in `PROJECT.md`:
+```yaml
+llm_provider: local
+llm_context_budget: 8000  # tokens, conservative for 8B models
 ```
 
-For document generation workflows:
-
-- Step 1 (Requirements analysis): Input=requirements (15K), Output=structured analysis (3K)
-- Step 2 (Outline): Input=requirements summary (2K) + analysis (3K), Output=outline (2K)
-- Step 3 (Section 1): Input=outline (2K) + relevant requirements (5K), Output=section (4K)
-- Step 4 (Section 2): Input=outline (2K) + section 1 summary (500), Output=section (4K)
-
-Each step's context budget stays under 30K input tokens despite the document growing to 200K+ tokens total. Use prompt caching for repeated content (requirements, outlines) to reduce costs by 60-90%.
-
 **Warning signs:**
-- "context_length_exceeded" errors in production
-- Token costs scaling quadratically with document length
-- No token counting in code
-- Each workflow step includes full conversation history
-- Developers surprised by token counts on real documents
+- Provider switching without context budget configuration
+- Local model prompt builder sending the same payload as Claude provider
+- Engineers switching to local model and seeing "generic" output that doesn't reference their project specifics
+- Context loading rules in `write-phase.md` not being provider-aware
 
 **Phase to address:**
-Phase 3 (Phase Orchestration). Context management is critical for phase execution workflows. The phase orchestrator must implement context budgeting before running multi-step generation workflows. Include token usage monitoring and context budget enforcement.
+LLM abstraction design phase. Context budget enforcement is a non-negotiable guard before any local model support.
+
+---
+
+### Pitfall 7: Local Model Quality Gate Absent — IP-Sensitive Projects Getting Degraded Output
+
+**What goes wrong:**
+The primary stated reason for local LLM support is IP-sensitive industrial content. Engineers working on confidential projects switch to local models. Local models (even quantized DeepSeek R1 or Llama 3.1 70B) produce structurally valid FDS output, but domain precision degrades: vague interlock conditions instead of specific sensor tag references, generic PackML state descriptions instead of process-specific transitions. The engineer, who is an industrial automation specialist not a prompt engineer, doesn't know if this degradation is acceptable for their document. They either ship a low-quality document or spend days manually correcting it.
+
+**Why it happens:**
+Local model quality is genuinely lower than Claude for technical domain content generation. There is no mechanism to warn the engineer about this tradeoff before they commit to local mode for a project.
+
+**How to avoid:**
+Add a quality disclosure to the provider selection step in `new-fds.md`. When local provider is selected, display a factual capability matrix:
+- Context window available
+- Known quality characteristics vs. Claude for technical documentation
+- Recommendation: use local for draft iteration, Claude for final verification
+
+Additionally, add an output quality check to `verify-phase.md` that counts quantifiable completeness markers: interlocks defined (count), parameters with ranges (count), I/O points with tag IDs (count). A local model generating 3 interlocks where Claude generates 12 should trigger a completeness warning, not a silent pass.
+
+**Warning signs:**
+- Local provider selected without any quality acknowledgment dialog
+- `verify-phase.md` applying the same pass criteria regardless of provider
+- EM sections generated locally with fewer than expected interlocks
+- Engineers asking "why is the output shorter?" after provider switch
+
+**Phase to address:**
+LLM abstraction + verification integration phase. The quality gate must be built alongside the provider, not retrofitted later.
+
+---
+
+### Pitfall 8: Provider Abstraction Over-Engineering — Building a Framework Instead of a Connector
+
+**What goes wrong:**
+Developers implement a full LLM orchestration framework with retry logic, streaming, tool calling abstractions, and plugin architecture. This replicates what LangChain/LiteLLM already provide, takes 3x longer to build, and introduces its own bugs. The system reaches v3.0 without a working local model because the abstraction layer is still being designed.
+
+**Why it happens:**
+The scope feels open-ended: "support Claude, GPT, and local models." Developers see this as an opportunity to build a proper framework. The existing system has no abstraction layer at all, so starting from scratch with a clean design feels right.
+
+**How to avoid:**
+Build the thinnest abstraction that solves the actual use case. The use case is: swap the provider for a `/doc:write-phase` call. This requires:
+1. A provider config in `PROJECT.md` (`llm_provider: claude|gpt|local`)
+2. A provider factory that returns a configured client
+3. Per-provider prompt variant selection (from Pitfall 5)
+4. Context budget enforcement (from Pitfall 6)
+
+That is four pieces, not a framework. Reject any abstraction work that isn't one of these four. Use liteLLM or a direct SDK for the actual API calls — do not write HTTP clients.
+
+**Warning signs:**
+- Abstraction layer designs with plugin registries, middleware chains, or "provider capabilities negotiation"
+- More than one new Python module per provider
+- Any design document that uses the word "framework"
+- Sprint review showing abstraction work but no working provider swap yet
+
+**Phase to address:**
+LLM abstraction design phase. Timebox the design to one day. If the design takes longer, it's too complex.
+
+---
+
+## PILLAR 3: Docs Engine Visibility
+
+---
+
+### Pitfall 9: Building a Template Viewer When Git Already Provides One
+
+**What goes wrong:**
+Engineers want to see what the docs engine does — which templates are being used, what's in the prompts, what changed since last month. Developers build a custom web-based template browser with syntax highlighting, diff views, and change history. This takes 6 weeks. Engineers use it twice and then go back to looking at the files directly. The 194 Markdown files are already in git with full history. `git log --oneline gsd-docs-industrial/templates/` already shows every change.
+
+**Why it happens:**
+"Visibility layer" sounds like a UI feature. The requirement (engineers can inspect templates/prompts) doesn't specify that a custom UI is needed. Developers default to building what they know: a React component.
+
+**How to avoid:**
+Define "visibility" by asking what specific action the engineer cannot perform today that they need to perform. If the answer is "see what template will be used for my project," that is a `doc:status` enhancement (show template paths resolved for this project type). If the answer is "see what changed in the engine last week," that is a structured git log command, not a UI. Build the minimum that closes the gap: a `doc:engine-status` command that prints resolved template paths, provider config, and standards loaded for the current project. That is a 2-hour task, not a 6-week feature.
+
+**Warning signs:**
+- Sprint items for "template viewer UI" without a user story describing what the engineer cannot do today
+- React components being added to the frontend for template browsing
+- New backend endpoints for reading gsd-docs-industrial/ file contents
+
+**Phase to address:**
+Visibility scoping phase (must precede any implementation). Requirements gathering: what specific information gap does each user story address?
+
+---
+
+### Pitfall 10: Engine Visibility Exposing Editable Templates — Engineers Diverging from SSOT
+
+**What goes wrong:**
+The visibility layer allows engineers to see templates and prompts. Someone adds an "edit" button "just to fix a typo." An engineer modifies `section-equipment-module.md` for their project. Now their local template diverges from the shared SSOT. Future updates to the template don't reach their project. When two engineers edit the same template for different projects, merge conflicts occur. The 194-file SSOT becomes 194 × N files.
+
+**Why it happens:**
+Visibility and editability look like a natural pair. Once engineers can see a template, the instinct to fix it in place is strong. The system doesn't distinguish between "view" and "modify."
+
+**How to avoid:**
+Visibility is strictly read-only for engine templates. Per-project overrides are allowed only via an explicit override mechanism (a `templates/overrides/` directory in the project folder with a documented escape hatch). The SSOT in `gsd-docs-industrial/` is never modified through the GUI. If an engineer wants to change a template, the correct path is: file an issue, update the SSOT in git, deploy the update.
+
+Make this explicit in the UI: templates shown in the viewer have a header "Read-only — part of GSD-Docs engine v0.1.0. Changes require a framework update."
+
+**Warning signs:**
+- Any "edit" affordance (button, inline editor) in the visibility layer
+- Template files showing up in per-project git diffs
+- Engineers asking "how do I customize the template for this project?"
+
+**Phase to address:**
+Visibility design phase. The read-only constraint must be in the spec before implementation starts.
+
+---
+
+### Pitfall 11: Visibility Scope Creep — Adding "Manage Prompts" to a Read-Only Viewer
+
+**What goes wrong:**
+The visibility layer starts as a read-only inspector. After shipping, engineers ask for the ability to annotate prompts ("this section always needs more interlocks"), tune parameters ("set temperature to 0.2 for this project"), or override sections ("skip the manual controls subsection for this EM"). Each request is reasonable individually. Collectively they transform the visibility layer into a prompt management system that duplicates functionality that should live in `PROJECT.md` and PLAN.md configuration.
+
+**Why it happens:**
+Engineers have legitimate customization needs. The visibility layer is the obvious place to expose controls because it's where they see what the engine does. The "one more feature" requests feel like small additions.
+
+**How to avoid:**
+Define the boundary at design time: the visibility layer answers "what is the engine doing?" not "how do I change what the engine does." Project-level customization already has a home (PROJECT.md standards config, PLAN.md optional subsection flags). Any customization request should be routed to those mechanisms, not the visibility layer. Document this boundary explicitly in the milestone spec.
+
+**Warning signs:**
+- Visibility layer backlog growing with "configure" or "manage" stories
+- New PROJECT.md fields being added through the visibility UI
+- Engineers using the visibility layer to change settings mid-project
+
+**Phase to address:**
+Visibility design phase. Write the boundary statement in the phase spec before any implementation.
+
+---
+
+## CROSS-PILLAR INTEGRATION PITFALLS
+
+---
+
+### Pitfall 12: Flexible Structure + Provider Abstraction Combination Breaking Context Isolation
+
+**What goes wrong:**
+Flexible FDS structure means section types vary per project. The new section types (functional-block, process-flow-unit) need different prompt variants than EM sections. The LLM provider abstraction adds another dimension: provider-specific prompt variants. The cross-product (section-type × provider) creates a prompt registry with many variants. Developers short-circuit this complexity by having all non-EM sections fall back to a generic "describe this functional unit" prompt regardless of provider. The context isolation principle (each writer gets only its scoped context) is maintained, but the prompts become generic.
+
+**Why it happens:**
+The cross-product of section types × providers feels combinatorially explosive. Developers simplify by defaulting to the lowest-specificity prompt.
+
+**How to avoid:**
+The cross-product is not as large as it appears. For v3.0, the realistic matrix is: 3 section types (EM, functional-block, process-flow-unit) × 3 providers (Claude, GPT, local) = 9 variants. Each variant is a small Markdown file. Map this out before writing any prompts. The domain content of each section type is shared; only the instruction style differs per provider. Use a layered approach: `prompts/{section-type}/base.md` (domain requirements) + `prompts/{section-type}/{provider}.md` (instruction style overlay).
+
+**Warning signs:**
+- Prompt files containing both section-type and provider specifics in a single template
+- Functional-block sections using EM prompt variants
+- "Works for Claude but not local" bugs on new section types
+
+**Phase to address:**
+The phase that integrates flexible structure with LLM abstraction (must happen after both pillars are individually designed, before combined testing).
+
+---
+
+### Pitfall 13: Visibility Layer Exposing Provider Config — Engineers Switching Mid-Project
+
+**What goes wrong:**
+The visibility layer shows the current provider config (which model is selected, context budget). Engineers see this and decide to switch from Claude to local mid-project to avoid API costs. The first half of the project's sections were generated with Claude prompts and have 12 interlocks per EM. The second half, written with local model prompts, have 4. The final FDS is inconsistent. `verify-phase.md` catches individual section completeness but has no cross-project consistency check.
+
+**Why it happens:**
+Visibility implies control. If engineers can see the provider, they expect to change it. Mid-project provider switching is a natural but destructive action.
+
+**How to avoid:**
+Provider selection is locked at project creation (`new-fds.md`) and stored in `PROJECT.md`. The visibility layer shows the locked config as read-only for in-progress projects. Mid-project provider changes require an explicit override that triggers a warning: "Changing provider mid-project may create inconsistent output quality. All sections written so far remain unchanged. Proceed?" Only allow this via a deliberate CLI command, not a visibility layer control.
+
+**Warning signs:**
+- Provider config shown with edit affordance in visibility layer
+- `PROJECT.md` provider field being writable through the GUI
+- No provider-lock behavior in `new-fds.md`
+
+**Phase to address:**
+The provider lock must be implemented in the flexible structure / new-fds phase, before visibility work begins.
+
+---
+
+### Pitfall 14: All Three Pillars Attempting Independent State Changes to the Same Project Files
+
+**What goes wrong:**
+Flexible structure changes ROADMAP.md generation. LLM abstraction adds provider config to PROJECT.md. Visibility layer reads both files and potentially exposes edit interfaces. All three pillars are developed in parallel phases and each makes assumptions about the schema of PROJECT.md and ROADMAP.md. The phases are integrated for the first time in the final milestone and the schemas are incompatible: flexible structure added `decomposition_model` to PROJECT.md; provider abstraction added `llm_provider`; visibility layer expects a specific `engine_version` field that neither added.
+
+**Why it happens:**
+Parallel development without a shared schema contract. Each pillar's phase specifies its own PROJECT.md changes.
+
+**How to avoid:**
+Define the full v3.0 PROJECT.md schema before any pillar implementation begins. This is a one-page spec listing every new field, its type, its default, and which pillar owns it. This schema is the integration contract. No pillar may add fields outside the pre-approved set without a schema revision.
+
+```yaml
+# v3.0 PROJECT.md additions (schema contract)
+decomposition_model: system-first | em-first | functional | hybrid   # flexible structure pillar
+llm_provider: claude | gpt | local                                    # abstraction pillar
+llm_context_budget: 128000                                            # abstraction pillar
+engine_version: "0.2.0"                                               # visibility pillar
+```
+
+**Warning signs:**
+- Each pillar's design doc showing its own PROJECT.md schema additions without cross-referencing
+- Integration test failures on PROJECT.md parsing
+- `doc:status` showing "unknown field" warnings after pillar combination
+
+**Phase to address:**
+Milestone kickoff — write and approve the shared schema contract before any pillar work begins.
 
 ---
 
@@ -438,101 +356,79 @@ Shortcuts that seem reasonable but create long-term problems.
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Store files on local filesystem instead of S3/object storage | Simple implementation, no cloud dependencies | Difficult to scale horizontally, no disaster recovery, manual backups | Acceptable for MVP if team server has reliable backup and single-instance deployment is sufficient |
-| Use polling instead of SSE/WebSocket for progress updates | Simpler implementation, easier debugging | Higher server load, 3-10 second latency, feels unresponsive | Never acceptable—SSE is only marginally more complex and drastically better UX |
-| Skip file validation beyond extension check | Fast upload processing | Security vulnerability, potential RCE | Never acceptable—validation is non-negotiable |
-| Use in-memory state instead of Redis for session management | No Redis dependency, faster development | Lose state on server restart, can't scale horizontally | Acceptable for single-server prototype, must migrate before multi-user production |
-| Hard-code Claude API client instead of LLM abstraction | Fewer abstractions, direct API usage | Locked to single provider, difficult to add local models | Never acceptable—abstraction is explicit requirement |
-| Store task results only in memory, not persistent storage | Faster processing, simpler code | Loss of data on restart, no resumption capability | Never acceptable—resumption is core reliability requirement |
-| Skip retry logic and rely on user to refresh | Faster initial implementation | Poor UX, wasted API calls, frustrated users | Never acceptable for production |
-| Synchronous database queries with SQLAlchemy ORM | Familiar ORM patterns, more examples | Blocks event loop, poor performance | Acceptable only if using async SQLAlchemy properly from start |
+| Normalize prompts for all providers | Single prompt file per workflow step | Output quality degrades on non-Claude providers; interlock completeness drops silently | Never — provider-specific prompt variants are required |
+| Ship visibility layer with edit affordances "disabled by default" | Faster to build one UI with hidden edit mode | Engineers find the hidden edit mode; template SSOT corrupts over time | Never — read-only must be architectural, not UI-level |
+| Skip context budget enforcement for MVP | Provider abstraction ships faster | Local model silently truncates context; engineers discover only when output quality is wrong | Never — enforce before any local model is tested |
+| Defer provisional ROADMAP to post-discovery | Cleaner discovery flow | All downstream commands break on missing ROADMAP.md | Never — provisional ROADMAP at project creation is load-bearing |
+| Use single generic section prompt for all new section types | Avoids prompt × provider matrix | Functional-block and process-flow-unit sections produce generic content without engineering precision | Only acceptable during internal development testing, not for real projects |
+
+---
 
 ## Integration Gotchas
 
-Common mistakes when connecting to external services.
+Common mistakes when connecting the three pillars.
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Claude API | Ignoring `retry-after` header in 429 responses | Parse header, sleep for specified duration before retry |
-| Claude API | Not implementing prompt caching for repeated content | Enable caching on system prompts and reference documents, save 60-90% |
-| Claude API | Assuming streaming always works | Handle streaming failures, fallback to non-streaming, store partial results |
-| Redis Pub/Sub | Treating it as persistent message queue | Use Redis Streams for persistence, Pub/Sub only for notifications |
-| Redis | Using string operations for complex state | Use Redis JSON or hash operations for structured data |
-| File uploads | Trusting `Content-Type` header | Validate magic numbers with `python-magic` library |
-| File uploads | Loading entire file into memory | Stream uploads in chunks with `aiofiles` |
-| WebSockets | Not implementing heartbeat/keepalive | Send ping/pong every 15-30 seconds to detect dead connections |
-| WebSockets | Coupling task execution to connection lifecycle | Store task state server-side, allow reconnection with task ID |
-| SSE | Not setting `Last-Event-ID` for resumption | Include event IDs, track client position, allow resumption |
-| Nginx reverse proxy | Default timeout too short for LLM streaming | Set `proxy_read_timeout 300s` and `proxy_send_timeout 300s` |
-| systemd service | Not setting proper working directory | Set `WorkingDirectory` in service file to project root |
-| systemd service | Not handling graceful shutdown | Implement `SIGTERM` handler to finish in-flight requests |
+| Flexible structure + write-phase | New section types inherit EM wave-dependency logic | Each section type declares its own dependency rules in PLAN.md frontmatter |
+| Provider abstraction + verify-phase | Verification criteria identical regardless of provider | Add provider-aware completeness thresholds in verify-phase config |
+| Visibility layer + PROJECT.md | Visibility reads PROJECT.md and offers to update it | PROJECT.md is CLI-owned; visibility layer reads it, never writes it |
+| Flexible structure + check-standards | ISA-88 compliance check runs on all sections regardless of section type | check-standards reads section-type from PLAN.md frontmatter before applying checks |
+| Provider abstraction + context-loading | All providers receive same context assembly | Context budget enforcement is per-provider; local model gets selective context loading by default |
+
+---
 
 ## Performance Traps
 
-Patterns that work at small scale but fail as usage grows.
+Patterns that work at small scale but fail at the scale of this project.
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Synchronous file I/O in async endpoints | Slow response times, queued requests | Use `aiofiles` for all file operations | 2-3 concurrent users with file uploads |
-| Loading full document history into memory | High memory usage, OOM crashes | Paginate history, lazy load content | Documents over 50-100 pages |
-| Storing all reference files in single directory | Slow directory listings, filesystem limits | Use hashed subdirectories (e.g., `uploads/{first_2_chars}/{uuid}`) | 10K+ uploaded files |
-| Separate API calls for each document section | High latency, rate limit issues | Batch operations where possible | Documents with 20+ sections |
-| No connection pooling for database | Connection exhaustion, high latency | Configure SQLAlchemy pool: `pool_size=20, max_overflow=40` | 10+ concurrent users |
-| Unbounded WebSocket connections | Memory exhaustion | Limit concurrent connections per user, implement timeouts | 50+ simultaneous connections |
-| Storing large context in Redis strings | High memory usage, serialization overhead | Use Redis JSON or compress with gzip | Context over 100KB per session |
-| No rate limiting per user | Single user can exhaust API quota | Implement per-user rate limits and quotas | Team of 5+ users |
+| Loading full SPECIFICATION.md context for local model | API call succeeds but model returns generic output | Enforce context budget before prompt assembly | Every local model call — 48,700 lines far exceeds 8K-32K effective context |
+| Template registry scanning all 194 files per request | Slow template resolution on first command run | Cache resolved template paths per project type at `new-fds` time | Noticeable at 30+ file scan; problematic if template directory grows |
+| Generating all ROADMAP phases at once for large system-first discovery | Phase list generated but engineer immediately changes it | Use `expand-roadmap` mechanism for confirmed incremental additions | Projects with >10 discovered units where engineer rejects proposed groupings |
+
+---
 
 ## Security Mistakes
 
-Domain-specific security issues beyond general web security.
+Domain-specific security issues for this project.
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Serving uploaded files directly from upload directory | Path traversal, RCE if executable files uploaded | Store outside web root, proxy through endpoint with UUID lookup |
-| Not sanitizing filenames before storage | Directory traversal via `../` in filename | Generate UUID-based filenames, ignore client-provided names |
-| Trusting client-provided `Content-Type` | Malicious files bypass validation | Validate magic numbers with `python-magic` |
-| No file size limits | DoS via massive uploads | Enforce limits before reading (check `Content-Length`), streaming validation |
-| Storing API keys in project files | Keys leaked in version control | Use environment variables, separate secrets management |
-| Logging full API requests/responses | API keys, sensitive data in logs | Redact sensitive fields, log only metadata |
-| No authentication on internal endpoints | Unauthorized access from team network | Require authentication even on "internal" network |
-| Sharing single Claude API key across all users | No usage attribution, quota issues | Implement per-user API keys or internal usage tracking |
-| Storing documents without access control | Users can access other users' documents | Implement document ownership and access control |
-| No input sanitization on document content | XSS in document preview, template injection | Sanitize markdown/HTML before rendering, use CSP headers |
+| Local model provider leaking prompt context to external endpoint | IP-sensitive FDS content (plant topology, safety interlocks) sent to third-party | Verify local model endpoint is truly local (Ollama/llama.cpp on localhost or intranet); block any provider config pointing to external URL when `ip_sensitive: true` in PROJECT.md |
+| Visibility layer proxying template files through FastAPI backend | Backend becomes a file server for gsd-docs-industrial/ directory; path traversal risk | Serve only pre-registered file paths from a template manifest, never serve arbitrary file paths |
+| Provider API keys stored in PROJECT.md | Keys committed to project git repo alongside FDS content | Provider credentials belong in environment variables only; PROJECT.md must never accept `api_key` fields |
+
+---
 
 ## UX Pitfalls
 
-Common user experience mistakes in this domain.
+Common user experience mistakes for this user base (industrial automation engineers, not developers).
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| No progress indication during long LLM calls | Users think app is frozen, refresh and retry | Stream tokens as they arrive, show "Generating..." with current step |
-| Losing work on connection drop | Frustration, distrust of system | Auto-save drafts, persist task state, allow resumption |
-| No way to cancel long-running generation | Users forced to wait or kill browser | Provide cancel button, implement graceful cancellation |
-| Generic "Error occurred" messages | Users don't know what to do | Specific messages: "Rate limit reached, retrying in 30s..." |
-| No indication of API cost for operations | Bill shock, inefficient usage | Show estimated token usage before generation |
-| Requiring full workflow restart after failure | Wasted time, repeated work | Allow resumption from checkpoints |
-| No preview before final document generation | Surprises in output, wasted generations | Show outline and section previews, allow editing before full generation |
-| Document preview doesn't match final output | Trust issues, confusion | Use same rendering pipeline for preview and final output |
-| No diff view for document iterations | Hard to see what changed | Show diff between versions, highlight AI suggestions |
-| Unclear which operations use CLI vs must use web | Confusion, workflow friction | Clear documentation, consider making CLI call web API |
+| Showing provider selection without quality context | Engineer selects local model expecting same output quality as Claude, discovers degradation after writing 3 phases | Show capability matrix at provider selection: context window, known quality characteristics, recommendation for each use case |
+| Decomposition model selection requiring ISA-88 knowledge to choose | Engineers who don't know ISA-88 cannot choose between "EM-first" and "functional" | Use project description to infer decomposition model (system-first discovery); offer "I'll figure it out from your description" as the default |
+| Engine visibility using internal names (template IDs, provider identifiers) | Engineers see "fds/section-equipment-module.md (isa88:true, packml:true)" and don't know what to do with it | Show human-readable descriptions: "Using Equipment Module template — covers states, interlocks, I/O" with a "Learn more" that links to the CLAUDE-CONTEXT.md section |
+
+---
 
 ## "Looks Done But Isn't" Checklist
 
 Things that appear complete but are missing critical pieces.
 
-- [ ] **WebSocket streaming**: Often missing reconnection logic—verify connection drop recovery and state resumption
-- [ ] **File uploads**: Often missing magic number validation—verify `python-magic` validation, not just extension/Content-Type
-- [ ] **Claude API integration**: Often missing retry-after header handling—verify 429 error response parsing
-- [ ] **Long-running tasks**: Often missing checkpoint persistence—verify tasks survive server restart
-- [ ] **Document generation**: Often missing token budget tracking—verify context window management
-- [ ] **Error handling**: Often missing user-friendly messages—verify specific, actionable error text
-- [ ] **Session management**: Often missing cleanup on logout—verify session expiration and Redis cleanup
-- [ ] **File storage**: Often missing access control—verify user can't access other users' files
-- [ ] **API cost tracking**: Often missing per-user attribution—verify usage monitoring and quota enforcement
-- [ ] **Graceful shutdown**: Often missing in-flight request handling—verify systemd service handles SIGTERM properly
-- [ ] **Context sharing**: Often missing CLI/web compatibility layer—verify projects work in both interfaces
-- [ ] **Background tasks**: Often missing failure notifications—verify users are notified when background tasks fail
-- [ ] **State synchronization**: Often missing conflict resolution—verify concurrent edits don't corrupt state
+- [ ] **Flexible structure:** Template section types defined, but no migration test on an actual Type A project to verify all existing ROADMAP phases still resolve correctly
+- [ ] **Flexible structure:** ROADMAP generation works for new section types, but `expand-roadmap.md` not updated to handle non-EM phase groupings
+- [ ] **LLM abstraction:** Provider swap works for a single `/doc:write-phase` call, but not tested end-to-end through `discuss → plan → write → verify` pipeline
+- [ ] **LLM abstraction:** Context budget enforcement implemented, but no test with a local model on a project with standards references loaded (standards refs add ~8K tokens)
+- [ ] **LLM abstraction:** Prompt variants exist for Claude and GPT, but local model prompt variants are stubs that default to GPT variants (silent quality degradation)
+- [ ] **Visibility layer:** Template viewer shows correct files for a fresh project, but not tested on a mid-project state where some templates are overridden
+- [ ] **Visibility layer:** Read-only enforced in UI, but no backend enforcement — direct API call can still overwrite template files
+- [ ] **Cross-pillar:** PROJECT.md schema contract defined, but `doc:status` not updated to display v3.0 fields (engineers cannot see provider or decomposition model in status output)
+- [ ] **Cross-pillar:** Provider locked at project creation, but `doc:resume` (crash recovery) doesn't re-validate provider lock after resume
+
+---
 
 ## Recovery Strategies
 
@@ -540,16 +436,13 @@ When pitfalls occur despite prevention, how to recover.
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| WebSocket connection loss | LOW | Client auto-reconnects with task ID, fetches missed chunks from Redis, resumes streaming |
-| Blocking file I/O degrading performance | MEDIUM | Migrate to `aiofiles` incrementally, prioritize upload endpoints first, test under load |
-| Rate limit exceeded | LOW | Wait for `retry-after` period, queued requests auto-retry, consider tier upgrade |
-| Shared state divergence CLI/web | HIGH | Rebuild shared library, migrate existing projects, comprehensive integration testing |
-| File upload security vulnerability | HIGH | Audit existing uploads, quarantine suspicious files, patch validation immediately |
-| Lost task state on server restart | MEDIUM | Implement Redis persistence, replay partial results to user, offer manual retry |
-| Context window exceeded | LOW | Implement summarization for next step, reduce context budget, cache summaries |
-| Duplicate task execution on reconnect | MEDIUM | Add task deduplication by ID, check existing task before starting new one |
-| Cost overrun from inefficient prompts | LOW | Enable prompt caching, optimize prompts, implement token budgets per user |
-| State corruption from concurrent edits | MEDIUM | Implement optimistic locking, detect conflicts, prompt user to merge or retry |
+| Templates stripped of EM domain knowledge | HIGH | Restore from git history; audit all new section types against original EM template for missing subsections; re-test with full Type A project |
+| ROADMAP heading format changed, wave assignments broken | MEDIUM | Fix ROADMAP template format; re-run `new-fds` on a test project; add format validation to CI |
+| Provider switched mid-project, inconsistent output quality | MEDIUM | Document which sections used which provider in CONTEXT.md; re-write affected sections with original provider; add provider-lock to PROJECT.md |
+| Local model truncating context silently | LOW (if caught early) | Add context budget logging to prompt builder; re-run affected sections with context budget enforced |
+| Visibility layer enabling template edits, SSOT corrupted | HIGH | Restore templates from git; audit all projects for local template overrides; disable edit affordance and deploy fix before next project starts |
+
+---
 
 ## Pitfall-to-Phase Mapping
 
@@ -557,72 +450,37 @@ How roadmap phases should address these pitfalls.
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| WebSocket connection drops | Phase 1: Core Infrastructure | Drop connection mid-task, verify resumption without data loss |
-| Blocking file I/O | Phase 1: Core Infrastructure | Upload 50MB file while making concurrent API requests, verify no latency spike |
-| Claude API rate limits | Phase 1: Core Infrastructure | Trigger 429 error, verify retry-after header respected |
-| Shared state CLI/web divergence | Phase 1: Core Infrastructure | Create project in CLI, verify appears correctly in web UI |
-| File upload security | Phase 2: File Management | Upload file with spoofed Content-Type, verify rejection based on magic number |
-| Missing resumption points | Phase 3: Phase Orchestration | Kill server mid-workflow, restart, verify resumption from checkpoint |
-| SSE vs WebSocket mismatch | Phase 1: Core Infrastructure | Implement streaming with SSE for one-way, verify auto-reconnection |
-| Context window limits | Phase 3: Phase Orchestration | Generate document with 200K+ total tokens, verify context budgeting |
-| Synchronous DB queries | Phase 1: Core Infrastructure | Run DB query under load, verify no event loop blocking |
-| No graceful shutdown | Phase 7: Deployment | Send SIGTERM during task execution, verify in-flight requests complete |
-| Missing error messages | All phases | Trigger each error condition, verify user-friendly message displayed |
-| No cost tracking | Phase 4: Document Preview | Run generation task, verify token usage displayed to user |
+| Destroying EM domain knowledge in templates | Flexible structure foundation — lock section-equipment-module.md as read-only | Run Type A project end-to-end; compare EM section output to v2.0 baseline |
+| Breaking write-phase wave assignments | ROADMAP template authoring — define canonical heading format | Run `write-phase` on new ROADMAP types; verify SUMMARY.md files created per section |
+| Undetermined ROADMAP at project start | Flexible structure design — provisional ROADMAP spec | `doc:discuss-phase 1` succeeds immediately after `doc:new-fds` for all decomposition models |
+| Selective ISA-88 compliance in hybrid projects | Standards integration within flexible structure | `check-standards` on a hybrid project produces no false positives for functional-block sections |
+| Lowest-common-denominator prompts | LLM abstraction design — prompt registry pattern | Run EM section generation via each provider; compare interlock counts against Claude baseline |
+| Context window truncation | LLM abstraction design — context budget enforcement | Test local model call with standards references loaded; verify warning triggered when budget exceeded |
+| IP-sensitive projects using local model without quality gate | LLM abstraction + verification integration | Verify `new-fds` provider selection shows quality matrix; verify `verify-phase` completeness thresholds are provider-aware |
+| Provider abstraction over-engineering | LLM abstraction design — one-day timebox | Design doc must fit one page; implementation ≤ 2 new Python files per provider |
+| Building custom template viewer instead of CLI command | Visibility scoping — requirements gathering phase | User story must name specific information gap before any implementation begins |
+| Visibility enabling template edits | Visibility design — read-only constraint in spec | Penetration test: attempt to modify template via API; must return 403 |
+| Visibility scope creep to prompt management | Visibility design — boundary statement in spec | Backlog review: any story with "configure" or "manage" is deferred to its owning mechanism |
+| Cross-pillar context isolation break | Cross-pillar integration phase (after both pillars individually tested) | Run functional-block section on each provider; verify output matches section-type, not provider default |
+| Mid-project provider switching | Provider lock in new-fds phase (before visibility work) | Attempt provider change mid-project via CLI; verify warning dialog shown and lock enforced |
+| Incompatible PROJECT.md schemas across pillars | Milestone kickoff — shared schema contract | Run `doc:status` on project created with all three pillar features; no unknown field warnings |
+
+---
 
 ## Sources
 
-### WebSocket & Real-Time Communication
-- [FastAPI WebSockets Documentation](https://fastapi.tiangolo.com/advanced/websockets/)
-- [How to Handle Large Scale WebSocket Traffic with FastAPI | Medium](https://hexshift.medium.com/how-to-handle-large-scale-websocket-traffic-with-fastapi-9c841f937f39)
-- [FastAPI + WebSockets + React: Real-Time Features | Medium](https://medium.com/@suganthi2496/fastapi-websockets-react-real-time-features-for-your-modern-apps-b8042a10fd90)
-- [WebSockets vs Server-Sent Events | Ably](https://ably.com/blog/websockets-vs-sse)
-- [SSE vs WebSockets: Comparing Real-Time Protocols | SoftwareMill](https://softwaremill.com/sse-vs-websockets-comparing-real-time-communication-protocols/)
-- [Building Real-Time AI Chat Infrastructure | Render](https://render.com/articles/real-time-ai-chat-websockets-infrastructure)
-- [How to Build LLM Streams That Survive Reconnects | Upstash](https://upstash.com/blog/resumable-llm-streams)
-
-### FastAPI Background Tasks & Performance
-- [Background Tasks - FastAPI](https://fastapi.tiangolo.com/tutorial/background-tasks/)
-- [Handling Long-Running Tasks in FastAPI | DataScienceTribe](https://www.datasciencebyexample.com/2023/08/26/handling-long-running-tasks-in-fastapi-python/)
-- [Managing Background Tasks in FastAPI | Leapcell](https://leapcell.io/blog/managing-background-tasks-and-long-running-operations-in-fastapi)
-- [FastAPI Background Tasks | Sentry](https://sentry.io/answers/fastapi-background-tasks-and-middleware/)
-
-### File Upload Security
-- [Uploading Files Using FastAPI: A Complete Guide | Better Stack](https://betterstack.com/community/guides/scaling-python/uploading-files-using-fastapi/)
-- [Building a Secure File Upload API in FastAPI | Mahdi Abu Tafish](https://noone-m.github.io/2025-12-10-fastapi-file-upload/)
-- [Upload files in FastAPI with file validation | Medium](https://medium.com/@jayhawk24/upload-files-in-fastapi-with-file-validation-787bd1a57658)
-
-### Claude API Integration & Cost Optimization
-- [Claude API Rate Limits Documentation](https://docs.claude.com/en/api/rate-limits)
-- [How to Fix Claude API 429 Rate Limit Error | AI Free API](https://www.aifreeapi.com/en/posts/fix-claude-api-429-rate-limit-error)
-- [Claude API Rate Limits: Production Scaling Guide | HashBuilds](https://www.hashbuilds.com/articles/claude-api-rate-limits-production-scaling-guide-for-saas)
-- [Prompt Caching: 60% Cost Reduction in LLM Applications | Medium](https://medium.com/tr-labs-ml-engineering-blog/prompt-caching-the-secret-to-60-cost-reduction-in-llm-applications-6c792a0ac29b)
-- [LLM Cost Optimization: 80% Reduction Guide | Koombea](https://ai.koombea.com/blog/llm-cost-optimization)
-- [Anthropic Claude API Pricing 2026 | MetaCTO](https://www.metacto.com/blogs/anthropic-api-pricing-a-full-breakdown-of-costs-and-integration)
-
-### State Management & Architecture
-- [State Management in 2026 | Nucamp](https://www.nucamp.co/blog/state-management-in-2026-redux-context-api-and-modern-patterns)
-- [FastAPI State Variables Explained | Medium](https://medium.com/algomart/fastapi-state-variables-explained-the-right-way-to-share-global-data-across-your-app-6de4d1435b22)
-- [FastAPI Sessions Documentation](https://jordanisaacs.github.io/fastapi-sessions/)
-- [Command Line Interface Guidelines](https://clig.dev/)
-
-### AI Workflow & Resumption
-- [The 2026 Guide to Agentic Workflow Architectures | Stack AI](https://www.stack-ai.com/blog/the-2026-guide-to-agentic-workflow-architectures)
-- [Agent-User Interaction Protocol | Via](https://ridewithvia.com/resources/agent-user-interaction-protocol-when-the-frontend-got-an-ai-protocol)
-- [AgentWorkflow Guide | LlamaIndex](https://www.llamaindex.ai/blog/introducing-agentworkflow-a-powerful-system-for-building-ai-agent-systems)
-
-### Production Deployment
-- [Deploy FastAPI with Gunicorn and Nginx | Vultr](https://docs.vultr.com/how-to-deploy-a-fastapi-application-with-gunicorn-and-nginx-on-ubuntu-2404)
-- [FastAPI Hosting: Deploy on Ubuntu Server | PloyCloud](https://ploy.cloud/blog/fastapi-hosting-deployment-guide-2025/)
-- [FastAPI Best Practices for Production 2026 | FastLaunchAPI](https://fastlaunchapi.dev/blog/fastapi-best-practices-production-2026)
-- [Preparing FastAPI for Production | Medium](https://medium.com/@ramanbazhanau/preparing-fastapi-for-production-a-comprehensive-guide-d167e693aa2b)
-
-### Monitoring & Logging
-- [Logging + LLM + FastAPI | Medium](https://medium.com/@alejandro7899871776/logging-llm-fastapi-69fe88e01a4d)
-- [FastAPI Middleware Patterns: Logging, Metrics, Error Handling 2026 | Johal.in](https://johal.in/fastapi-middleware-patterns-custom-logging-metrics-and-error-handling-2026-2/)
-- [Building Observable LLM Agents with OpenTelemetry | Medium](https://engineering.teknasyon.com/from-prompts-to-metrics-building-observable-llm-agents-using-fastapi-opentelemetry-prometheus-359d3132d92b)
+- Project context: `.planning/PROJECT.md` — v3.0 milestone definition, existing constraints
+- System architecture: `gsd-docs-industrial/CLAUDE-CONTEXT.md` — SSOT for existing system behavior
+- Existing templates: `gsd-docs-industrial/templates/fds/section-equipment-module.md`, `templates/roadmap/type-a-nieuwbouw-standaard.md`
+- Existing workflows: `gsd-docs-industrial/workflows/write-phase.md`, `commands/new-fds.md`
+- Prompt portability (industry consensus): [Portability of LLM Prompts — Vivek Haldar](https://vivekhaldar.com/articles/portability-of-llm-prompts/), [OpenAI Community Thread](https://community.openai.com/t/the-portability-of-a-llm-prompt/311147)
+- Over-abstraction anti-pattern: [Moving Beyond Over Abstraction — HatchWorks AI](https://hatchworks.com/blog/gen-ai/llm-projects-production-abstraction/), [LLM Abstraction Layer — ProxAI](https://www.proxai.co/blog/archive/llm-abstraction-layer)
+- LLM routing and fallback strategies: [Failover Routing — Portkey](https://portkey.ai/blog/failover-routing-strategies-for-llms-in-production/), [LiteLLM Router](https://docs.litellm.ai/docs/routing)
+- Local LLM deployment for confidential content: [On-Prem LLMs vs Cloud APIs — Unified AI Hub](https://www.unifiedaihub.com/blog/on-premise-llms-vs-cloud-apis-when-to-run-your-ai-models-on-premise)
+- ISA-88 flexible decomposition pitfalls: [6 Steps to Flexible Control System — Control Engineering](https://www.controleng.com/6-steps-to-designing-a-flexible-control-system-with-isa-88/), [ISA-88 Unit Boundary Design — Cross Company](https://www.crossco.com/resources/articles/6-steps-to-designing-a-flexible-control-system-with-isa-88/)
+- Git-based audit trails vs custom tooling: [Audit Trails and GitOps — Harness](https://www.harness.io/blog/audit-trails), [Best Prompt Versioning Tools — Braintrust](https://www.braintrust.dev/articles/best-prompt-versioning-tools-2025)
+- Schema migration patterns: [Schema Migrations Pitfalls — Quesma](https://quesma.com/blog/schema-migrations/), [Expand-Migrate-Contract — Defacto](https://www.getdefacto.com/article/database-schema-migrations)
 
 ---
-*Pitfalls research for: Web GUI for AI-Powered CLI FDS/SDS Document Generation*
-*Researched: 2026-02-14*
-*Confidence: HIGH - Based on official documentation, production guides, and 2026 best practices*
+*Pitfalls research for: Docs Engine Rearchitecture — GSD-Docs Industrial v3.0*
+*Researched: 2026-03-31*

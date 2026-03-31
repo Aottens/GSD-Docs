@@ -1,1703 +1,465 @@
-# Architecture Patterns: Web GUI for FDS/SDS Document Generation
+# Architecture Research
 
-**Domain:** Industrial automation FDS/SDS document generation
-**Researched:** 2026-02-14
+**Domain:** Industrial FDS/SDS docs engine rearchitecture (v3.0)
+**Researched:** 2026-03-31
 **Confidence:** HIGH
 
-## Recommended Architecture
+## Standard Architecture
 
 ### System Overview
 
+Current v2.0 system (baseline for integration analysis):
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        BROWSER (Engineer)                       │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │ React Frontend (TypeScript)                              │   │
-│  │  • Project wizard + phase timeline (Zustand/Jotai)      │   │
-│  │  • Document outline + Markdown preview (react-markdown) │   │
-│  │  • Chat panel (WebSocket connection)                     │   │
-│  │  • Reference library manager (upload/view)              │   │
-│  └──────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-                              ▲ │
-                   HTTPS      │ │ WebSocket
-                   REST API   │ │ /ws
-                              │ ▼
+│                     CLI Layer (~/.claude/commands/doc/)          │
+│  14 /doc:* commands (frontmatter .md) → Claude Code execution   │
+│  Context: gsd-docs-industrial/ (194 files, SPECIFICATION.md)    │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │ reads/writes
+                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    FastAPI Backend (Python)                     │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │ API Layer                                                │   │
-│  │  • REST endpoints (/api/projects, /api/phases)          │   │
-│  │  • WebSocket manager (/ws/{session_id})                 │   │
-│  │  • File upload handler (/api/files/upload)              │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │ Workflow Engine (orchestrator)                           │   │
-│  │  • Workflow loader (translates .md → Python)            │   │
-│  │  • Step executor (wave-based parallelization)           │   │
-│  │  • State manager (STATE.md checkpoint/resume)           │   │
-│  │  • Background task coordinator (ARQ + Redis)            │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │ LLM Provider Abstraction                                 │   │
-│  │  • LLMProvider interface (abstract base)                │   │
-│  │  • ClaudeProvider (Anthropic SDK)                       │   │
-│  │  • LocalProvider (stub for v3.0, Ollama/llama.cpp)     │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │ Domain Knowledge Loader                                  │   │
-│  │  • Template registry (equipment-module.md, etc.)        │   │
-│  │  • Standards loader (PackML/ISA-88, opt-in)             │   │
-│  │  • Prompt builder (agent context assembly)              │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │ Metadata Store (SQLite)                                  │   │
-│  │  • Projects table (id, name, type, created, status)     │   │
-│  │  • Files table (id, project_id, path, type, uploaded)   │   │
-│  │  • Sessions table (id, user, started, last_activity)    │   │
-│  └──────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-                              ▲ │
-                              │ │
-                              │ ▼
+│                   File System (project/.planning/)               │
+│  STATE.md · CONTEXT.md · PLAN.md · CONTENT.md · VERIFICATION.md │
+│  ROADMAP.md · PROJECT.md · REQUIREMENTS.md · SUMMARY.md         │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │ reads (display only)
+                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                      File System Storage                        │
-│  • /projects/{project-id}/.planning/ (ROADMAP, STATE, etc.)    │
-│  • /projects/{project-id}/.planning/phases/ (PLAN, CONTENT)    │
-│  • /projects/{project-id}/output/ (FDS/SDS final docs)         │
-│  • /references/shared/ (PackML, ISA-88, typicals CATALOG)      │
-│  • /references/projects/{id}/ (per-project overrides)          │
-└─────────────────────────────────────────────────────────────────┘
-                              ▲ │
-                              │ │ API calls
-                              │ ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      External Services                          │
-│  • Anthropic Claude API (LLM provider)                         │
-│  • Pandoc (DOCX export, shell subprocess)                      │
-│  • Mermaid CLI (diagram rendering, mmdc)                       │
+│                     GUI Layer (v2.0 — shipped)                   │
+│  React frontend (cockpit) ↔ FastAPI backend (file/project API)  │
+│  SQLite (project/file metadata only) · SSE (export progress)    │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Component Boundaries
+### What v3.0 Adds
 
-| Component | Responsibility | Communicates With |
-|-----------|---------------|-------------------|
-| **React Frontend** | User interface, state management, real-time updates display | FastAPI REST + WebSocket |
-| **API Layer** | HTTP routing, WebSocket connection management, request validation | Workflow Engine, File Storage, SQLite |
-| **Workflow Engine** | Orchestrate .md workflow execution, spawn LLM tasks, manage waves | LLM Provider, Domain Knowledge Loader, State Manager |
-| **LLM Provider** | Abstract LLM API calls (Claude, future local models) | External LLM APIs (Anthropic, Ollama) |
-| **Domain Knowledge Loader** | Load templates, standards, prompts from v1.0 file structure | File System (gsd-docs-industrial/) |
-| **State Manager** | Read/write STATE.md, checkpoint operations, detect crashes | File System (.planning/STATE.md) |
-| **SQLite Metadata** | Project list, file registry, session tracking | API Layer |
-| **File Storage** | Store project files, references, generated documents | API Layer, Workflow Engine |
-
-### Data Flow
-
-#### 1. Project Creation Flow
+Three new features each touch a different layer of this stack:
 
 ```
-Engineer fills wizard → React validates → POST /api/projects
-                                             ↓
-                                FastAPI creates project
-                                             ↓
-                        Workflow Engine loads new-fds.md workflow
-                                             ↓
-                        LLM Provider calls Claude (classify Type A/B/C/D)
-                                             ↓
-                        Generate ROADMAP.md, PROJECT.md, STATE.md
-                                             ↓
-                        File Storage writes .planning/ files
-                                             ↓
-                        SQLite stores project metadata
-                                             ↓
-                        WebSocket broadcasts "project_created" event
-                                             ↓
-                        React updates project list + redirects to timeline
+┌─────────────────────────────────────────────────────────────────────┐
+│  FEATURE 1: Flexible FDS Structure                                  │
+│  Layer: CLI docs engine (gsd-docs-industrial/)                      │
+│  Touch point: fds-structure.json, section templates, new-fds.md,   │
+│               plan-phase.md, discuss-phase.md, config_phases.py     │
+├─────────────────────────────────────────────────────────────────────┤
+│  FEATURE 2: LLM Provider Abstraction                                │
+│  Layer: CLI prompts → new abstraction shim                          │
+│  Touch point: command .md files (prompt construction), new          │
+│               provider config in PROJECT.md/config.json             │
+├─────────────────────────────────────────────────────────────────────┤
+│  FEATURE 3: Docs Engine Visibility                                  │
+│  Layer: New GUI surface + new FastAPI router                        │
+│  Touch point: new /api/engine/* endpoints, new React feature,       │
+│               reads gsd-docs-industrial/ files (read-only)          │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-#### 2. Phase Discussion Flow
+## Component Boundaries
+
+### What Exists and What Changes
+
+| Component | v2.0 State | v3.0 Change |
+|-----------|-----------|-------------|
+| `~/.claude/commands/doc/` — 14 command .md files | Unchanged | Pillar 1: modify `new-fds.md`, `discuss-phase.md`, `plan-phase.md` to support system-first discovery; Pillar 2: add provider-config reading |
+| `~/.claude/gsd-docs-industrial/templates/fds/` — 5 section templates | Equipment-module only | Pillar 1: add `section-functional-unit.md`, `section-process-step.md`, `section-hybrid.md` for non-EM decomposition |
+| `~/.claude/gsd-docs-industrial/templates/fds-structure.json` | EM-centric static structure | Pillar 1: replace with dynamic structure schema — decomposition model selected at `/doc:new-fds` |
+| `~/.claude/gsd-docs-industrial/CLAUDE-CONTEXT.md` | v1.0 context file | Pillar 1: update with system-first discovery rules; Pillar 2: document provider config schema |
+| `~/.claude/gsd-docs-industrial/workflows/new-fds.md` | Hardcoded EM classification | Pillar 1: add decomposition model discovery step |
+| `~/.claude/gsd-docs-industrial/workflows/plan-phase.md` | Selects EM template only | Pillar 1: selects template from decomposition model registry |
+| `~/.claude/gsd-docs-industrial/agents/doc-writer.md` | Claude-specific prompt patterns | Pillar 2: add provider-aware prompt formatting wrapper |
+| `~/.claude/gsd-docs-industrial/agents/doc-verifier.md` | Claude-specific prompt patterns | Pillar 2: add provider-aware prompt formatting wrapper |
+| `backend/app/config_phases.py` | Hardcoded Types A/B/C/D phase lists | Pillar 1: extend to support dynamic decomposition model phases |
+| `backend/app/api/` — 8 existing routers | File/project management API | Pillar 3: add new `engine.py` router |
+| `backend/app/services/` — 5 existing services | File/project management services | Pillar 3: add new `engine_service.py` |
+| `frontend/src/features/` — 7 existing features | Cockpit features | Pillar 3: add new `engine/` feature directory |
+| `.planning/PROJECT.md` per-project | type, language, standards config | Pillar 1: add decomposition model; Pillar 2: add provider config |
+
+### New Components Required
+
+| Component | What It Is | Belongs To |
+|-----------|-----------|------------|
+| `section-functional-unit.md` | Template for functional unit decomposition (non-EM projects) | Pillar 1 / CLI engine |
+| `section-process-step.md` | Template for process-flow decomposition | Pillar 1 / CLI engine |
+| `section-isa88-unit.md` | Template for ISA-88 unit/procedure decomposition | Pillar 1 / CLI engine |
+| `decomposition-models.json` | Registry of all decomposition models with trigger heuristics | Pillar 1 / CLI engine |
+| `provider-config.md` (or schema in SPECIFICATION.md) | LLM provider config schema: model, endpoint, api-key-env, prompt-format | Pillar 2 / CLI engine |
+| `backend/app/api/engine.py` | FastAPI router: list files, get file content, get diff, list changes | Pillar 3 / GUI |
+| `backend/app/services/engine_service.py` | Reads `gsd-docs-industrial/` directory tree, parses frontmatter, diffs | Pillar 3 / GUI |
+| `frontend/src/features/engine/` | React feature: template browser, prompt viewer, change log viewer | Pillar 3 / GUI |
+
+## Recommended Project Structure
+
+The three pillars map to three independent work areas in the repo:
 
 ```
-Engineer clicks "Discuss Phase 3" → POST /api/phases/3/discuss
-                                             ↓
-                        Workflow Engine loads discuss-phase.md workflow
-                                             ↓
-                        Read ROADMAP.md for phase goals
-                                             ↓
-                        LLM Provider calls Claude (identify gray areas)
-                                             ↓
-                        WebSocket streams questions to chat panel
-                                             ↓
-                        Engineer answers via /ws/send_message
-                                             ↓
-                        Workflow accumulates decisions
-                                             ↓
-                        Generate CONTEXT.md with decisions
-                                             ↓
-                        State Manager updates STATE.md
-                                             ↓
-                        WebSocket broadcasts "phase_discussion_complete"
-                                             ↓
-                        React enables "Plan Phase 3" button
+~/.claude/gsd-docs-industrial/         # Pillar 1 + 2: CLI engine changes
+├── templates/
+│   └── fds/
+│       ├── section-equipment-module.md    (existing — unchanged)
+│       ├── section-interface.md           (existing — unchanged)
+│       ├── section-state-machine.md       (existing — unchanged)
+│       ├── section-functional-unit.md     (NEW — Pillar 1)
+│       ├── section-process-step.md        (NEW — Pillar 1)
+│       └── section-isa88-unit.md          (NEW — Pillar 1)
+├── templates/fds-structure.json           (REPLACE — Pillar 1)
+├── templates/decomposition-models.json    (NEW — Pillar 1)
+├── workflows/new-fds.md                   (MODIFY — Pillar 1 + 2)
+├── workflows/plan-phase.md                (MODIFY — Pillar 1)
+├── workflows/discuss-phase.md             (MODIFY — Pillar 1)
+├── agents/doc-writer.md                   (MODIFY — Pillar 2)
+├── agents/doc-verifier.md                 (MODIFY — Pillar 2)
+└── CLAUDE-CONTEXT.md                      (MODIFY — Pillar 1 + 2)
+
+backend/app/                           # Pillar 3: GUI backend changes
+├── api/
+│   └── engine.py                          (NEW — Pillar 3)
+├── services/
+│   └── engine_service.py                  (NEW — Pillar 3)
+└── main.py                                (MODIFY — register engine router)
+
+frontend/src/features/                 # Pillar 3: GUI frontend changes
+└── engine/
+    ├── EngineExplorer.tsx                 (NEW — Pillar 3)
+    ├── TemplateViewer.tsx                 (NEW — Pillar 3)
+    ├── PromptViewer.tsx                   (NEW — Pillar 3)
+    └── ChangeLog.tsx                      (NEW — Pillar 3)
 ```
 
-#### 3. Phase Writing Flow (Wave-based Parallelization)
-
-```
-Engineer clicks "Write Phase 3" → POST /api/phases/3/write
-                                             ↓
-                        Workflow Engine loads write-phase.md workflow
-                                             ↓
-                        Discover all PLAN.md files in phase-3/
-                                             ↓
-                        Group plans by wave number (frontmatter)
-                                             ↓
-                        State Manager checkpoints STATE.md (wave 1 start)
-                                             ↓
-                        FOR EACH WAVE (sequential):
-                          ↓
-                          Background Task Queue (ARQ + Redis):
-                          - Spawn parallel tasks for all plans in wave
-                          - Each task:
-                              → Domain Knowledge Loader builds isolated context
-                              → Load: PROJECT.md, CONTEXT.md, PLAN.md, standards
-                              → NOT loaded: other plans, other CONTENT.md
-                              → LLM Provider calls Claude (doc-writer agent)
-                              → Write CONTENT.md + SUMMARY.md
-                              → WebSocket streams progress per section
-                          - Await all wave tasks completion
-                          ↓
-                          State Manager checkpoints STATE.md (wave N complete)
-                          ↓
-                        Aggregate CROSS-REFS.md from all writers
-                                             ↓
-                        WebSocket broadcasts "phase_write_complete"
-                                             ↓
-                        React updates phase timeline (Phase 3: Writing → Verifying)
-```
-
-#### 4. Document Preview Flow
-
-```
-Engineer clicks section in outline → GET /api/phases/3/content/03-02
-                                             ↓
-                        File Storage reads 03-02-CONTENT.md
-                                             ↓
-                        Return raw Markdown to React
-                                             ↓
-                        react-markdown renders with syntax highlighting
-                                             ↓
-                        Mermaid diagrams rendered client-side
-```
-
-#### 5. Reference Upload Flow
-
-```
-Engineer uploads PackML guide PDF → POST /api/files/upload
-                                             ↓
-                        FastAPI UploadFile handler
-                                             ↓
-                        Validate file type + size
-                                             ↓
-                        File Storage writes to /references/projects/{id}/
-                                             ↓
-                        SQLite stores file metadata
-                                             ↓
-                        WebSocket broadcasts "file_uploaded"
-                                             ↓
-                        React updates reference library list
-```
-
----
-
-## Integration Points: v1.0 → v2.0
-
-### New Components (Built from Scratch)
-
-| Component | What | Technology |
-|-----------|------|------------|
-| **Frontend UI** | Visual interface for all workflows | React + TypeScript, Zustand/Jotai state, react-markdown |
-| **FastAPI Backend** | Replaces Claude Code as orchestrator | FastAPI 2026, Pydantic v2, async/await |
-| **WebSocket Manager** | Real-time progress streaming | FastAPI WebSockets, Redis pub/sub for multi-instance |
-| **LLM Provider Abstraction** | Model-agnostic interface | Abstract base class, ClaudeProvider (Anthropic SDK) |
-| **Background Task Queue** | Wave-based parallel execution | ARQ (Async Redis Queue) |
-| **SQLite Metadata Store** | Project/file/session registry | SQLite with SQLAlchemy async |
-| **API Routes** | REST endpoints for all operations | FastAPI routers (projects, phases, files, export) |
-
-### Modified Components (Adapted from v1.0)
-
-| Component | v1.0 Implementation | v2.0 Change | Reason |
-|-----------|---------------------|-------------|--------|
-| **Workflow Logic** | .md files with embedded bash/prompts | Python orchestrator reads .md, executes steps | Web backend can't execute bash directly; translate logic to Python |
-| **Context Loading** | Claude Code @file syntax | Python file reader + prompt builder | Explicit context assembly for API calls |
-| **State Management** | STATE.md read/write via bash | Python STATE.md parser/writer | Programmatic checkpoint/resume logic |
-| **File Discovery** | Glob/Grep tools | Python pathlib.glob() + regex | Native Python file operations |
-| **Progress Feedback** | Terminal output (echo, boxes) | WebSocket JSON events | Real-time browser updates |
-
-### Unchanged Components (Reused Exactly)
-
-| Component | What | Why Unchanged |
-|-----------|------|---------------|
-| **Domain Knowledge Files** | Templates (equipment-module.md), standards (PackML, ISA-88), section structures | These ARE the SSOT for document structure; backend loads as prompt context |
-| **Workflow .md Files** | 14 workflow files (new-fds.md, write-phase.md, etc.) | Step descriptions, validation logic, success criteria remain authoritative; Python reads them |
-| **Agent Prompts** | doc-writer.md, doc-verifier.md, fresh-eyes.md | Agent role definitions and instructions reused verbatim as LLM system prompts |
-| **Project File Format** | .planning/, ROADMAP.md, PLAN.md frontmatter, STATE.md structure | CLI compatibility requirement; GUI and CLI produce identical files |
-| **SPECIFICATION.md** | v2.7.0 SSOT for workflow semantics | Reference document for implementing Python orchestration logic |
-
----
-
-## Pattern 1: Workflow Translation (.md → Python)
-
-### v1.0 Pattern (CLI)
-
-Workflows are .md files with embedded bash and Claude Code directives:
-
-```markdown
-## Step 3: Discover Plans
-
-**Discover plans:**
-```bash
-PHASE_DIR=$(find .planning/phases -type d -name "${PHASE}-*" | head -1)
-PLAN_FILES=$(find ${PHASE_DIR} -name "${PHASE}-[0-9][0-9]-PLAN.md" | sort)
-```
-
-**For each plan file, read YAML frontmatter:**
-```bash
-WAVE=$(grep "^wave:" ${PLAN_FILE} | cut -d: -f2 | tr -d ' ')
-```
-```
-
-### v2.0 Pattern (Web Backend)
-
-Python orchestrator reads the .md workflow and executes equivalent logic:
-
-```python
-# backend/workflows/engine.py
-
-class WorkflowEngine:
-    def __init__(self, workflow_path: Path):
-        """Load workflow .md file and parse steps."""
-        self.workflow_md = workflow_path.read_text()
-        self.steps = self._parse_workflow_steps()
-
-    def _parse_workflow_steps(self) -> List[WorkflowStep]:
-        """Extract ## Step N: sections from markdown."""
-        # Parse markdown, extract step headers + content
-        # Each step becomes a callable Python function
-        pass
-
-    async def execute_step(self, step_name: str, context: dict):
-        """Execute a workflow step with given context."""
-        step = self.steps[step_name]
-
-        # Example: "Discover Plans" step
-        if step_name == "discover_plans":
-            return await self._discover_plans(context)
-
-    async def _discover_plans(self, context: dict) -> List[PlanFile]:
-        """Python equivalent of bash plan discovery."""
-        phase_num = context["phase"]
-
-        # Find phase directory
-        phase_dirs = list(Path(".planning/phases").glob(f"{phase_num:02d}-*"))
-        if not phase_dirs:
-            raise WorkflowError(f"Phase {phase_num} directory not found")
-
-        phase_dir = phase_dirs[0]
-
-        # Find all PLAN.md files
-        plan_files = sorted(phase_dir.glob(f"{phase_num:02d}-[0-9][0-9]-PLAN.md"))
-
-        # Parse frontmatter from each plan
-        plans = []
-        for plan_path in plan_files:
-            frontmatter = self._parse_yaml_frontmatter(plan_path)
-            plans.append(PlanFile(
-                path=plan_path,
-                plan_id=frontmatter["plan"],
-                wave=frontmatter["wave"],
-                name=frontmatter["name"],
-                depends_on=frontmatter.get("depends_on", [])
-            ))
-
-        return plans
-```
-
-**Key principle:** The .md file is the SOURCE OF TRUTH for workflow logic. Python code IMPLEMENTS what the .md describes, not vice versa. If workflow changes, update the .md; Python reads and executes it.
-
----
-
-## Pattern 2: FastAPI Backend Structure
-
-### Recommended Directory Layout
-
-```
-backend/
-├── main.py                      # FastAPI app entry, lifespan, CORS
-├── config.py                    # Settings (Pydantic BaseSettings)
-├── database.py                  # SQLite/SQLAlchemy async session
-│
-├── api/                         # REST API routes
-│   ├── __init__.py
-│   ├── projects.py              # /api/projects CRUD
-│   ├── phases.py                # /api/phases/{phase}/discuss|plan|write|verify
-│   ├── files.py                 # /api/files/upload, /api/files/{file_id}
-│   ├── export.py                # /api/export/fds|sds|docx
-│   └── websocket.py             # /ws/{session_id} WebSocket endpoint
-│
-├── workflows/                   # Workflow orchestration
-│   ├── __init__.py
-│   ├── engine.py                # WorkflowEngine (loads .md, executes steps)
-│   ├── loaders.py               # Load workflow .md files from gsd-docs-industrial/
-│   ├── state_manager.py         # STATE.md read/write, checkpoint/resume
-│   └── steps/                   # Python implementations of workflow steps
-│       ├── new_fds.py           # new-fds.md step implementations
-│       ├── discuss_phase.py
-│       ├── plan_phase.py
-│       ├── write_phase.py
-│       └── verify_phase.py
-│
-├── llm/                         # LLM provider abstraction
-│   ├── __init__.py
-│   ├── provider.py              # LLMProvider abstract base class
-│   ├── claude.py                # ClaudeProvider (Anthropic SDK)
-│   ├── local.py                 # LocalProvider (stub for v3.0)
-│   └── context_builder.py       # Build agent prompts with domain knowledge
-│
-├── domain/                      # Domain knowledge loading
-│   ├── __init__.py
-│   ├── templates.py             # Load templates from gsd-docs-industrial/templates/
-│   ├── standards.py             # Load PackML/ISA-88 if enabled in PROJECT.md
-│   ├── agents.py                # Load agent prompts (doc-writer.md, etc.)
-│   └── prompts.py               # Assemble full prompts for LLM calls
-│
-├── tasks/                       # Background task definitions (ARQ)
-│   ├── __init__.py
-│   ├── write_tasks.py           # Parallel section writing tasks
-│   └── export_tasks.py          # DOCX generation tasks
-│
-├── models/                      # Pydantic models + SQLAlchemy schemas
-│   ├── __init__.py
-│   ├── project.py               # Project SQLAlchemy + Pydantic models
-│   ├── phase.py                 # Phase state models
-│   ├── plan.py                  # PLAN.md frontmatter schema
-│   └── session.py               # WebSocket session tracking
-│
-└── utils/                       # Utilities
-    ├── __init__.py
-    ├── file_ops.py              # File read/write helpers
-    ├── frontmatter.py           # YAML frontmatter parser
-    └── markdown.py              # Markdown utilities
-```
-
-### Core FastAPI Application
-
-```python
-# backend/main.py
-
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
-
-from api import projects, phases, files, export, websocket
-from database import init_db
-from tasks import setup_arq
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Application lifespan: startup and shutdown."""
-    # Startup
-    await init_db()
-    await setup_arq()
-    yield
-    # Shutdown
-    # Close connections, cleanup
-
-app = FastAPI(
-    title="GSD-Docs Industrial API",
-    version="2.0.0",
-    lifespan=lifespan
-)
-
-# CORS for React frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # React dev server
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Include routers
-app.include_router(projects.router, prefix="/api/projects", tags=["projects"])
-app.include_router(phases.router, prefix="/api/phases", tags=["phases"])
-app.include_router(files.router, prefix="/api/files", tags=["files"])
-app.include_router(export.router, prefix="/api/export", tags=["export"])
-app.include_router(websocket.router, prefix="/ws", tags=["websocket"])
-
-@app.get("/")
-async def root():
-    return {"message": "GSD-Docs Industrial API v2.0"}
-```
-
----
-
-## Pattern 3: LLM Provider Abstraction
-
-### Interface Design (Model-Agnostic)
-
-```python
-# backend/llm/provider.py
-
-from abc import ABC, abstractmethod
-from typing import AsyncGenerator, Optional
-from pydantic import BaseModel
-
-class LLMMessage(BaseModel):
-    """Single message in conversation."""
-    role: str  # "system" | "user" | "assistant"
-    content: str
-
-class LLMResponse(BaseModel):
-    """Response from LLM."""
-    content: str
-    model: str
-    usage: dict  # tokens, cost, etc.
-    finish_reason: str
-
-class LLMProvider(ABC):
-    """Abstract LLM provider interface."""
-
-    @abstractmethod
-    async def complete(
-        self,
-        messages: list[LLMMessage],
-        model: str,
-        max_tokens: int = 4000,
-        temperature: float = 1.0,
-        **kwargs
-    ) -> LLMResponse:
-        """Single completion (non-streaming)."""
-        pass
-
-    @abstractmethod
-    async def stream(
-        self,
-        messages: list[LLMMessage],
-        model: str,
-        max_tokens: int = 4000,
-        temperature: float = 1.0,
-        **kwargs
-    ) -> AsyncGenerator[str, None]:
-        """Streaming completion (yields text chunks)."""
-        pass
-
-    @abstractmethod
-    async def count_tokens(self, text: str, model: str) -> int:
-        """Estimate token count for text."""
-        pass
-```
-
-### Claude Implementation (v2.0)
-
-```python
-# backend/llm/claude.py
-
-from anthropic import AsyncAnthropic
-from llm.provider import LLMProvider, LLMMessage, LLMResponse
-
-class ClaudeProvider(LLMProvider):
-    """Anthropic Claude API provider."""
-
-    def __init__(self, api_key: str):
-        self.client = AsyncAnthropic(api_key=api_key)
-        self.default_model = "claude-opus-4-6"
-
-    async def complete(
-        self,
-        messages: list[LLMMessage],
-        model: str = None,
-        max_tokens: int = 4000,
-        temperature: float = 1.0,
-        **kwargs
-    ) -> LLMResponse:
-        """Call Claude API (non-streaming)."""
-        model = model or self.default_model
-
-        # Convert LLMMessage to Anthropic format
-        anthropic_messages = [
-            {"role": msg.role, "content": msg.content}
-            for msg in messages
-            if msg.role != "system"  # system goes in separate param
-        ]
-
-        system_msg = next((m.content for m in messages if m.role == "system"), None)
-
-        response = await self.client.messages.create(
-            model=model,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            system=system_msg,
-            messages=anthropic_messages,
-            **kwargs
-        )
-
-        return LLMResponse(
-            content=response.content[0].text,
-            model=response.model,
-            usage={
-                "input_tokens": response.usage.input_tokens,
-                "output_tokens": response.usage.output_tokens,
-            },
-            finish_reason=response.stop_reason
-        )
-
-    async def stream(
-        self,
-        messages: list[LLMMessage],
-        model: str = None,
-        max_tokens: int = 4000,
-        temperature: float = 1.0,
-        **kwargs
-    ) -> AsyncGenerator[str, None]:
-        """Call Claude API (streaming)."""
-        model = model or self.default_model
-
-        # Same message conversion as above
-        anthropic_messages = [...]
-        system_msg = ...
-
-        async with self.client.messages.stream(
-            model=model,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            system=system_msg,
-            messages=anthropic_messages,
-            **kwargs
-        ) as stream:
-            async for text in stream.text_stream:
-                yield text
-
-    async def count_tokens(self, text: str, model: str) -> int:
-        """Estimate tokens (Anthropic SDK provides count_tokens)."""
-        return await self.client.count_tokens(text)
-```
-
-### Local Model Stub (v3.0 Preparation)
-
-```python
-# backend/llm/local.py
-
-from llm.provider import LLMProvider, LLMMessage, LLMResponse
-
-class LocalProvider(LLMProvider):
-    """Local model provider (Ollama, llama.cpp, etc.)."""
-
-    def __init__(self, endpoint: str, model: str):
-        self.endpoint = endpoint  # e.g., "http://localhost:11434" for Ollama
-        self.model = model        # e.g., "llama3.3-405b"
-
-    async def complete(
-        self,
-        messages: list[LLMMessage],
-        model: str = None,
-        max_tokens: int = 4000,
-        temperature: float = 1.0,
-        **kwargs
-    ) -> LLMResponse:
-        """Call local model endpoint (stub for v3.0)."""
-        # TODO v3.0: Implement Ollama/llama.cpp API call
-        raise NotImplementedError("Local model support coming in v3.0")
-
-    async def stream(self, messages, model, max_tokens, temperature, **kwargs):
-        raise NotImplementedError("Local model support coming in v3.0")
-
-    async def count_tokens(self, text: str, model: str) -> int:
-        # TODO v3.0: Implement local tokenizer
-        return len(text) // 4  # Rough estimate
-```
-
-### Provider Factory
-
-```python
-# backend/llm/__init__.py
-
-from llm.provider import LLMProvider
-from llm.claude import ClaudeProvider
-from llm.local import LocalProvider
-from config import settings
-
-def get_llm_provider() -> LLMProvider:
-    """Factory: return configured LLM provider."""
-    if settings.LLM_PROVIDER == "claude":
-        return ClaudeProvider(api_key=settings.ANTHROPIC_API_KEY)
-    elif settings.LLM_PROVIDER == "local":
-        return LocalProvider(
-            endpoint=settings.LOCAL_LLM_ENDPOINT,
-            model=settings.LOCAL_LLM_MODEL
-        )
-    else:
-        raise ValueError(f"Unknown LLM provider: {settings.LLM_PROVIDER}")
-```
-
-**Key benefit:** Entire codebase calls `get_llm_provider().complete()`. Swapping Claude → local model is a config change, not a code rewrite.
-
----
-
-## Pattern 4: React Frontend Structure
-
-### Recommended Directory Layout
-
-```
-frontend/
-├── src/
-│   ├── main.tsx                 # React entry point
-│   ├── App.tsx                  # Root component, routing
-│   │
-│   ├── components/              # Reusable UI components
-│   │   ├── ProjectWizard.tsx    # Multi-step project creation
-│   │   ├── PhaseTimeline.tsx    # Phase progress visualization
-│   │   ├── DocumentOutline.tsx  # Collapsible phase/section tree
-│   │   ├── ChatPanel.tsx        # WebSocket-connected chat
-│   │   ├── MarkdownPreview.tsx  # react-markdown + Mermaid
-│   │   ├── ReferenceLibrary.tsx # File upload + listing
-│   │   └── ProgressIndicator.tsx # Wave/section progress bars
-│   │
-│   ├── pages/                   # Route pages
-│   │   ├── Home.tsx             # Project list dashboard
-│   │   ├── ProjectView.tsx      # Main working view (timeline + outline + preview)
-│   │   ├── PhaseDiscuss.tsx     # Discussion UI for gray areas
-│   │   ├── PhaseVerify.tsx      # Verification results display
-│   │   └── Export.tsx           # DOCX export options
-│   │
-│   ├── state/                   # State management
-│   │   ├── projectStore.ts      # Zustand store for projects
-│   │   ├── phaseStore.ts        # Zustand store for current phase state
-│   │   ├── chatStore.ts         # WebSocket message history
-│   │   └── referenceStore.ts    # Reference library state
-│   │
-│   ├── api/                     # API client
-│   │   ├── client.ts            # Axios instance with auth
-│   │   ├── projects.ts          # Project CRUD endpoints
-│   │   ├── phases.ts            # Phase operation endpoints
-│   │   ├── files.ts             # File upload endpoints
-│   │   └── websocket.ts         # WebSocket connection manager
-│   │
-│   ├── hooks/                   # Custom React hooks
-│   │   ├── useWebSocket.ts      # WebSocket connection hook
-│   │   ├── useProject.ts        # Load project data
-│   │   ├── usePhaseState.ts     # Track phase progress
-│   │   └── useFileUpload.ts     # File upload with progress
-│   │
-│   └── types/                   # TypeScript types
-│       ├── project.ts           # Project, ROADMAP types
-│       ├── phase.ts             # Phase, Plan types
-│       ├── message.ts           # WebSocket message types
-│       └── api.ts               # API request/response types
-│
-├── public/
-│   └── index.html
-├── package.json
-├── tsconfig.json
-└── vite.config.ts               # Vite bundler config
-```
-
-### State Management: Zustand (Lightweight, Recommended)
-
-```typescript
-// frontend/src/state/projectStore.ts
-
-import create from 'zustand';
-
-interface Project {
-  id: string;
-  name: string;
-  type: 'A' | 'B' | 'C' | 'D';
-  status: 'planning' | 'writing' | 'verifying' | 'complete';
-  currentPhase: number;
-  createdAt: string;
-}
-
-interface ProjectState {
-  projects: Project[];
-  currentProject: Project | null;
-
-  // Actions
-  loadProjects: () => Promise<void>;
-  selectProject: (id: string) => void;
-  createProject: (data: CreateProjectRequest) => Promise<string>;
-  updateProjectStatus: (id: string, status: Project['status']) => void;
-}
-
-export const useProjectStore = create<ProjectState>((set, get) => ({
-  projects: [],
-  currentProject: null,
-
-  loadProjects: async () => {
-    const response = await fetch('/api/projects');
-    const projects = await response.json();
-    set({ projects });
-  },
-
-  selectProject: (id: string) => {
-    const project = get().projects.find(p => p.id === id);
-    set({ currentProject: project || null });
-  },
-
-  createProject: async (data) => {
-    const response = await fetch('/api/projects', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    const newProject = await response.json();
-    set(state => ({
-      projects: [...state.projects, newProject],
-      currentProject: newProject,
-    }));
-    return newProject.id;
-  },
-
-  updateProjectStatus: (id, status) => {
-    set(state => ({
-      projects: state.projects.map(p =>
-        p.id === id ? { ...p, status } : p
-      ),
-    }));
-  },
-}));
-```
-
-### WebSocket Hook (Real-Time Updates)
-
-```typescript
-// frontend/src/hooks/useWebSocket.ts
-
-import { useEffect, useRef, useState } from 'react';
-import { useChatStore } from '../state/chatStore';
-
-export interface WebSocketMessage {
-  type: string;
-  data: any;
-}
-
-export function useWebSocket(sessionId: string) {
-  const [connected, setConnected] = useState(false);
-  const ws = useRef<WebSocket | null>(null);
-  const addMessage = useChatStore(state => state.addMessage);
-
-  useEffect(() => {
-    // Connect to WebSocket
-    const socket = new WebSocket(`ws://localhost:8000/ws/${sessionId}`);
-    ws.current = socket;
-
-    socket.onopen = () => {
-      console.log('WebSocket connected');
-      setConnected(true);
-    };
-
-    socket.onmessage = (event) => {
-      const message: WebSocketMessage = JSON.parse(event.data);
-
-      // Route message based on type
-      switch (message.type) {
-        case 'chat_message':
-          addMessage(message.data);
-          break;
-        case 'progress_update':
-          // Handle progress update (e.g., wave completion)
-          break;
-        case 'phase_complete':
-          // Handle phase completion
-          break;
-        default:
-          console.warn('Unknown message type:', message.type);
-      }
-    };
-
-    socket.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
-
-    socket.onclose = () => {
-      console.log('WebSocket disconnected');
-      setConnected(false);
-    };
-
-    return () => {
-      socket.close();
-    };
-  }, [sessionId]);
-
-  const sendMessage = (type: string, data: any) => {
-    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      ws.current.send(JSON.stringify({ type, data }));
+### Structure Rationale
+
+- **Pillar 1 stays entirely in `gsd-docs-industrial/`:** The CLI engine is self-contained. GUI reads project type/phase config from `config_phases.py` — that file needs extension but the domain logic stays in the engine.
+- **Pillar 2 is a thin shim, not a platform:** Provider abstraction is lightweight (config-driven prompt wrapping) because the constraint is "CLI compatibility maintained." No new orchestration layer.
+- **Pillar 3 is additive to the GUI:** Engine visibility is read-only inspection. No existing GUI routes or services are modified — just a new router and new frontend feature.
+
+## Architectural Patterns
+
+### Pattern 1: Decomposition Model Registry
+
+**What:** A single JSON registry (`decomposition-models.json`) maps model IDs to templates, triggers, and section structure. The `new-fds.md` workflow queries this registry during project setup based on how the engineer describes the system.
+
+**When to use:** Any time the docs engine needs to select a structural template. Replaces the current hardcoded EM-centric path in `new-fds.md` and `plan-phase.md`.
+
+**Trade-offs:** Adding a registry introduces indirection but makes adding new decomposition models (e.g., safety-function decomposition for future standards) a config change not a workflow rewrite.
+
+**Example structure:**
+```json
+{
+  "models": [
+    {
+      "id": "equipment-module",
+      "label": "Equipment Module (ISA-88 / PackML)",
+      "triggers": ["PLC", "EM", "equipment module", "PackML", "ISA-88"],
+      "section_template": "section-equipment-module.md",
+      "phase_structure": "type-a-or-b-em-phases",
+      "fds_structure": "fds-structure-em.json"
+    },
+    {
+      "id": "functional-unit",
+      "label": "Functional Unit (process-flow)",
+      "triggers": ["functional block", "process step", "unit operation"],
+      "section_template": "section-functional-unit.md",
+      "phase_structure": "functional-unit-phases",
+      "fds_structure": "fds-structure-functional.json"
+    },
+    {
+      "id": "hybrid",
+      "label": "Hybrid (mixed decomposition)",
+      "triggers": [],
+      "section_template": "section-hybrid.md",
+      "phase_structure": "hybrid-phases",
+      "fds_structure": "fds-structure-hybrid.json"
     }
-  };
-
-  return { connected, sendMessage };
+  ]
 }
 ```
 
-### Markdown Preview Component
+### Pattern 2: Provider Config in PROJECT.md
 
-```typescript
-// frontend/src/components/MarkdownPreview.tsx
+**What:** LLM provider configuration lives in per-project `PROJECT.md` (and defaults in `CLAUDE-CONTEXT.md`). The `doc-writer.md` and `doc-verifier.md` agents read provider config at runtime to format prompts correctly.
 
-import React from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import mermaid from 'mermaid';
+**When to use:** Any CLI command that constructs prompts. Prompt format varies by provider (Claude system/human turns vs OpenAI messages vs Ollama raw).
 
-interface MarkdownPreviewProps {
-  content: string;
-}
+**Trade-offs:** Putting provider config in PROJECT.md preserves git-trackability and CLI compatibility (no new config files). Downside: switching provider mid-project requires editing PROJECT.md — acceptable for this use case.
 
-export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ content }) => {
-  // Initialize Mermaid
-  React.useEffect(() => {
-    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
-    mermaid.contentLoaded();
-  }, [content]);
-
-  return (
-    <div className="markdown-preview">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={{
-          code({ node, inline, className, children, ...props }) {
-            const match = /language-(\w+)/.exec(className || '');
-            const language = match ? match[1] : '';
-
-            // Mermaid diagrams
-            if (language === 'mermaid') {
-              return (
-                <div className="mermaid">
-                  {String(children).replace(/\n$/, '')}
-                </div>
-              );
-            }
-
-            // Code blocks with syntax highlighting
-            if (!inline && match) {
-              return (
-                <SyntaxHighlighter
-                  style={vscDarkPlus}
-                  language={language}
-                  PreTag="div"
-                  {...props}
-                >
-                  {String(children).replace(/\n$/, '')}
-                </SyntaxHighlighter>
-              );
-            }
-
-            // Inline code
-            return <code className={className} {...props}>{children}</code>;
-          },
-        }}
-      >
-        {content}
-      </ReactMarkdown>
-    </div>
-  );
-};
+**Example schema addition to PROJECT.md:**
+```yaml
+llm:
+  provider: claude          # claude | openai | ollama | deepseek
+  model: claude-opus-4-5    # model ID per provider
+  api_key_env: ANTHROPIC_API_KEY   # env var name (not value)
+  endpoint: null            # null = use default; set for local/proxy
+  prompt_format: anthropic  # anthropic | openai | ollama-raw
 ```
 
----
+### Pattern 3: Read-Only Engine Service
 
-## Pattern 5: File Storage Architecture
+**What:** `engine_service.py` walks the `gsd-docs-industrial/` directory tree and exposes file content, metadata, and change history (via git log on the engine files) through a read-only API. No writes — the engine is managed as files, not through the GUI.
 
-### Storage Layout
+**When to use:** All `/api/engine/*` endpoints. The GUI is an inspector, not an editor.
 
+**Trade-offs:** Read-only simplifies the service (no conflict resolution, no versioning logic). Engineers who need to modify templates still do so directly in files. The GUI shows what's there; it doesn't manage it.
+
+**Example endpoint shape:**
 ```
-/opt/gsd-docs-data/              # Base data directory (VM deployment)
-│
-├── references/                  # Reference library
-│   ├── shared/                  # Global references (all projects)
-│   │   ├── standards/
-│   │   │   ├── packml/
-│   │   │   │   ├── STATE-MODEL.md
-│   │   │   │   └── UNIT-MODES.md
-│   │   │   └── isa-88/
-│   │   │       ├── EQUIPMENT-HIERARCHY.md
-│   │   │       └── TERMINOLOGY.md
-│   │   ├── typicals/
-│   │   │   ├── CATALOG.json
-│   │   │   └── library/
-│   │   │       ├── FB_AnalogIn.scl
-│   │   │       └── FB_DosingStation.scl
-│   │   └── vendor-docs/
-│   │       ├── siemens-packml-guide.pdf
-│   │       └── rockwell-isa88-overview.pdf
-│   │
-│   └── projects/                # Per-project reference overrides
-│       ├── {project-id}/
-│       │   ├── client-standards/
-│       │   ├── baseline-fds/   # For modification projects (Type C/D)
-│       │   └── vendor-docs/
-│       └── ...
-│
-├── projects/                    # Project working directories
-│   ├── {project-id}/
-│   │   ├── .planning/           # Planning artifacts
-│   │   │   ├── PROJECT.md
-│   │   │   ├── REQUIREMENTS.md
-│   │   │   ├── ROADMAP.md
-│   │   │   ├── STATE.md
-│   │   │   ├── BASELINE.md      # Type C/D only
-│   │   │   ├── config.json
-│   │   │   │
-│   │   │   ├── phases/
-│   │   │   │   ├── 01-foundation/
-│   │   │   │   │   ├── CONTEXT.md
-│   │   │   │   │   ├── 01-01-PLAN.md
-│   │   │   │   │   ├── 01-01-CONTENT.md
-│   │   │   │   │   ├── 01-01-SUMMARY.md
-│   │   │   │   │   └── VERIFICATION.md
-│   │   │   │   ├── 02-architecture/
-│   │   │   │   │   └── ...
-│   │   │   │   └── 03-equipment/
-│   │   │   │       ├── CONTEXT.md
-│   │   │   │       ├── CROSS-REFS.md
-│   │   │   │       ├── 03-01-PLAN.md
-│   │   │   │       ├── 03-01-CONTENT.md
-│   │   │   │       ├── 03-01-SUMMARY.md
-│   │   │   │       ├── 03-02-PLAN.md
-│   │   │   │       └── ...
-│   │   │   │
-│   │   │   └── archive/
-│   │   │       └── v1.0/
-│   │   │
-│   │   ├── output/              # Final documents
-│   │   │   ├── FDS-{Project}-v1.0.md
-│   │   │   ├── SDS-{Project}-v1.0.md
-│   │   │   ├── RATIONALE.md
-│   │   │   ├── EDGE-CASES.md
-│   │   │   └── TRACEABILITY.md
-│   │   │
-│   │   ├── diagrams/            # Generated diagrams
-│   │   │   ├── mermaid/
-│   │   │   │   ├── phase-3-state-em-200.mmd
-│   │   │   │   └── ...
-│   │   │   └── rendered/
-│   │   │       ├── phase-3-state-em-200.png
-│   │   │       └── ...
-│   │   │
-│   │   └── export/              # DOCX exports
-│   │       ├── FDS-{Project}-v1.0.docx
-│   │       └── SDS-{Project}-v1.0.docx
-│   │
-│   └── ...
-│
-└── metadata/                    # SQLite database
-    └── gsd-docs.db
+GET /api/engine/files          → directory tree with file metadata
+GET /api/engine/files/{path}   → file content + frontmatter parsed
+GET /api/engine/changelog      → git log on engine directory (recent N commits)
+GET /api/engine/templates      → filtered list: type=fds|sds|roadmap|workflow
+GET /api/engine/prompts        → filtered list: type=agent|command
 ```
 
-### File Upload Endpoint
+## Data Flow
 
-```python
-# backend/api/files.py
+### Pillar 1: System-First FDS Structure
 
-from fastapi import APIRouter, UploadFile, File, HTTPException
-from pathlib import Path
-from typing import List
-import aiofiles
-import mimetypes
-
-router = APIRouter()
-
-UPLOAD_DIR = Path("/opt/gsd-docs-data/references/projects")
-MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
-
-ALLOWED_TYPES = {
-    "application/pdf",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # .docx
-    "text/markdown",
-    "text/plain",
-}
-
-@router.post("/upload")
-async def upload_file(
-    project_id: str,
-    category: str,  # "client-standards" | "baseline-fds" | "vendor-docs"
-    file: UploadFile = File(...)
-):
-    """Upload reference file for a project."""
-
-    # Validate file type
-    content_type = file.content_type
-    if content_type not in ALLOWED_TYPES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"File type {content_type} not allowed"
-        )
-
-    # Check file size
-    file.file.seek(0, 2)  # Seek to end
-    size = file.file.tell()
-    file.file.seek(0)     # Reset to start
-
-    if size > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail=f"File too large (max {MAX_FILE_SIZE // 1024 // 1024}MB)"
-        )
-
-    # Save file
-    project_dir = UPLOAD_DIR / project_id / category
-    project_dir.mkdir(parents=True, exist_ok=True)
-
-    file_path = project_dir / file.filename
-
-    async with aiofiles.open(file_path, 'wb') as f:
-        content = await file.read()
-        await f.write(content)
-
-    # Store metadata in SQLite
-    file_metadata = {
-        "project_id": project_id,
-        "filename": file.filename,
-        "category": category,
-        "path": str(file_path),
-        "size": size,
-        "mime_type": content_type,
-        "uploaded_at": datetime.now().isoformat(),
-    }
-    # ... save to database
-
-    return {
-        "success": True,
-        "file_id": file_metadata["id"],
-        "path": str(file_path)
-    }
+```
+Engineer runs /doc:new-fds
+    ↓
+new-fds.md: ask "describe your system" (open-ended)
+    ↓
+new-fds.md: load decomposition-models.json
+    → match engineer's description against model triggers
+    → present 2-3 candidate models with short explanation
+    → engineer confirms or overrides
+    ↓
+new-fds.md: write chosen decomposition_model to PROJECT.md
+    → scaffold ROADMAP.md using model's phase_structure
+    → reference model's fds_structure file in PROJECT.md
+    ↓
+plan-phase.md: reads decomposition_model from PROJECT.md
+    → selects correct section template (section-functional-unit.md etc.)
+    → generates PLAN.md files using that template's subsection structure
+    ↓
+doc-writer.md: reads section template path from PLAN.md frontmatter
+    → writes CONTENT.md following template structure
+    ↓
+complete-fds.md: reads fds_structure file named in PROJECT.md
+    → assembles final document using that structure (not hardcoded EM structure)
 ```
 
----
+### Pillar 2: LLM Provider Abstraction
 
-## Pattern 6: Real-Time Communication Layer
-
-### WebSocket Message Protocol
-
-```python
-# backend/api/websocket.py
-
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from typing import Dict
-import json
-import asyncio
-
-router = APIRouter()
-
-# Active connections registry
-connections: Dict[str, WebSocket] = {}
-
-@router.websocket("/{session_id}")
-async def websocket_endpoint(websocket: WebSocket, session_id: str):
-    """WebSocket connection for real-time updates."""
-
-    await websocket.accept()
-    connections[session_id] = websocket
-
-    try:
-        # Send initial connection confirmation
-        await websocket.send_json({
-            "type": "connection_established",
-            "data": {"session_id": session_id}
-        })
-
-        # Listen for client messages
-        while True:
-            data = await websocket.receive_text()
-            message = json.loads(data)
-
-            # Route message based on type
-            await handle_client_message(session_id, message)
-
-    except WebSocketDisconnect:
-        del connections[session_id]
-        print(f"Client {session_id} disconnected")
-
-async def handle_client_message(session_id: str, message: dict):
-    """Handle incoming message from client."""
-    msg_type = message.get("type")
-
-    if msg_type == "chat_message":
-        # User answered a discussion question
-        # ... process answer
-        pass
-
-    elif msg_type == "ping":
-        # Heartbeat
-        await send_to_client(session_id, {
-            "type": "pong",
-            "data": {}
-        })
-
-async def send_to_client(session_id: str, message: dict):
-    """Send message to specific client."""
-    ws = connections.get(session_id)
-    if ws:
-        await ws.send_json(message)
-
-async def broadcast_progress(session_id: str, event: str, data: dict):
-    """Broadcast progress update to client."""
-    await send_to_client(session_id, {
-        "type": "progress_update",
-        "data": {
-            "event": event,
-            "timestamp": datetime.now().isoformat(),
-            **data
-        }
-    })
+```
+Any /doc:* command that invokes doc-writer.md or doc-verifier.md
+    ↓
+Agent reads PROJECT.md → llm.provider, llm.model, llm.prompt_format
+    ↓
+If prompt_format == "anthropic":
+    → standard Claude system/human turn format (current behavior)
+If prompt_format == "openai":
+    → messages array format (system, user roles)
+    → strip Claude-specific XML tags if present
+If prompt_format == "ollama-raw":
+    → single text prompt, no role markers
+    → inject <INST> markers if model expects them
+    ↓
+Agent constructs prompt in correct format
+    → calls provider via configured endpoint
+    → parses response (provider-specific stop sequences, role markers stripped)
+    ↓
+Rest of workflow unchanged: write to CONTENT.md, update STATE.md
 ```
 
-### Progress Broadcasting (from Background Tasks)
+**Note:** This abstraction lives in the agent prompt files themselves (as conditional instructions) and in a thin `provider-format.md` reference doc that agents `@`-include. No new Python infrastructure is needed — Claude Code executes the instructions in the .md files. For actual local model invocation, the engineer configures the endpoint; Claude Code's Bash tool makes the API call.
 
-```python
-# backend/tasks/write_tasks.py
+### Pillar 3: Docs Engine Visibility
 
-from arq import create_pool
-from arq.connections import RedisSettings
-from api.websocket import broadcast_progress
-
-async def write_section_task(
-    ctx: dict,
-    session_id: str,
-    project_id: str,
-    phase: int,
-    plan_id: str
-):
-    """Background task: write single section (runs in wave)."""
-
-    # Load context
-    context = await load_section_context(project_id, phase, plan_id)
-
-    # Broadcast start
-    await broadcast_progress(session_id, "section_write_start", {
-        "plan_id": plan_id,
-        "plan_name": context["plan"]["name"]
-    })
-
-    # Call LLM provider
-    llm = get_llm_provider()
-    messages = build_writer_prompt(context)
-
-    # Stream response and broadcast chunks
-    content_chunks = []
-    async for chunk in llm.stream(messages, model="claude-opus-4-6"):
-        content_chunks.append(chunk)
-
-        # Broadcast progress every N chunks
-        if len(content_chunks) % 10 == 0:
-            await broadcast_progress(session_id, "section_write_progress", {
-                "plan_id": plan_id,
-                "chars_written": len("".join(content_chunks))
-            })
-
-    # Write files
-    content = "".join(content_chunks)
-    await write_content_file(project_id, phase, plan_id, content)
-
-    # Generate SUMMARY.md
-    summary = await generate_summary(llm, content)
-    await write_summary_file(project_id, phase, plan_id, summary)
-
-    # Broadcast completion
-    await broadcast_progress(session_id, "section_write_complete", {
-        "plan_id": plan_id,
-        "content_length": len(content),
-        "summary_length": len(summary)
-    })
-
-    return {"success": True, "plan_id": plan_id}
+```
+Engineer opens "Engine" tab in GUI cockpit
+    ↓
+React EngineExplorer component
+    → GET /api/engine/files
+        → engine_service.py walks ~/.claude/gsd-docs-industrial/
+        → returns tree with file type, size, last-modified
+    ↓
+Engineer clicks a template file
+    → GET /api/engine/files/templates/fds/section-equipment-module.md
+        → engine_service.py reads file
+        → parses YAML frontmatter (type, language, standards, subsections)
+        → returns: { frontmatter, raw_markdown, rendered_html }
+    ↓
+TemplateViewer renders: frontmatter panel + markdown preview
+    ↓
+Engineer clicks "Recent Changes"
+    → GET /api/engine/changelog?limit=20
+        → engine_service.py runs git log on engine directory
+        → returns: [{ hash, date, message, files_changed }]
+    ↓
+ChangeLog renders commit list with diff-on-click
 ```
 
-### React Component (Receiving Updates)
+## Scaling Considerations
 
-```typescript
-// frontend/src/components/ProgressIndicator.tsx
+| Scale | Architecture Adjustments |
+|-------|--------------------------|
+| Current (1-5 engineers, local) | All three pillars as described — no scaling concerns |
+| Team server (5-20 users, VM) | Pillar 3 engine service can cache directory tree (5min TTL) to avoid repeated filesystem walks; git log calls are cheap |
+| Multi-team (50+ users) | Engine visibility would need a proper changelog store rather than live git log calls; still no concern for Pillars 1-2 (CLI-side changes) |
 
-import React, { useEffect, useState } from 'react';
-import { useWebSocket } from '../hooks/useWebSocket';
+### Scaling Priorities
 
-interface SectionProgress {
-  plan_id: string;
-  plan_name: string;
-  status: 'pending' | 'writing' | 'complete';
-  chars_written: number;
-}
+1. **First bottleneck (if any):** Pillar 3 engine service doing live git log calls under concurrent load. Mitigation: background-refresh cache on engine service startup and on a 5-minute timer.
+2. **Not a concern:** Pillars 1 and 2 are CLI-side changes with no runtime load impact on the server.
 
-export const ProgressIndicator: React.FC<{ sessionId: string }> = ({ sessionId }) => {
-  const { connected } = useWebSocket(sessionId);
-  const [sections, setSections] = useState<Record<string, SectionProgress>>({});
+## Anti-Patterns
 
-  useEffect(() => {
-    // Listen for progress updates
-    const handleMessage = (event: MessageEvent) => {
-      const message = JSON.parse(event.data);
+### Anti-Pattern 1: Building LLM Abstraction as a Backend Orchestration Layer
 
-      if (message.type === 'progress_update') {
-        const { event: eventName, data } = message.data;
+**What people do:** Add a `LLMOrchestrator` service to FastAPI that routes calls to different providers, then rebuild the prompt construction logic in Python.
 
-        if (eventName === 'section_write_start') {
-          setSections(prev => ({
-            ...prev,
-            [data.plan_id]: {
-              plan_id: data.plan_id,
-              plan_name: data.plan_name,
-              status: 'writing',
-              chars_written: 0,
-            }
-          }));
-        }
+**Why it's wrong:** The constraint is that AI operations stay in the CLI. The GUI is a file/project management API. Adding LLM orchestration to the backend violates the cockpit architecture decision (Phase 10 of v2.0), doubles maintenance surface, and breaks CLI compatibility because prompts would diverge between CLI and GUI paths.
 
-        if (eventName === 'section_write_progress') {
-          setSections(prev => ({
-            ...prev,
-            [data.plan_id]: {
-              ...prev[data.plan_id],
-              chars_written: data.chars_written,
-            }
-          }));
-        }
+**Do this instead:** Provider abstraction belongs in the CLI agent files (`doc-writer.md`, `doc-verifier.md`). The agents read `llm.provider` from PROJECT.md and format their prompts accordingly. This is a config-driven prompt pattern, not a software architecture change.
 
-        if (eventName === 'section_write_complete') {
-          setSections(prev => ({
-            ...prev,
-            [data.plan_id]: {
-              ...prev[data.plan_id],
-              status: 'complete',
-            }
-          }));
-        }
-      }
-    };
+### Anti-Pattern 2: Storing Engine File Snapshots in SQLite
 
-    // ... attach listener
-  }, []);
+**What people do:** Copy template content into the database for faster querying, then sync on change.
 
-  return (
-    <div className="progress-indicator">
-      <h3>Writing Progress</h3>
-      {Object.values(sections).map(section => (
-        <div key={section.plan_id} className="section-progress">
-          <span>{section.plan_name}</span>
-          <span className={`status ${section.status}`}>
-            {section.status === 'writing'
-              ? `${section.chars_written} chars...`
-              : section.status
-            }
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-};
+**Why it's wrong:** Templates are already version-controlled (git). Copying them into SQLite creates a second source of truth that drifts. The engine visibility feature's value is showing what's actually on disk — stale DB snapshots undermine that.
+
+**Do this instead:** Read files directly from the filesystem in `engine_service.py`. Cache the directory tree in memory (not in SQLite) with a short TTL for performance.
+
+### Anti-Pattern 3: Making Decomposition Models Mutually Exclusive by Project Type
+
+**What people do:** Map Type A → EM decomposition, Type B → functional unit, etc. Hardcode the mapping.
+
+**Why it's wrong:** Real projects don't follow clean type-to-model mappings. A Type B (Greenfield Flex) project for a batch system needs EM decomposition; a Type A (Standards) project for a conveyor line might use process-step decomposition. The engineer's description of the system should drive model selection, not project type.
+
+**Do this instead:** Project type (A/B/C/D) determines scope and rigor requirements (standards, phases). Decomposition model is a separate independent dimension set during `/doc:new-fds`. Both are stored in PROJECT.md.
+
+### Anti-Pattern 4: Engine Visibility as an Editor
+
+**What people do:** Add edit/save buttons to the template viewer so engineers can modify templates in the GUI.
+
+**Why it's wrong:** Templates are shared infrastructure. GUI edits without version control create divergence between team members. The 194-file engine is its own codebase — it deserves proper version control, not inline editing.
+
+**Do this instead:** The engine viewer is read-only. Show git history. Document the workflow: to modify a template, edit the file directly, commit, and the GUI reflects the change on next load.
+
+## Integration Points
+
+### External Services
+
+| Service | Integration Pattern | Notes |
+|---------|---------------------|-------|
+| Anthropic Claude API | Existing — via CLI agent invocation | Pillar 2 adds provider-conditional prompt formatting, no new API surface |
+| OpenAI API | New — via Bash tool in CLI agents | Provider config in PROJECT.md; agent formats prompt as OpenAI messages and calls via curl/python in Bash |
+| Ollama (local) | New — via Bash tool in CLI agents | Local endpoint; no API key needed; agent uses ollama-raw format |
+| DeepSeek API | New — OpenAI-compatible endpoint | Uses openai prompt_format with DeepSeek endpoint configured |
+| Git (engine changelog) | New — subprocess in engine_service.py | `git log --follow` on gsd-docs-industrial/ directory |
+
+### Internal Boundaries
+
+| Boundary | Communication | Notes |
+|----------|---------------|-------|
+| CLI engine ↔ per-project files | Filesystem reads/writes (unchanged) | Pillar 1 adds `decomposition_model` field to PROJECT.md; backward compatible |
+| CLI engine ↔ LLM provider | @-includes in agent .md files (unchanged) | Pillar 2 adds conditional prompt-format branch in doc-writer.md |
+| GUI backend ↔ CLI engine files | New: `engine_service.py` reads ~/.claude/gsd-docs-industrial/ | Read-only; no writes from GUI to engine |
+| GUI backend ↔ existing project files | Existing: phase status derived from filesystem artifacts | Unchanged; Pillar 1 adds decomposition_model to PROJECT.md schema read |
+| GUI frontend ↔ engine API | New: `GET /api/engine/*` REST endpoints | New React feature; does not modify existing features |
+| `config_phases.py` ↔ frontend | Existing: phase definitions for timeline display | Pillar 1 requires extension to handle dynamic decomposition model phase counts |
+
+## Build Order
+
+The three pillars have minimal cross-dependencies. Correct sequence based on dependencies:
+
 ```
+PILLAR 1: Flexible FDS Structure
+─────────────────────────────────────────────────────────────
+Step 1.1  decomposition-models.json — registry of all models
+          (no dependencies; defines the schema everything else references)
 
----
+Step 1.2  New section templates (section-functional-unit.md,
+          section-process-step.md, section-isa88-unit.md)
+          (depends on: knowing what models exist from 1.1)
 
-## Anti-Patterns to Avoid
+Step 1.3  fds-structure variants (fds-structure-functional.json,
+          fds-structure-hybrid.json)
+          (depends on: new templates from 1.2)
 
-### Anti-Pattern 1: Hardcoding Workflow Logic in API Routes
+Step 1.4  Modify new-fds.md workflow — add decomposition model discovery
+          (depends on: registry from 1.1; writes model to PROJECT.md)
 
-**What:** Embedding workflow steps directly in FastAPI route handlers.
+Step 1.5  Modify discuss-phase.md — load decomposition context for discussion
+          (depends on: PROJECT.md schema from 1.4)
 
-```python
-# BAD: Workflow logic in route
-@router.post("/phases/{phase}/write")
-async def write_phase(phase: int):
-    # Find plans
-    plans = glob(f".planning/phases/{phase:02d}-*/*-PLAN.md")
-    # Group by wave
-    waves = {}
-    for plan in plans:
-        wave = parse_frontmatter(plan)["wave"]
-        waves.setdefault(wave, []).append(plan)
-    # Execute waves
-    for wave_num, wave_plans in waves.items():
-        # ... spawn tasks
-    # This is fragile and doesn't follow v1.0 workflow definitions
+Step 1.6  Modify plan-phase.md — select section template from model registry
+          (depends on: templates from 1.2, registry from 1.1)
+
+Step 1.7  Extend config_phases.py — support dynamic phase structure per model
+          (depends on: new phase structures defined in 1.1)
+
+─────────────────────────────────────────────────────────────
+PILLAR 2: LLM Provider Abstraction
+─────────────────────────────────────────────────────────────
+Step 2.1  provider-format.md reference doc — prompt format specs
+          per provider (no dependencies; pure documentation)
+
+Step 2.2  Update CLAUDE-CONTEXT.md — document provider config schema
+          for PROJECT.md llm block
+          (depends on: format spec from 2.1)
+
+Step 2.3  Modify doc-writer.md agent — add provider-conditional
+          prompt construction
+          (depends on: format spec from 2.1)
+
+Step 2.4  Modify doc-verifier.md agent — add provider-conditional
+          prompt construction
+          (depends on: format spec from 2.1)
+
+Step 2.5  Test suite: write a simple FDS section with each target
+          provider (Claude, OpenAI, Ollama) to verify output quality
+          (depends on: 2.3, 2.4; environment with local model available)
+
+─────────────────────────────────────────────────────────────
+PILLAR 3: Docs Engine Visibility
+─────────────────────────────────────────────────────────────
+Step 3.1  engine_service.py — filesystem walker, frontmatter parser,
+          git log reader
+          (no dependencies on Pillars 1 or 2; can start in parallel)
+
+Step 3.2  backend/app/api/engine.py — FastAPI router with
+          /api/engine/* endpoints
+          (depends on: service from 3.1)
+
+Step 3.3  Register engine router in main.py
+          (depends on: router from 3.2)
+
+Step 3.4  React EngineExplorer + TemplateViewer + ChangeLog components
+          (depends on: API from 3.2; can develop against mock data first)
+
+─────────────────────────────────────────────────────────────
+SEQUENCING RECOMMENDATION
+─────────────────────────────────────────────────────────────
+Pillar 3 can run fully in parallel with Pillars 1 and 2 —
+it is additive (new router, new frontend feature) with no
+dependencies on the CLI engine changes.
+
+Pillar 2 can start after Pillar 1's Step 1.1 (to know the
+PROJECT.md schema), but the bulk of Pillar 2 (agent rewrites)
+is independent of Pillar 1's template work.
+
+Recommended execution order for a single developer:
+  1. Pillar 1 Steps 1.1–1.3  (schema + templates first, no risk)
+  2. Pillar 3 Steps 3.1–3.3  (backend service — gives quick feedback
+                                on engine file structure while templates
+                                are being written)
+  3. Pillar 1 Steps 1.4–1.7  (workflow changes — now templates exist)
+  4. Pillar 2 Steps 2.1–2.5  (provider abstraction — last because it
+                                requires a working project to test against)
+  5. Pillar 3 Step 3.4        (frontend — build against real API)
 ```
-
-**Why bad:** Duplicates workflow logic from .md files. Changes to workflows require code edits, not .md edits. Violates SSOT principle.
-
-**Instead:** Route handlers trigger WorkflowEngine, which reads .md and executes steps.
-
-```python
-# GOOD: Workflow engine reads .md
-@router.post("/phases/{phase}/write")
-async def write_phase(phase: int, session_id: str):
-    engine = WorkflowEngine.load("write-phase.md")
-    await engine.execute(context={"phase": phase, "session_id": session_id})
-```
-
----
-
-### Anti-Pattern 2: Tight Coupling to Claude API
-
-**What:** Calling Anthropic SDK directly throughout codebase.
-
-```python
-# BAD: Direct Claude calls everywhere
-from anthropic import AsyncAnthropic
-
-async def write_section(plan):
-    client = AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
-    response = await client.messages.create(
-        model="claude-opus-4-6",
-        messages=[...]
-    )
-    return response.content[0].text
-```
-
-**Why bad:** Cannot swap LLM providers without rewriting all LLM calls. Vendor lock-in.
-
-**Instead:** Use LLMProvider abstraction.
-
-```python
-# GOOD: Provider-agnostic
-async def write_section(plan):
-    llm = get_llm_provider()  # Returns ClaudeProvider or LocalProvider
-    response = await llm.complete(messages=[...])
-    return response.content
-```
-
----
-
-### Anti-Pattern 3: Storing Generated Content in Database
-
-**What:** Saving CONTENT.md, SUMMARY.md in SQLite/Postgres BLOBs.
-
-**Why bad:**
-- Breaks CLI compatibility (CLI expects .md files on disk)
-- Loses human-readable git-trackable project structure
-- Complicates debugging (can't inspect files directly)
-
-**Instead:** Store files on disk exactly as v1.0 does. SQLite stores only METADATA (project ID, file path, upload time).
-
----
-
-### Anti-Pattern 4: Frontend Calling LLM APIs Directly
-
-**What:** React components making direct API calls to Anthropic.
-
-**Why bad:**
-- Exposes API keys in browser
-- No orchestration control (can't checkpoint, resume)
-- Can't implement wave-based parallelization
-
-**Instead:** Frontend calls FastAPI endpoints. Backend orchestrates LLM calls.
-
----
-
-## Scalability Considerations
-
-| Concern | At 1 Engineer | At 5 Engineers | At 20 Engineers |
-|---------|---------------|----------------|-----------------|
-| **Concurrent Projects** | Single VM handles easily | Same VM, separate project dirs | Consider load balancer + multiple VM instances |
-| **WebSocket Connections** | Direct connection to FastAPI | Redis pub/sub for multi-instance | Dedicated WebSocket gateway (e.g., Socket.IO cluster) |
-| **Background Tasks** | ARQ worker on same VM | Dedicated worker VM with Redis | Worker pool with autoscaling |
-| **File Storage** | Local disk (/opt/gsd-docs-data) | NFS mount for shared access | Object storage (S3-compatible, MinIO) |
-| **LLM API Rate Limits** | Anthropic tier sufficient | Monitor usage, upgrade tier | Queue requests, implement retry + backoff |
-| **Database** | SQLite on disk | Migrate to PostgreSQL for concurrent writes | PostgreSQL with connection pooling |
-
----
-
-## Build Order (Dependency-Aware)
-
-### Phase 1: Foundation (Week 1)
-
-**Backend:**
-1. FastAPI skeleton (main.py, config, CORS)
-2. SQLite setup (database.py, models)
-3. File storage structure (/opt/gsd-docs-data/)
-4. Basic project CRUD API (/api/projects)
-
-**Frontend:**
-1. React + Vite setup
-2. Routing (React Router)
-3. Zustand stores (projectStore)
-4. Project list page (Home.tsx)
-
-**Integration:**
-- Frontend can create/list projects
-- Backend writes PROJECT.md, ROADMAP.md to disk
-
----
-
-### Phase 2: Workflow Engine Core (Week 2)
-
-**Backend:**
-1. WorkflowEngine (load .md, parse steps)
-2. State Manager (STATE.md read/write, checkpoint)
-3. Domain Knowledge Loader (templates, standards)
-4. LLM Provider abstraction + ClaudeProvider
-
-**Testing:**
-- Implement /doc:new-fds workflow in Python
-- Verify PROJECT.md, ROADMAP.md generation matches v1.0
-
----
-
-### Phase 3: Discussion + Planning Workflows (Week 3)
-
-**Backend:**
-1. /api/phases/{phase}/discuss endpoint
-2. discuss-phase.md workflow implementation
-3. /api/phases/{phase}/plan endpoint
-4. plan-phase.md workflow implementation
-
-**Frontend:**
-1. PhaseTimeline component
-2. ChatPanel component (WebSocket connection)
-3. PhaseDiscuss page
-
-**Integration:**
-- Engineer can discuss phase, see questions in chat
-- Engineer answers, backend generates CONTEXT.md
-- Engineer plans phase, backend generates PLAN.md files
-
----
-
-### Phase 4: Writing Workflow + Real-Time (Week 4)
-
-**Backend:**
-1. ARQ + Redis setup
-2. Background task queue (write_tasks.py)
-3. /api/phases/{phase}/write endpoint
-4. write-phase.md workflow (wave-based parallel)
-5. WebSocket broadcasting (progress updates)
-
-**Frontend:**
-1. ProgressIndicator component
-2. DocumentOutline component
-3. MarkdownPreview component
-
-**Integration:**
-- Engineer clicks "Write Phase 3"
-- Backend spawns parallel writers per wave
-- Frontend shows real-time progress
-- Engineer sees CONTENT.md in preview panel
-
----
-
-### Phase 5: Verification + Review (Week 5)
-
-**Backend:**
-1. /api/phases/{phase}/verify endpoint
-2. verify-phase.md workflow (goal-backward checks)
-3. /api/phases/{phase}/review endpoint
-4. review-phase.md workflow
-
-**Frontend:**
-1. PhaseVerify page (gap display, fix trigger)
-2. Review UI (client feedback capture)
-
-**Integration:**
-- Engineer verifies phase, sees gaps
-- Engineer triggers gap closure (re-plan, re-write)
-- Engineer reviews with client, logs feedback
-
----
-
-### Phase 6: FDS Assembly + Export (Week 6)
-
-**Backend:**
-1. /api/export/fds endpoint
-2. complete-fds.md workflow (cross-ref resolution)
-3. /api/export/docx endpoint
-4. Pandoc subprocess integration
-5. Mermaid CLI integration (mmdc)
-
-**Frontend:**
-1. Export page (format options, download)
-
-**Integration:**
-- Engineer completes all phases
-- Backend assembles FDS.md
-- Engineer exports DOCX with diagrams
-
----
-
-### Phase 7: Reference Library + SDS (Week 7)
-
-**Backend:**
-1. /api/files/upload endpoint
-2. Reference library API
-3. /api/export/sds endpoint
-4. generate-sds.md workflow (typicals matching)
-
-**Frontend:**
-1. ReferenceLibrary component
-2. File upload UI
-
-**Integration:**
-- Engineer uploads client standards
-- Backend makes them available to workflows
-- Engineer generates SDS from FDS
-
----
-
-### Phase 8: VM Deployment + Production Hardening (Week 8)
-
-**Infrastructure:**
-1. Nginx reverse proxy config
-2. systemd service files (FastAPI, ARQ worker)
-3. Redis setup
-4. SSL certificate (Let's Encrypt)
-5. Backup scripts (project files, SQLite)
-
-**Testing:**
-- Full end-to-end workflow (new-fds → export)
-- Multi-user concurrent access
-- Crash recovery (STATE.md resume)
-
----
-
-## Deployment Architecture (VM, No Docker)
-
-### System Services
-
-```ini
-# /etc/systemd/system/gsd-docs-api.service
-
-[Unit]
-Description=GSD-Docs FastAPI Backend
-After=network.target
-
-[Service]
-Type=notify
-User=gsd-docs
-Group=gsd-docs
-WorkingDirectory=/opt/gsd-docs-backend
-Environment="PATH=/opt/gsd-docs-backend/venv/bin"
-ExecStart=/opt/gsd-docs-backend/venv/bin/uvicorn main:app \
-  --host 127.0.0.1 --port 8000 --workers 4
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```ini
-# /etc/systemd/system/gsd-docs-worker.service
-
-[Unit]
-Description=GSD-Docs ARQ Background Worker
-After=network.target redis.service
-
-[Service]
-Type=simple
-User=gsd-docs
-Group=gsd-docs
-WorkingDirectory=/opt/gsd-docs-backend
-Environment="PATH=/opt/gsd-docs-backend/venv/bin"
-ExecStart=/opt/gsd-docs-backend/venv/bin/arq tasks.WorkerSettings
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-```
-
-### Nginx Configuration
-
-```nginx
-# /etc/nginx/sites-available/gsd-docs
-
-upstream fastapi_backend {
-    server 127.0.0.1:8000;
-}
-
-server {
-    listen 80;
-    server_name docs.company.local;
-
-    # Redirect to HTTPS
-    return 301 https://$server_name$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name docs.company.local;
-
-    ssl_certificate /etc/letsencrypt/live/docs.company.local/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/docs.company.local/privkey.pem;
-
-    # React frontend (static files)
-    root /opt/gsd-docs-frontend/dist;
-    index index.html;
-
-    # API requests to FastAPI
-    location /api/ {
-        proxy_pass http://fastapi_backend;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-
-    # WebSocket connections
-    location /ws/ {
-        proxy_pass http://fastapi_backend;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_read_timeout 86400;  # 24h for long-running operations
-    }
-
-    # React routing (SPA)
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-}
-```
-
----
 
 ## Sources
 
-### Architecture Patterns
-- [Elevating LLM Deployment with FastAPI and React: A Step-By-Step Guide](https://medium.com/@georgewen7/elevating-llm-deployment-with-fastapi-and-react-a-step-by-step-guide-885d8f08f4f1)
-- [Architecting Scalable FastAPI Systems for Large Language Model (LLM) Applications](https://medium.com/@moradikor296/architecting-scalable-fastapi-systems-for-large-language-model-llm-applications-and-external-cf72f76ad849)
-- [How to build production-ready AI agents with RAG and FastAPI](https://thenewstack.io/how-to-build-production-ready-ai-agents-with-rag-and-fastapi/)
-- [Building LLM apps with FastAPI — best practices](https://agentsarcade.com/blog/building-llm-apps-with-fastapi-best-practices)
+- v2.0 codebase — `backend/app/` (FastAPI, services, config_phases.py) — HIGH confidence (direct inspection)
+- v1.0 CLI engine — `~/.claude/gsd-docs-industrial/` (CLAUDE-CONTEXT.md, workflows/, templates/, agents/) — HIGH confidence (direct inspection)
+- `fds-structure.json` v1.0 — assembly structure, EM-centric dynamic sections — HIGH confidence (direct inspection)
+- `SPECIFICATION.md v2.7.0` (referenced in CLAUDE-CONTEXT.md) — canonical domain knowledge SSOT
+- `.planning/PROJECT.md` v3.0 milestone goals — HIGH confidence (project source of truth)
+- v2.0 key decisions table (PROJECT.md) — "No LLM orchestration in GUI" constraint — HIGH confidence
 
-### WebSocket Real-Time Communication
-- [WebSockets - FastAPI](https://fastapi.tiangolo.com/advanced/websockets/)
-- [How to Implement WebSockets in FastAPI](https://oneuptime.com/blog/post/2026-02-02-fastapi-websockets/view)
-- [FastAPI + WebSockets + React: Real-Time Features for Your Modern Apps](https://medium.com/@suganthi2496/fastapi-websockets-react-real-time-features-for-your-modern-apps-b8042a10fd90)
-- [Real-Time Features in FastAPI: WebSockets, Event Streaming, and Push Notifications](https://python.plainenglish.io/real-time-features-in-fastapi-websockets-event-streaming-and-push-notifications-fec79a0a6812)
-
-### LLM Provider Abstraction
-- [Implementing an LLM Agnostic Architecture](https://www.entrio.io/blog/implementing-llm-agnostic-architecture-generative-ai-module)
-- [LLM & AI Agent Applications with LangChain and LangGraph — Part 29: Model Agnostic Pattern and LLM API Gateway](https://towardsai.net/p/machine-learning/llm-ai-agent-applications-with-langchain-and-langgraph-part-29-model-agnostic-pattern-and-llm-api-gateway)
-- [Introducing Any-Agent: An abstraction layer between your code and the many agentic frameworks](https://blog.mozilla.ai/introducing-any-agent-an-abstraction-layer-between-your-code-and-the-many-agentic-frameworks/)
-
-### React State Management
-- [18 Best React State Management Libraries in 2026](https://fe-tool.com/awesome-react-state-management)
-- [Top 5 React State Management Tools Developers Actually Use in 2026 and Why](https://www.syncfusion.com/blogs/post/react-state-management-libraries)
-- [React State Management in 2025: What You Actually Need](https://www.developerway.com/posts/react-state-management-2025)
-- [Editor State Management | docmost/docmost](https://deepwiki.com/docmost/docmost/3.4-editor-state-management)
-
-### FastAPI File Upload
-- [How to Implement File Uploads in FastAPI](https://oneuptime.com/blog/post/2026-01-26-fastapi-file-uploads/view)
-- [Uploading Files Using FastAPI: A Complete Guide to Secure File Handling](https://betterstack.com/community/guides/scaling-python/uploading-files-using-fastapi/)
-- [Static File & Upload Management | fastapi-practices/fastapi_best_architecture](https://deepwiki.com/fastapi-practices/fastapi_best_architecture/11.5-static-file-and-upload-management)
-
-### Background Tasks
-- [How to Implement Background Tasks in FastAPI](https://oneuptime.com/blog/post/2026-02-02-fastapi-background-tasks/view)
-- [Managing Background Tasks in FastAPI: BackgroundTasks vs ARQ + Redis](https://davidmuraya.com/blog/fastapi-background-tasks-arq-vs-built-in/)
-- [How I Handled 100K Daily Jobs in FastAPI Using Task Queues and Async Retries](https://medium.com/@connect.hashblock/how-i-handled-100k-daily-jobs-in-fastapi-using-task-queues-and-async-retries-62bbcdd8240d)
-
-### React Markdown Rendering
-- [react-markdown - npm](https://www.npmjs.com/package/react-markdown)
-- [How to render and edit Markdown in React with react-markdown](https://www.contentful.com/blog/react-markdown/)
-- [Creating Polished Content with React Markdown](https://refine.dev/blog/react-markdown/)
-- [5 Best Markdown Editors for React Compared](https://strapi.io/blog/top-5-markdown-editors-for-react)
+---
+*Architecture research for: GSD-Docs Industrial v3.0 Docs Engine Rearchitecture*
+*Researched: 2026-03-31*
+*Scope: Integration of 3 new features with existing v2.0 architecture*

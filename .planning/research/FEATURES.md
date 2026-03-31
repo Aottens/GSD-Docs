@@ -1,300 +1,290 @@
 # Feature Research
 
-**Domain:** Web-based industrial document generation GUI (FDS/SDS automation)
-**Researched:** 2026-02-14
-**Confidence:** HIGH
+**Domain:** Docs engine rearchitecture — flexible FDS structure, LLM provider abstraction, engine visibility
+**Researched:** 2026-03-31
+**Confidence:** HIGH (core patterns), MEDIUM (industrial-specific research limited by niche domain)
 
-## Feature Landscape
+> **Note:** This file supersedes the v2.0 FEATURES.md (2026-02-14). That research covered the GUI cockpit; this covers v3.0 docs engine internals.
 
-### Table Stakes (Users Expect These)
+---
 
-Features users assume exist. Missing these = product feels incomplete.
+## Pillar 1: Flexible FDS Structure
+
+### What Engineers Actually Need
+
+Currently, `/doc:new-fds` forces EM (Equipment Module) decomposition immediately. In practice, engineers first describe a system functionally — "a filling machine with a loader, filler, and unloader" — before knowing the ISA-88 hierarchy. The problem is not that ISA-88 is wrong; it is that it is premature. Real project discovery reveals the hierarchy rather than prescribing it upfront.
+
+ISA-88 itself separates the **procedural model** (Procedure → Unit Procedure → Operation → Phase) from the **physical model** (Process Cell → Unit → EM → CM). The current system conflates them by hardcoding the physical hierarchy at project start. The fix is to let the structural model emerge from discovery.
+
+### Table Stakes (Engineers Expect These)
+
+Features the rearchitecture must deliver for the new approach to feel coherent.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| **Project wizard with guided setup** | Standard for complex configuration flows; reduces errors during project initialization | MEDIUM | 3-5 steps: project type (A/B/C/D), language (Dutch/English), reference files, baseline selection (Type C/D only). Must support validation before proceeding. |
-| **Phase timeline/progress visualization** | Engineers need to understand where they are in multi-phase workflow | LOW | Linear timeline showing 3 FDS phases (Discuss → Plan → Write → Verify → Review) with completion status. Leverage existing STATE.md for data. |
-| **Document outline tree view** | Essential for navigating hierarchical document structure (chapters/sections) | MEDIUM | Tree navigation for FDS sections, expandable/collapsible nodes. Must handle dynamic sections added during write phase. Integration with STATE.md section tracking. |
-| **Real-time progress feedback for AI tasks** | Long-running LLM calls (30s-3min) feel broken without feedback | MEDIUM | Progress indicators for discuss/plan/write/verify operations with estimated time remaining. Use SSE or WebSocket for server-push updates. Phase-level granularity sufficient. |
-| **Human-in-the-loop review gates** | Engineers must verify AI output before proceeding; table stakes for professional document generation | HIGH | Review UI for verify-phase and review-phase with approve/reject/request-changes workflow. Must pause automation, show diffs/changes, capture feedback in CONTEXT.md. |
-| **File upload with drag-and-drop** | Modern web UI standard for reference document management | LOW | Standard dropzone.js or similar for reference files. Multi-file support required. Must handle PDF, DOCX, images. |
-| **Document preview (not raw Markdown)** | Engineers need to see rendered output, not source | MEDIUM | Convert Markdown to readable preview. Basic rendering sufficient for v2.0; full DOCX preview deferred. Support Mermaid diagram rendering since v1.0 generates them. |
-| **Project list/dashboard** | Multiple concurrent projects expected; need access point | LOW | List view of all projects with status, last modified, project type. Clicking opens project detail view. SQLite metadata query. |
-| **Error recovery/resume capability** | Crashes happen; losing hours of AI generation is unacceptable | MEDIUM | Leverage existing v1.0 /doc:resume logic. GUI must detect incomplete state and offer resume. Forward-only strategy already proven. |
-| **Export to DOCX** | Final deliverable format for clients; non-negotiable | LOW | Wrapper around existing v1.0 Pandoc + huisstijl.docx export. Download button with progress indicator. |
+| **System-first discovery prompt** | Engineers describe what they have, not what ISA-88 says they should have | LOW | `new-fds` asks "describe your system" before asking decomposition model. Decomposition choice follows discovery, not precedes it. |
+| **Decomposition model selection** | Every project is different — batch plant, filling line, DCS continuous process, SCADA discrete | MEDIUM | Support: ISA-88 hierarchy, functional blocks, process-flow, hybrid. Selection at project create time stored in PROJECT.md. |
+| **Structure-aware ROADMAP generation** | The phase plan must reflect the chosen decomposition, not a hardcoded EM template | HIGH | ROADMAP generator reads decomposition model and produces appropriate phase structure. Replaces 4 hardcoded templates (A/B/C/D) with parameterized generation. |
+| **Decomposition model stored in project config** | All commands must know the structure without re-asking | LOW | `PROJECT.md` gains a `decomposition_model` field. All downstream commands (discuss, plan, write, verify) read it. |
+| **Backward compatibility with existing Type A/B/C/D projects** | v1.0 projects must continue working | MEDIUM | Default decomposition model = `isa88_em` (current behavior). Type A/B map to `isa88_em`; Type B-flex gets `functional` as a valid alternative. Existing projects unaffected. |
+| **Template selection by decomposition model** | Section templates (equipment module, state machine, interface) are EM-specific | HIGH | New template sets per decomposition model. `isa88_em` uses existing templates. `functional` uses functional-block templates. Templates selected at write time from PROJECT.md config. |
 
-### Differentiators (Competitive Advantage)
-
-Features that set the product apart. Not required, but valuable.
+### Differentiators
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| **Embedded chat panel for discussion phases** | Inline AI discussion feels natural vs switching tools; maintains context within workflow | MEDIUM | Chat UI embedded in phase view during discuss-phase. Pre-populate with v1.0 prompts from /doc:discuss-phase. Conversation history stored in CONTEXT.md. Differentiates from generic chatbot by being workflow-aware. |
-| **Shared reference library + per-project overrides** | Team knowledge accumulation; new projects inherit standards but can customize | MEDIUM | Two-tier architecture: global shared library (read-only for engineers, admin-managed) + per-project uploads that override/supplement. Tagging/categorization for findability. Unique to domain-specific tools. |
-| **Confidence-based SDS typicals matching** | Prevents hallucinated SDS content; shows "NEW TYPICAL NEEDED" for unknown equipment | HIGH | Surface existing v1.0 CATALOG.json matching + confidence scores in GUI. Visual indication when confidence < threshold. Shows engineer why typical was selected. Builds trust in AI output. |
-| **Gap closure loop visualization** | Shows verify → write → re-verify cycles; builds trust by making AI refinement visible | MEDIUM | Visual indicator when gap detected in verification, showing re-planning and re-write cycles. Max 2 iterations per v1.0 logic. Transparency in AI iteration rare in document tools. |
-| **Bilingual template system (Dutch/English)** | Single workflow, dual language output; critical for international engineering firms | LOW | Leverage existing v1.0 templates. Language selector in project wizard. Differentiates from English-only AI tools. |
-| **Standards compliance overlay (PackML/ISA-88)** | Opt-in verification against industry standards; shows violations with references | HIGH | Conditional loading of standards during verify-phase if enabled. Show compliance violations in separate panel. Links to standard sections. Unique to industrial automation domain. |
-| **Phase-specific context isolation** | Prevents AI cross-contamination between parallel sections; shows "what the AI knew" for each section | MEDIUM | Visualize which reference docs/baseline sections were provided to each writer. Debug view for engineers. Builds trust by showing AI's information boundaries. |
-| **Project type classification with roadmap generation** | Guided questionnaire determines Type A/B/C/D and generates custom phase structure | MEDIUM | Wizard flow asking about greenfield/brownfield, single-unit/multi-unit. Auto-generates ROADMAP.md. Removes manual planning overhead. |
+| **Hybrid decomposition** | Some projects are partially ISA-88, partially functional — e.g., a DCS system where the reactor unit follows ISA-88 but the utility section is described functionally | HIGH | `hybrid` decomposition allows phase-level model selection. Phase 2 might be `isa88_em`, Phase 3 might be `functional`. Requires per-phase config in ROADMAP.md. |
+| **Structure evolution / late promotion** | Project starts functional, discovers EM hierarchy during discuss-phase, promotes sections to ISA-88 structure without rewrite | HIGH | `expand-roadmap` extended to support structure promotion: functional → isa88_em migration path. Complex; defer unless engineers hit this repeatedly. |
+| **ISA-88 conformance check on functional projects** | Engineer gets told "your functional description maps to these EM/CM boundaries" | MEDIUM | A verification level that attempts ISA-88 mapping and surfaces ambiguities. Opt-in, not automatic. |
 
-### Anti-Features (Commonly Requested, Often Problematic)
-
-Features that seem good but create problems.
+### Anti-Features
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| **Real-time collaborative editing (Google Docs style)** | "Multiple engineers should write simultaneously" | Document generation is single-engineer workflow per v1.0 design; AI writes in parallel sections but human reviews sequentially. Adds massive complexity (OT/CRDT, conflict resolution) for zero value. Review-phase already handles collaboration. | Use review-phase for team collaboration: one engineer drives, others review/comment. Async by design. |
-| **Full auto-generation (zero human input)** | "Just generate the whole document from project name" | Equipment-specific details cannot be inferred (valve specs, safety requirements, client preferences). Results in hallucinated/unsafe content. v1.0 requires discuss-phase input for good reason. | Keep discuss-phase mandatory. Pre-populate with template questions but require engineer confirmation/edits. Trust comes from human-in-loop. |
-| **Inline Markdown editing in GUI** | "Let me tweak the AI output directly" | Creates divergence between GUI and file-backed state. v1.0 files are SSOT; editing in GUI breaks CLI compatibility requirement. Also: engineers editing AI output defeats verification loop. | Show preview-only. If changes needed, use review-phase feedback → AI re-writes. Keeps workflow clean and maintains verification integrity. |
-| **Database-backed document storage** | "SQLite for everything, not files" | v1.0 constraint: STATE.md must be human-readable and git-trackable. Database opaque to version control, breaks CLI compatibility, removes auditability. | SQLite only for metadata (project list, file references). Documents remain file-based. Hybrid approach gives both searchability and transparency. |
-| **Live DOCX preview (Word-perfect rendering)** | "Show exactly what the export will look like" | Requires full Word rendering engine in browser (LibreOffice WASM, Office Online API, or heavy JS library). Export is Pandoc's responsibility; GUI doesn't need pixel-perfect preview. | Markdown preview with Mermaid rendering. DOCX export is download action. Engineers review exported DOCX in Word if pixel-perfection needed. |
-| **AI provider selection in GUI** | "Let user choose GPT-4 vs Claude vs local model per project" | v2.0 uses Claude API exclusively per PROJECT.md. Provider abstraction exists for v3.0 local models but not multi-provider. Adds configuration complexity and prompt incompatibility risks. | Backend hardcoded to Claude API. v3.0 milestone adds local model support with provider swap, but single provider per deployment, not per project. |
-| **Undo/redo for AI operations** | "Let me undo the verify step" | AI operations are forward-only per v1.0 design (SUMMARY.md as completion proof). Undo implies rollback which conflicts with crash recovery. Also: how do you undo a 3-minute LLM call? | Use review-phase feedback for corrections. Gap closure loop already handles "AI got it wrong, try again" scenario. No undo needed if workflow designed for iteration. |
+| **Free-form structure (no model)** | "Let the engineer decide everything" | No structure = no phase templates, no verification criteria, no consistent output; the entire value of the system evaporates | Offer 4 opinionated models. Hybrid covers edge cases. |
+| **Automatic structure detection from description** | "Let the AI figure out the decomposition" | LLM classification of decomposition model is unreliable; a wrong choice poisons the entire project's ROADMAP | Ask explicitly, confirm, store. Human confirms before proceeding. |
+| **GUI-driven structure editor** | Engineers want drag-and-drop hierarchy builder | Massive scope; breaks file-backed STATE.md; CLI incompatibility | Decomposition model set once at project create time via CLI wizard. GUI displays; CLI edits. |
+
+### Dependencies on Existing System
+
+- `new-fds.md` command must be extended with discovery-first questions
+- `PROJECT.md` template gains `decomposition_model` field
+- `fds-structure.json` gains variant entries per decomposition model
+- ROADMAP templates (currently 4 hardcoded) become parameterized generators
+- Section templates under `templates/fds/` need counterparts for `functional` and `process-flow` models
+- `check-standards.md` ISA-88 checking only applies to `isa88_em` and `hybrid` models
+- `expand-roadmap.md` must understand decomposition model when proposing expansion
+
+---
+
+## Pillar 2: LLM Provider Abstraction
+
+### What Engineers Actually Need
+
+Industrial clients often cannot send project content to cloud APIs due to IP sensitivity, NDA obligations, or compliance requirements. The current system hardwires Claude (Anthropic API). Engineers need: (a) swap Claude for GPT-4o for cost reasons, (b) run locally on a VM for IP-sensitive projects, (c) fallback if a cloud provider is down.
+
+The dominant pattern in 2025-2026 is LiteLLM: a unified Python interface to 100+ providers including Ollama (local), Claude, OpenAI, and any OpenAI-compatible endpoint. It uses a single `litellm.completion()` call regardless of provider, with routing config in YAML.
+
+### Table Stakes
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| **Single provider abstraction interface** | All commands must work identically regardless of provider | MEDIUM | One function wraps LLM calls across all commands. LiteLLM is the standard pattern for this. Replaces direct Anthropic SDK calls. |
+| **Provider configured per project (PROJECT.md)** | IP-sensitive projects use local; development uses cloud | LOW | `PROJECT.md` gains `llm_provider` and `llm_model` fields. Commands read config, not hardcoded. |
+| **Claude (Anthropic) support** | Current provider; existing behavior unchanged | LOW | LiteLLM supports Claude natively via `anthropic/claude-opus-4-5` model string. |
+| **OpenAI / GPT support** | Cost flexibility for non-IP-sensitive projects | LOW | LiteLLM supports OpenAI natively. `openai/gpt-4o` model string. |
+| **Local model support via Ollama** | IP-sensitive deployment requirement | MEDIUM | LiteLLM supports Ollama via `ollama/llama3` + `api_base=http://localhost:11434`. Ollama must be running on the machine. |
+| **API key management (per provider)** | Engineers should not hardcode keys in project files | LOW | Keys in `.env` or environment variables, never in PROJECT.md. LiteLLM reads standard env vars (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`). |
+| **Graceful error on misconfiguration** | Engineer who picks wrong provider gets clear error, not Python traceback | LOW | Wrapper validates provider config before first LLM call in a command. |
+
+### Differentiators
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| **Fallback chain** | If cloud provider is down or rate-limited, fall back to backup model | MEDIUM | LiteLLM router supports fallback chains: `claude-3-5-sonnet → gpt-4o → ollama/llama3`. Config in YAML. Adds resilience for long writes. |
+| **Per-phase provider override** | Some phases (e.g. standards-heavy verification) work best with specific models | LOW | `decomposition_model` / `llm_provider` can be overridden at command invocation time via env var. Does not need to be in PROJECT.md. |
+| **OpenAI-compatible endpoint support** | Client has their own self-hosted LLM gateway (Azure OpenAI, custom proxy) | LOW | LiteLLM supports `openai/` prefix with custom `api_base`. No extra code needed. |
+| **Cost/token logging (local only)** | Engineers want to know how much a project costs | MEDIUM | LiteLLM has built-in usage tracking. Append token counts to STATE.md or a separate USAGE.md. Useful for estimating project costs. |
+
+### Anti-Features
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| **GUI-based provider config** | "Switch providers from the cockpit" | GUI has no LLM operations (cockpit pivot decision). Adding provider config to GUI creates false impression of GUI-driven AI. | CONFIG.md or PROJECT.md for provider config; CLI wizard at project create time. |
+| **Real-time model comparison** | "Let engineer see Claude vs GPT output side by side" | Doubles token cost and complexity; creates decision fatigue; the FDS content should be deterministic given the same inputs | Provider is a project-level setting. Engineer chooses once per project based on IP sensitivity. |
+| **Fine-tuned models** | "Train a model on our past FDSs" | Training data management, infrastructure, and retraining cycles are enormous scope; model drift risk for safety-adjacent documents | Few-shot examples in prompts + strong system prompts already achieve domain specificity without fine-tuning. |
+| **Streaming output in CLI** | "Show text as it generates for long sections" | Claude Code already handles this at the host level; streaming in subagents creates partial-write risk in file-backed state | Keep current write-on-complete pattern. Streaming is cosmetic; forward-only safety matters more. |
+
+### Dependencies on Existing System
+
+- Every command that calls Claude directly (write-phase.md, verify-phase.md, discuss-phase.md, etc.) must be updated to use the abstraction wrapper
+- `PROJECT.md` template gains `llm_provider` and `llm_model` fields
+- Install setup (`install.ps1`) must document how to set provider env vars
+- LiteLLM added as a Python dependency (`pip install litellm`)
+- Commands that construct prompts must remain provider-agnostic — no Claude-specific XML tags in prompts (currently prompts use `<section>` XML which is Claude-optimal; verify GPT-4o handles gracefully)
+- Context window sizes differ by model (Claude claude-opus-4-5: 200k, GPT-4o: 128k, Llama-3.1-70b: 128k) — context loading rules in commands must be aware of target model's limits
+
+---
+
+## Pillar 3: Docs Engine Visibility
+
+### What Engineers Actually Need
+
+The docs engine is 194 Markdown files: templates, prompts, workflows, command definitions. Engineers cannot see what the system is doing, cannot tell which template was used to generate a section, cannot track what changed between updates, and cannot answer client questions like "what verification criteria are applied to the state machine section?". The system is a black box.
+
+The goal is a **read-only inspection layer** — not editing (that stays in the file system / version control), but visibility into what exists, what it does, and what changed.
+
+### Table Stakes
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| **Template browser** | Engineers need to see what template was used for any section | MEDIUM | Web GUI page listing all files under `gsd-docs-industrial/templates/`, `commands/`, `workflows/`. Rendered Markdown view. No editing. |
+| **Current config summary** | "What provider, model, decomposition model, and standards flags is this project using?" | LOW | Per-project summary panel in GUI showing PROJECT.md config values. Already partially present in cockpit; extend to show engine config. |
+| **Template-to-section traceability** | For a given section in the document, which template and prompts were used? | MEDIUM | Add `template_ref` and `prompt_ref` fields to PLAN.md entries at plan-phase time. GUI shows these in the document outline. |
+| **Command documentation viewer** | "What does /doc:write-phase do?" readable by non-engineers | LOW | Browse commands/*.md files rendered in GUI. Read-only. Demystifies the system for engineers who want to understand before trusting output. |
+| **Engine version display** | Engineers need to know which version of the docs engine generated a document | LOW | `VERSION` file already exists in `gsd-docs-industrial/`. Surface it in GUI header and in exported document frontmatter. |
+
+### Differentiators
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| **Changelog / diff viewer for engine updates** | When the system is updated, engineers can see what changed (prompt improvements, new templates, verification criteria) | MEDIUM | Git log on `gsd-docs-industrial/` filtered to template/prompt files. Rendered as readable changelog in GUI. Requires git to be available on deployment machine. |
+| **Verification criteria browser** | "What exactly does verify-phase check for a state machine section?" | LOW | Browse verification criteria extracted from verify-phase.md and section templates. Engineers can validate that the system checks what they care about. |
+| **Template health indicators** | Flag templates that haven't been updated in >6 months, or that are missing required fields | MEDIUM | Lightweight linter over template Markdown files. Surface warnings in the template browser. Prevents silently stale templates. |
+| **Usage statistics per template** | "Which templates get used most across all projects?" | LOW | Count section plan entries by template_ref across all projects. Simple SQLite aggregate query. Useful for prioritizing template improvements. |
+
+### Anti-Features
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| **In-GUI template editing** | "Let engineers tweak prompts without touching files" | File-backed templates are the SSOT; GUI edits create divergence, break version control, and risk prompt corruption in production | Read-only browser with a "copy to clipboard" for the prompt text. Engineers edit via file system, commit via git. |
+| **Per-project template overrides** | "Let project X use a different state machine template" | Template divergence across projects creates inconsistent output quality; makes QA impossible | One set of canonical templates. If a template needs improvement, update it for all projects. |
+| **AI-assisted template improvement** | "Let the AI suggest better prompts" | Meta-prompting creates a loop where the system's own quality becomes dependent on AI judgment; safety risk for standards-adjacent content | Engineers review and improve templates manually based on output quality patterns. |
+| **Real-time prompt preview** | "Show what the full prompt will look like for section X before running write-phase" | Pre-execution preview requires rendering variable substitution, which replicates the execution engine in the GUI | Post-execution traceability (template_ref in PLAN.md) is more useful than pre-execution preview. |
+
+### Dependencies on Existing System
+
+- GUI gains a new "Engine" section in the navigation
+- FastAPI backend gains read-only endpoints to serve template/command files
+- PLAN.md template gains `template_ref` and `prompt_ref` fields (populated by `plan-phase.md`)
+- `VERSION` file surfaced in GUI header
+- Git integration (read-only `git log`) needed for changelog feature — must handle gracefully if git is unavailable
+- Traceability fields in PLAN.md are additive and backward-compatible with v1.0 projects
+
+---
 
 ## Feature Dependencies
 
 ```
-Project Wizard
-    └──creates──> Project State (STATE.md, ROADMAP.md)
-                      └──enables──> Phase Timeline View
-                                       ├──enables──> Discuss Phase (Chat Panel)
-                                       ├──enables──> Plan Phase (Section Planning)
-                                       ├──enables──> Write Phase (Progress Feedback)
-                                       ├──enables──> Verify Phase (Gap Visualization)
-                                       └──enables──> Review Phase (Human-in-Loop UI)
+[Flexible FDS Structure]
+    └──requires──> [Decomposition model in PROJECT.md]
+                       └──requires──> [new-fds discovery prompt]
+    └──requires──> [Structure-aware ROADMAP generation]
+                       └──requires──> [Parameterized ROADMAP templates]
+    └──requires──> [Template sets per decomposition model]
 
-Reference Library Management
-    ├──feeds──> Discuss Phase (context for AI)
-    ├──feeds──> Write Phase (content source)
-    └──feeds──> SDS Generation (typicals matching)
+[LLM Provider Abstraction]
+    └──requires──> [LiteLLM wrapper function]
+                       └──requires──> [Provider config in PROJECT.md]
+    └──enhances──> [Fallback chain]
+                       └──requires──> [LiteLLM router config]
 
-Document Preview
-    ├──requires──> Write Phase completion (CONTENT.md exists)
-    └──enhanced-by──> Mermaid Rendering (diagrams in preview)
+[Docs Engine Visibility]
+    └──requires──> [Template browser in GUI]
+                       └──requires──> [FastAPI file-serving endpoints]
+    └──enhances──> [Template-to-section traceability]
+                       └──requires──> [template_ref in PLAN.md]
 
-Export to DOCX
-    ├──requires──> Complete-FDS or Generate-SDS completion
-    └──requires──> Pandoc backend integration
+[Flexible FDS Structure] ──enhances──> [Docs Engine Visibility]
+    (decomposition model visible in engine config summary)
 
-Error Recovery
-    ├──requires──> STATE.md parsing
-    └──enables──> Resume from any phase
-
-Standards Compliance
-    ├──requires──> Verify Phase enabled
-    ├──requires──> Standards files loaded (opt-in)
-    └──conflicts-with──> Projects without standards requirement (Type A/B often skip)
+[LLM Provider Abstraction] ──feeds──> [Docs Engine Visibility]
+    (provider/model visible in per-project config summary)
 ```
 
 ### Dependency Notes
 
-- **Project Wizard creates Project State:** Wizard must generate STATE.md and ROADMAP.md before any phase operations. Timeline view is read-only visualization of this state.
-- **Phase Timeline enables phase operations:** Each phase button in timeline triggers corresponding workflow (discuss/plan/write/verify/review). Timeline is navigation hub.
-- **Reference Library feeds AI phases:** Upload must complete before discuss-phase. Files stored in per-project directory, referenced in CONTEXT.md for AI prompt context.
-- **Document Preview requires Write completion:** Cannot preview non-existent content. Preview disabled until at least one section has CONTENT.md.
-- **Export requires completion:** FDS export needs complete-fds completion (STATE.md status check). SDS export needs generate-sds completion.
-- **Error Recovery requires STATE parsing:** Resume functionality depends on parsing STATE.md to detect incomplete phases. Must handle corrupted/partial STATE.md gracefully.
-- **Standards Compliance conflicts with non-standards projects:** PackML/ISA-88 overhead inappropriate for simple projects. Must be opt-in during wizard, disabled by default.
+- **Decomposition model requires PROJECT.md changes:** All three pillars touch PROJECT.md — coordinate schema changes into a single migration to avoid multiple backwards-compat gaps.
+- **LiteLLM wrapper must be added before any command refactoring:** Commands cannot be updated piecemeal — the wrapper must exist and be tested before migrating commands away from direct Anthropic SDK.
+- **Template browser does not depend on traceability:** Template browser is useful standalone. Traceability (template_ref in PLAN.md) enhances it but is independent.
+- **Hybrid decomposition conflicts with simple ROADMAP generator:** Implement single-model ROADMAP generation first, then extend to hybrid as a follow-on.
 
-## MVP Definition
+---
 
-### Launch With (v2.0)
+## MVP Definition for v3.0
 
-Minimum viable GUI — what's needed to replace CLI for single-engineer workflow.
+### Launch With (v3.0 core)
 
-- [ ] **Project Wizard** — Guided setup for Type A/B/C/D, language, reference upload. Generates STATE.md + ROADMAP.md. Critical path: no wizard = no projects.
-- [ ] **Project List Dashboard** — Browse existing projects, see status, open project. Engineers need to find their work.
-- [ ] **Phase Timeline View** — Visual representation of ROADMAP phases with completion status. Primary navigation for workflow.
-- [ ] **Embedded Chat Panel** — AI discussion interface for discuss-phase. Core differentiator; enables gray area resolution.
-- [ ] **Basic Document Preview** — Markdown rendering of CONTENT.md with Mermaid diagrams. Engineers need to see output without exporting.
-- [ ] **Progress Feedback for Long Tasks** — SSE/polling for write/verify operations with "Generating Section 3.2..." messages. Prevents "is it frozen?" anxiety.
-- [ ] **Human-in-Loop Review UI** — Approve/reject for verify-phase and review-phase. Non-negotiable for professional use.
-- [ ] **Reference File Upload** — Drag-and-drop for per-project files. Discuss-phase useless without reference context.
-- [ ] **DOCX Export** — Download button wrapping Pandoc export. Final deliverable format.
-- [ ] **Error Recovery** — Resume button when STATE.md shows incomplete phase. Crash resilience required for 3-hour generation runs.
+Minimum set for the milestone to deliver on its promise.
 
-### Add After Validation (v2.x)
+- [ ] **System-first discovery in `new-fds`** — functional description before decomposition choice; essential for the pillar to exist at all
+- [ ] **Decomposition model in PROJECT.md** — enables all downstream commands to behave correctly for the chosen model
+- [ ] **Structure-aware ROADMAP for `functional` and `isa88_em` models** — the two most common cases; process-flow and hybrid can follow
+- [ ] **LiteLLM abstraction wrapper** — single function replacing direct Anthropic SDK calls across all commands
+- [ ] **Claude + OpenAI + Ollama provider support** — covers all three deployment scenarios (cost, IP-sensitive, fallback)
+- [ ] **Template browser in GUI (read-only)** — minimal viable visibility: engineers can see what templates exist and what they contain
+- [ ] **Engine version in GUI + export frontmatter** — traceability at document level
 
-Features to add once core workflow proven in production.
+### Add After Validation (v3.x)
 
-- [ ] **Shared Reference Library** — Global library with admin management. Wait for team feedback on per-project file pain points. Trigger: "We're uploading the same standards PDF 50 times."
-- [ ] **Gap Closure Loop Visualization** — Show verify → re-plan → re-write cycles. Nice transparency but not critical for operation. Trigger: Engineers ask "Why did it take 3 verify cycles?"
-- [ ] **Phase-Specific Context Visualization** — Debug view showing which files/baseline sections fed each writer. Builds trust but not MVP. Trigger: "Why didn't the AI include X?"
-- [ ] **Standards Compliance Panel** — PackML/ISA-88 verification overlay. Deferred until standards-requiring projects demand it. Trigger: Client requires PackML compliance report.
-- [ ] **SDS Typicals Confidence Display** — Show matching scores for CATALOG.json hits. Useful but SDS generation itself is post-FDS. Trigger: Engineers question typical selections.
-- [ ] **Document Outline Tree with Jump-to-Section** — Enhanced navigation for large FDS. MVP preview is linear scroll; tree adds polish. Trigger: "FDS too long to scroll."
-- [ ] **Batch Export** — Export multiple versions (draft, final, with/without diagrams). Single export covers MVP. Trigger: Engineers manually exporting 4 variants.
+Add once core behavior is proven stable.
 
-### Future Consideration (v3.0+)
+- [ ] **`template_ref` / `prompt_ref` in PLAN.md** — trigger: engineers start asking "which template generated this section?"
+- [ ] **Fallback chain configuration** — trigger: cloud provider outages cause project interruptions
+- [ ] **Changelog / diff viewer for engine updates** — trigger: team starts updating templates and loses track of what changed
+- [ ] **Functional and process-flow section templates** — trigger: first project using non-EM decomposition reveals template gaps
+- [ ] **Verification criteria browser** — trigger: client asks "what exactly was verified?"
 
-Features to defer until product-market fit established and architecture ready.
+### Future Consideration (v4+)
 
-- [ ] **Local LLM Support** — Provider abstraction ready but requires v3.0 milestone per PROJECT.md. Deferred: API costs manageable, model quality unproven for technical docs.
-- [ ] **Multi-user Team Features** — Role-based access, project sharing, activity logs. v2.0 is single-engineer per project. Deferred: Complexity not justified until team workflow clarifies.
-- [ ] **Client Portal** — Read-only review access for clients outside engineering team. Scope creep risk. Deferred: Email PDF works for now.
-- [ ] **Version Comparison UI** — Diff view between FDS v1.0 and v1.1. Useful but v1.0 /doc:release handles versioning. Deferred: Engineers use Word's compare feature.
-- [ ] **Mobile/Tablet UI** — Responsive design for field access. Engineering work is desktop-based. Deferred: No field use cases identified.
-- [ ] **API for External Integration** — REST API for CI/CD or third-party tools. Over-engineering for MVP. Deferred: No integration requests yet.
-- [ ] **Advanced Search** — Full-text search across all projects. SQLite metadata search sufficient for v2.0. Deferred: Team size doesn't warrant Elasticsearch.
+- [ ] **Hybrid decomposition model** — defer until a real project needs it; designing for hypothetical hybrid is premature
+- [ ] **Structure evolution / late promotion** — defer; rarely needed; high complexity
+- [ ] **Cost/token logging** — useful but not blocking; USAGE.md approach can be added standalone
+- [ ] **Template health indicators** — useful ops tooling; non-urgent
+
+---
 
 ## Feature Prioritization Matrix
 
-| Feature | User Value | Implementation Cost | Priority | Notes |
-|---------|------------|---------------------|----------|-------|
-| Project Wizard | HIGH | MEDIUM | P1 | Blocking: No projects without wizard |
-| Phase Timeline View | HIGH | LOW | P1 | Core navigation; reads STATE.md |
-| Chat Panel (Discuss) | HIGH | MEDIUM | P1 | Differentiator; critical for discuss-phase |
-| Progress Feedback | HIGH | MEDIUM | P1 | UX disaster without it for 3min LLM calls |
-| Human-in-Loop Review | HIGH | HIGH | P1 | Professional requirement; approve/reject workflow |
-| Document Preview | HIGH | MEDIUM | P1 | Must see output; Markdown + Mermaid sufficient |
-| Reference Upload | HIGH | LOW | P1 | Discuss/write phases need context |
-| DOCX Export | HIGH | LOW | P1 | Final deliverable; wraps existing Pandoc |
-| Error Recovery | HIGH | MEDIUM | P1 | 3-hour runs can crash; resume essential |
-| Project List | HIGH | LOW | P1 | Engineers need project access |
-| Shared Library | MEDIUM | MEDIUM | P2 | Nice-to-have; per-project works for MVP |
-| Gap Loop Viz | MEDIUM | LOW | P2 | Transparency; not operational need |
-| Context Viz | MEDIUM | MEDIUM | P2 | Debug/trust feature; defer to v2.x |
-| Standards Panel | MEDIUM | HIGH | P2 | Opt-in; subset of projects need it |
-| SDS Confidence Display | MEDIUM | LOW | P2 | SDS post-FDS; can add after FDS proven |
-| Document Tree Nav | MEDIUM | MEDIUM | P2 | Polish; linear scroll works for MVP |
-| Batch Export | LOW | LOW | P2 | Single export sufficient initially |
-| Local LLM | HIGH | HIGH | P3 | v3.0 milestone; architecture ready but deferred |
-| Multi-User Features | MEDIUM | HIGH | P3 | v2.0 single-engineer; wait for team workflow clarity |
-| Client Portal | LOW | MEDIUM | P3 | Scope creep; email PDF works |
-| Version Comparison | LOW | MEDIUM | P3 | Word handles this; low ROI |
-| Mobile UI | LOW | HIGH | P3 | Desktop-only workflow; no field use |
-| External API | LOW | MEDIUM | P3 | No integrations identified |
-| Advanced Search | LOW | HIGH | P3 | Team size doesn't need it |
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| System-first discovery in `new-fds` | HIGH | LOW | P1 |
+| Decomposition model in PROJECT.md | HIGH | LOW | P1 |
+| Structure-aware ROADMAP generation | HIGH | HIGH | P1 |
+| LiteLLM abstraction wrapper | HIGH | MEDIUM | P1 |
+| Ollama / local model support | HIGH | MEDIUM | P1 |
+| Template browser (read-only) | MEDIUM | MEDIUM | P1 |
+| Engine version display | LOW | LOW | P1 |
+| Functional decomposition templates | HIGH | HIGH | P2 |
+| template_ref in PLAN.md | MEDIUM | LOW | P2 |
+| Fallback chain | MEDIUM | MEDIUM | P2 |
+| Changelog / diff viewer | MEDIUM | MEDIUM | P2 |
+| Verification criteria browser | MEDIUM | LOW | P2 |
+| Hybrid decomposition | LOW | HIGH | P3 |
+| Structure evolution/promotion | LOW | HIGH | P3 |
+| Cost/token logging | LOW | MEDIUM | P3 |
+| Template health indicators | LOW | MEDIUM | P3 |
 
 **Priority key:**
-- P1 (Must have for launch): 10 features — Project Wizard, Timeline, Chat, Progress, Review UI, Preview, Upload, Export, Recovery, Project List
-- P2 (Should have, add when possible): 7 features — Shared Library, Gap Viz, Context Viz, Standards Panel, SDS Confidence, Tree Nav, Batch Export
-- P3 (Nice to have, future consideration): 7 features — Local LLM, Multi-User, Client Portal, Version Diff, Mobile, API, Search
+- P1: Must have for v3.0 launch
+- P2: Should have, add when core is stable
+- P3: Nice to have, future milestone
 
-## Existing v1.0 Workflow Integration
+---
 
-The GUI wraps proven v1.0 CLI workflows. Feature dependencies on existing logic:
+## Industrial Automation Domain Specifics
 
-| v1.0 Command | GUI Feature | Integration Point |
-|--------------|-------------|-------------------|
-| `/doc:new-fds` | Project Wizard | Backend calls v1.0 classification logic, generates STATE.md + ROADMAP.md |
-| `/doc:discuss-phase N` | Chat Panel | Chat messages become discussion prompts; output stored in CONTEXT.md |
-| `/doc:plan-phase N` | Timeline "Plan" button | Backend orchestrates wave planning; GUI shows progress |
-| `/doc:write-phase N` | Timeline "Write" button + Progress | Backend runs parallel writers; SSE streams section completion |
-| `/doc:verify-phase N` | Timeline "Verify" button + Review UI | Backend runs 5-level verification; GUI shows gaps for human review |
-| `/doc:review-phase N` | Review UI with feedback | Human provides approve/reject/feedback; stored in CONTEXT.md |
-| `/doc:complete-fds` | Timeline final step | Backend assembles FDS; enables export |
-| `/doc:generate-sds` | SDS generation button | Backend scaffolds SDS with typicals matching |
-| `/doc:export` | Export to DOCX button | Backend calls Pandoc; GUI streams file download |
-| `/doc:status` | Project List + Timeline | Backend parses STATE.md; GUI visualizes status |
-| `/doc:resume` | Recovery/Resume button | Backend detects incomplete phase; resumes forward-only |
-| `/doc:release` | Version management UI | Backend handles internal/client versioning |
-| `/doc:check-standards` | Standards compliance panel | Backend runs PackML/ISA-88 checks if enabled |
+### Why Standard Document Generation Patterns Don't Fully Apply
 
-**Key constraint:** GUI does not reimplement v1.0 logic. Backend wraps existing workflows. Frontend provides visual interface and captures human input.
+Most document generation research covers general-purpose tools or software engineering docs. FDS/SDS generation is different in ways that affect feature design:
 
-## Competitor Feature Analysis
+1. **Standards compliance is load-bearing.** ISA-88, PackML, IEC 61131-3 are contractual requirements for batch and safety systems. The flexible structure feature must not weaken standards compliance — the opt-in ISA-88 check must remain intact for EM-based projects.
 
-Web-based document generation tools comparison (as of 2026):
+2. **IP sensitivity is structural, not optional.** Industrial project content (control logic, equipment specifications, process parameters) is core IP. This is not a "nice to have" for local LLMs — it is a blocking requirement for some clients. Local model support must be first-class, not an afterthought.
 
-| Feature Category | Generic Doc Gen (Templafy, Docupilot) | AI Writing (Jasper, Copy.ai) | Engineering DMS (eQuorum, OpenText) | Our Approach (GSD-Docs GUI) |
-|------------------|--------------------------------------|------------------------------|--------------------------------------|------------------------------|
-| **Template-based generation** | Heavy template libraries, drag-drop builders | Prompt-based, minimal templates | CAD integration, drawing mgmt | Domain-specific templates (FDS/SDS section structures) |
-| **AI integration** | Limited: autocomplete, suggestions | Core feature: full AI writing | Emerging: AI search, GenAI assist | Core: AI writes with human-in-loop verification |
-| **Workflow automation** | Linear approval flows | No structured workflow | Complex approval chains, revision control | Phase-based with discuss→plan→write→verify→review cycle |
-| **Collaboration** | Real-time editing, comments | Share/export only | Multi-user with locking, markup | Async review-phase, single engineer per project |
-| **Preview/Export** | Live preview, multi-format export | Plain text, basic export | Native CAD viewers, PDF | Markdown preview + DOCX export via Pandoc |
-| **Reference Management** | Central asset library | No reference system | Document vaults, version control | Two-tier: shared library + per-project uploads |
-| **Domain Specificity** | Industry-agnostic | Generic business writing | Engineering-aware but CAD-focused | Industrial automation (FDS/SDS) specialist |
-| **Human-in-Loop** | Manual review steps | No verification | Approval workflows | Structured verify/review phases with gap detection |
-| **Standards Compliance** | Template enforcement only | None | Audit trails, compliance reporting | Opt-in PackML/ISA-88 verification |
-| **Pricing Model** | Per-user SaaS subscription | Usage-based (API calls) | Enterprise licensing | Team server (self-hosted), Claude API costs |
+3. **Engineers are not prompt engineers.** The visibility layer must explain the system in engineering terms (what verification criteria apply, which template section covers interlocks) — not in LLM terms (prompt tokens, temperature settings).
 
-**Competitive positioning:**
-- **vs Generic Doc Gen:** We have AI writing, they have broader template variety. Win: Domain expertise (FDS/SDS structures).
-- **vs AI Writing:** We have structured workflow + verification, they have simplicity. Win: Professional quality gates.
-- **vs Engineering DMS:** We have AI generation, they have mature collaboration. Win: Document creation speed (hours not weeks).
+4. **The document is a legal artifact.** Version numbers, approval status, and traceability to requirements matter. The engine version surfaced in exports is not cosmetic — it answers "which version of the generation system was used for this approved document?"
 
-**Feature gaps we accept:**
-- No real-time collaboration (engineering DMS have this) — Our workflow is single-engineer by design
-- No broad template marketplace (generic doc gen have this) — Deep not wide: FDS/SDS only
-- No CAD integration (engineering DMS have this) — Documents only, not drawings per PROJECT.md scope
+5. **Context window limits hit differently.** A single Equipment Module section for a complex reactor can be 3,000–5,000 words. With multiple context files loaded (PROJECT.md, CONTEXT.md, standards references), some local models (70B at 128k context) hit limits that cloud models do not. The LLM abstraction must surface this as a configuration concern, not a silent truncation.
 
-**Features we uniquely offer:**
-- Confidence-scored SDS typicals matching (prevents hallucination)
-- Gap closure loop with re-verification (quality iteration)
-- Bilingual template system (Dutch/English from same workflow)
-- Phase-specific context isolation (shows "what AI knew")
-- Standards compliance as workflow step not post-hoc audit
+---
 
 ## Sources
 
-**Web-Based Document Generation Best Practices:**
-- [Best Enterprise Document Assembly Tools: Top 12 Picks for 2026](https://www.edocgen.com/blogs/top12-document-assembly-tools-2026)
-- [What is document generation? (The 5 best tools in 2026)](https://www.templafy.com/what-is-document-generation/)
-- [18 Best Document Generation Software Reviewed in 2026](https://thedigitalprojectmanager.com/tools/best-document-generation-software/)
-
-**AI Document Assistant Interface Patterns:**
-- [13 Best AI Document Generation Tools for 2026](https://venngage.com/blog/best-ai-document-generator/)
-- [31 Chatbot UI Examples from Product Designers](https://www.eleken.co/blog-posts/chatbot-ui-examples)
-- [AI chat interfaces could become the primary user interface to read documentation](https://idratherbewriting.com/blog/ai-chat-interfaces-are-the-new-user-interface-for-docs)
-
-**Project Wizard UX Design:**
-- [The Ultimate Guide to Web Wizard Design](https://lab.interface-design.co.uk/the-ultimate-guide-to-web-wizard-design-5b6fb4201f94)
-- [Wizards: Definition and Design Recommendations - NN/G](https://www.nngroup.com/articles/wizards/)
-- [Wizard Design Pattern by Nick Babich](https://uxplanet.org/wizard-design-pattern-8c86e14f2a38)
-- [Creating a setup wizard (and when you shouldn't) - LogRocket](https://blog.logrocket.com/ux-design/creating-setup-wizard-when-you-shouldnt/)
-
-**Real-Time Progress Feedback:**
-- [Building Progress Bars for the Web with Django and Celery](https://www.saaspegasus.com/guides/django-celery-progress-bars/)
-- [Providing Real-Time Feedback About Long-Running Task with SignalR](https://blog.stevanfreeborn.com/providing-real-time-feedback-about-long-running-task-with-signal-r)
-- [How to create progress indicator UI for better usability?](https://cieden.com/book/atoms/progress-indicator/progress-indicator-ui)
-
-**Document Preview/Rendering:**
-- [How to Preview Document or File in Browser for SaaS](https://ardas-it.com/how-to-preview-document-or-file-in-a-browser-for-saas)
-- [Word Document Online Preview Demo](https://develop365.gitlab.io/word-preview/)
-- [How To Preview Doc And PDF Files In Browser](https://selleo.com/blog/how-to-preview-doc-and-pdf-files-in-browser)
-
-**File Upload/Drag-Drop:**
-- [Dropzone.js](https://www.dropzone.dev/)
-- [File drag and drop - Web APIs | MDN](https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API/File_drag_and_drop)
-- [How to Implement Drag and Drop in Document Upload UI](https://blog.filestack.com/implement-drag-drop-document-upload-ui/)
-
-**Workflow Dashboards:**
-- [What is a Timeline Workflow and How to Manage it? – Businessmap](https://knowledgebase.businessmap.io/hc/en-us/articles/360028419032-What-is-a-Timeline-Workflow-and-How-to-Manage-it)
-- [Tree view - Carbon Design System](https://carbondesignsystem.com/components/tree-view/usage/)
-- [Interaction Design for Trees](https://medium.com/@hagan.rivers/interaction-design-for-trees-5e915b408ed2)
-
-**Team Collaboration Patterns:**
-- [Document Collaboration: Maximize Team Efficiency | Zoom](https://www.zoom.com/en/products/collaborative-docs/features/document-collaboration/)
-- [Enhancing Collaboration and Productivity with Multi-User Document Management](https://www.docmoto.com/blog/enhancing-collaboration-and-productivity-with-multi-user-document-management/)
-
-**Engineering Document Management:**
-- [EDMS Guide: Engineering Document Management Systems | Accruent](https://www.accruent.com/resources/knowledge-hub/what-is-an-engineering-document-management-system)
-- [Understanding an Engineering Workflow | eQuorum](https://www.equorum.com/blog/understanding-an-engineering-workflow/)
-- [Document Approval Workflow: Steps to Create](https://www.cflowapps.com/document-approval-workflow/)
-
-**Technical Documentation Automation:**
-- [12 AI Tools for Technical Writers](https://clickhelp.com/clickhelp-technical-writing-blog/ai-tools-for-technical-writers/)
-- [AI in technical writing: complete guide for 2026](https://instrktiv.com/en/ai-in-technical-writing/)
-
-**Document Tagging/Reference Management:**
-- [Document Tagging for Technical Writing: Best Practices | Docsie](https://www.docsie.io/blog/glossary/document-tagging/)
-- [How content tagging enables better content management | Contentful](https://www.contentful.com/blog/content-tagging/)
-
-**Human-in-the-Loop AI Patterns:**
-- [Human-in-the-loop in AI workflows: Meaning and patterns | Zapier](https://zapier.com/blog/human-in-the-loop/)
-- [Human-in-the-Loop for AI Agents: Best Practices | Permit.io](https://www.permit.io/blog/human-in-the-loop-for-ai-agents-best-practices-frameworks-use-cases-and-demo)
-- [Human-in-the-Loop AI Review Queues: Workflow Patterns That Scale (2025)](https://alldaystech.com/guides/artificial-intelligence/human-in-the-loop-ai-review-queue-workflows)
-- [Human-in-the-Loop AI in Document Workflows - Best Practices | Parseur](https://parseur.com/blog/hitl-best-practices)
-
-**Real-Time Communication Architecture:**
-- [Polling vs. Long Polling vs. SSE vs. WebSockets vs. Webhooks](https://blog.algomaster.io/p/polling-vs-long-polling-vs-sse-vs-websockets-webhooks)
-- [How to set up WebSockets, Server-Sent Events, and Long Polling for Real-Time Features in SaaS Products](https://venturenox.com/blog/websockets-server-sent-events-and-long-polling-for-real-time-features-in-saas-products/)
-- [WebSockets vs Server-Sent Events (SSE) | Ably](https://ably.com/blog/websockets-vs-sse)
+- [LiteLLM documentation — Ollama provider](https://docs.litellm.ai/docs/providers/ollama)
+- [LiteLLM — Getting Started](https://docs.litellm.ai/docs/)
+- [LiteLLM — OpenAI-compatible endpoints](https://docs.litellm.ai/docs/providers/openai_compatible)
+- [LiteLLM proxy configuration](https://docs.litellm.ai/docs/proxy/configs)
+- [The LLM Abstraction Layer: Why Your Codebase Needs One in 2025](https://www.proxai.co/blog/archive/llm-abstraction-layer)
+- [ISA-88 and Modular Automation — Yokogawa](https://www.yokogawa.com/us/library/resources/media-publications/isa-88-and-modular-automation/)
+- [ISA-88 Wikipedia — Physical and Procedural model separation](https://en.wikipedia.org/wiki/ISA-88)
+- [6 Steps to Designing a Flexible Control System with ISA-88](https://www.controleng.com/6-steps-to-designing-a-flexible-control-system-with-isa-88/)
+- [Run LLMs Locally with Ollama — Privacy-First AI for Developers 2025](https://www.cohorte.co/blog/run-llms-locally-with-ollama-privacy-first-ai-for-developers-in-2025)
+- [Prompt Versioning: The Complete Guide](https://agenta.ai/blog/prompt-versioning-guide)
+- [Prompt Versioning and Management — LaunchDarkly](https://launchdarkly.com/blog/prompt-versioning-and-management/)
+- v1.0/v2.0 system internals: `gsd-docs-industrial/CLAUDE-CONTEXT.md`, `commands/`, `templates/`
 
 ---
-*Feature research for: GSD-Docs Industrial v2.0 GUI*
-*Researched: 2026-02-14*
-*Confidence: HIGH — grounded in web UI patterns, AI document tools, engineering workflows, and existing v1.0 constraints*
+*Feature research for: v3.0 Docs Engine Rearchitecture (flexible structure, LLM abstraction, engine visibility)*
+*Researched: 2026-03-31*
