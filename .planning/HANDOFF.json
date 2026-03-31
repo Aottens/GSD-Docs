@@ -1,30 +1,37 @@
 {
   "version": "1.0",
-  "timestamp": "2026-03-30T20:11:31.815Z",
+  "timestamp": "2026-03-31T19:28:49.664Z",
   "phase": null,
-  "phase_name": "between-milestones",
+  "phase_name": "pre-roadmap",
   "phase_dir": null,
   "plan": null,
   "task": null,
   "total_tasks": null,
-  "status": "milestone_complete",
-  "completed_tasks": [],
-  "remaining_tasks": [],
+  "status": "requirements_complete",
+  "completed_tasks": [
+    {"id": 1, "name": "v2.0 milestone — Phase 16 executed", "status": "done"},
+    {"id": 2, "name": "v2.0 milestone — audit (re-audit after gap closure)", "status": "done"},
+    {"id": 3, "name": "v2.0 milestone — complete, archive, tag v2.0, push", "status": "done"},
+    {"id": 4, "name": "v3.0 milestone — questioning (3 pillars defined)", "status": "done"},
+    {"id": 5, "name": "v3.0 milestone — research (4 parallel researchers + synthesis)", "status": "done"},
+    {"id": 6, "name": "v3.0 milestone — requirements (29 requirements defined)", "status": "done"}
+  ],
+  "remaining_tasks": [
+    {"id": 7, "name": "v3.0 milestone — roadmap creation (phases, build order, traceability)", "status": "not_started"},
+    {"id": 8, "name": "v3.0 milestone — begin phase planning and execution", "status": "not_started"}
+  ],
   "blockers": [],
   "human_actions_pending": [],
   "decisions": [
-    {
-      "decision": "Defer Phase 15 (Production Deployment) — SYST-02/SYST-03 accepted as tech debt",
-      "rationale": "Local development has priority over VM deployment",
-      "phase": "v2.0"
-    },
-    {
-      "decision": "Revisit v1 docs backend items next",
-      "rationale": "User has unfinished items from v1.0 CLI docs backend to address before new milestone work",
-      "phase": "next"
-    }
+    {"decision": "v3.0 scope: 3 pillars — flexible FDS structure, LLM provider abstraction, engine visibility", "rationale": "User wants system-first approach instead of EM-first, multi-provider LLM support, and engineer-facing docs engine viewer", "phase": "v3.0"},
+    {"decision": "Project type A/B/C/D and decomposition model are independent dimensions", "rationale": "A/B/C/D classifies project nature (new/extension/modification/retrofit); decomposition describes system structure. Any type can use any model.", "phase": "v3.0"},
+    {"decision": "All 4 decomposition models in v3.0 including hybrid", "rationale": "User wants full flexibility from day one: isa88_em, functional, process_flow, hybrid", "phase": "v3.0"},
+    {"decision": "Custom decomposition model builder + FDS extraction skills", "rationale": "User wants /doc:create-decomposition and /doc:extract-decomposition to allow custom structures and importing from customer FDS documents", "phase": "v3.0"},
+    {"decision": "Full LLM abstraction with fallback chains and cost logging", "rationale": "Both provider flexibility and IP-sensitive local deployment; includes token tracking per project", "phase": "v3.0"},
+    {"decision": "Prompt variant strategy deferred to planning", "rationale": "Research flagged that provider-specific prompt variants are needed, but exact approach (file-based vs code-based) deferred", "phase": "v3.0"},
+    {"decision": "Full engine visibility including P2 items", "rationale": "Template browser, traceability, changelog, verification criteria browser, template health indicators", "phase": "v3.0"}
   ],
   "uncommitted_files": [],
-  "next_action": "/gsd:new-milestone — start next milestone. User wants to revisit v1 docs backend items as part of or before next milestone.",
-  "context_notes": "v2.0 GUI milestone shipped 2026-03-30. 11 phases, 26 plans, 56 tasks, ~14,652 LOC. 31/33 requirements satisfied (SYST-02/SYST-03 deferred). Tag v2.0 pushed to origin. Phase directories archived to milestones/v2.0-phases/. REQUIREMENTS.md deleted (fresh for next milestone). RETROSPECTIVE.md created. User mentioned wanting to revisit v1 docs backend items — saved as memory."
+  "next_action": "Create v3.0 roadmap: spawn gsd-roadmapper agent to break 29 requirements into phases with build order. Research suggests ~6 phases. Use /gsd:new-milestone to continue roadmap creation, or manually run roadmapper.",
+  "context_notes": "Session covered: executing Phase 16, re-auditing v2.0, completing/archiving v2.0 milestone (tag pushed), then starting v3.0 — questioning, 4 parallel research agents, synthesis, and requirements definition. Research files in .planning/research/ (STACK.md, FEATURES.md, ARCHITECTURE.md, PITFALLS.md, SUMMARY.md). Key research insight: prompt portability doesn't exist — provider-specific variants mandatory. Build order suggestion from research: schema contract → LLM abstraction → flexible structure → engine visibility."
 }
