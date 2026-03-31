@@ -8,6 +8,15 @@ A dual-interface system for managing industrial FDS (Functional Design Specifica
 
 Engineers can create, manage, and review FDS/SDS projects through a visual web interface that guides them through the full document lifecycle — from project setup through verified export — with human-in-the-loop quality gates and team-accessible reference management.
 
+## Current Milestone: v3.0 Docs Engine Rearchitecture
+
+**Goal:** Rearchitect the docs backend from rigid EM-first structure to a flexible system-first approach, add LLM provider abstraction for multi-provider/local deployment, and create a visibility layer so engineers can inspect and manage the docs engine.
+
+**Target features:**
+- Flexible FDS structure — system-first discovery instead of EM-first. Support ISA-88, functional, process-flow, or hybrid decomposition based on how the engineer describes the system
+- LLM provider abstraction — swap between Claude, GPT, and local models (DeepSeek, Llama) for both cost flexibility and IP-sensitive local deployment
+- Backend visibility/manageability — engineers can see what the docs engine does, inspect templates/prompts, track changes via a viewer or control plane
+
 ## Current State
 
 **v2.0 GUI shipped** (2026-03-30). 11 phases, 26 plans, 56 tasks, ~14,652 LOC across 155 source files. 31/33 requirements satisfied — deployment (SYST-02/SYST-03) deferred.
@@ -56,6 +65,9 @@ Engineers can create, manage, and review FDS/SDS projects through a visual web i
 
 ### Active
 
+- [ ] Flexible FDS structure — system-first discovery, multiple decomposition models — v3.0
+- [ ] LLM provider abstraction — multi-provider support (Claude, GPT, local models) — v3.0
+- [ ] Docs engine visibility — engineer-facing viewer for templates, prompts, changes — v3.0
 - [ ] VM deployment with Nginx reverse proxy and systemd services (deferred from v2.0)
 - [ ] CLI compatibility verification (deferred from v2.0)
 
@@ -67,7 +79,7 @@ Engineers can create, manage, and review FDS/SDS projects through a visual web i
 - Real-time collaborative editing — single-engineer workflow; review-phase handles collaboration
 - Full-auto mode (zero human input) — equipment specifics cannot be inferred
 - Database-backed state management — STATE.md is human-readable, git-trackable
-- Local LLM deployment — deferred to v3.0; architecture supports provider swap
+- ~~Local LLM deployment — deferred to v3.0~~ (now in scope for v3.0)
 - Inline Markdown editing in GUI — creates divergence from file-backed state; breaks CLI compatibility
 
 ## Context
@@ -113,5 +125,9 @@ Engineers can create, manage, and review FDS/SDS projects through a visual web i
 | Per-section truth filtering | Phase 12 passed phase-level truths to every section; Phase 16 added regex-based section matching | ✓ Good — clean UX, no false positives |
 | Defer VM deployment | Local development priority; deployment is separate concern | — Pending |
 
+| Flexible FDS structure over EM-first | v1.0 hardcodes EM decomposition from day one; real projects start at different abstraction levels | — Pending |
+| LLM provider abstraction in docs engine | Both provider flexibility and local deployment for IP-sensitive industrial content | — Pending |
+| Docs engine visibility layer | 194 Markdown files invisible to engineers; need control plane for inspection/management | — Pending |
+
 ---
-*Last updated: 2026-03-30 — v2.0 GUI milestone shipped*
+*Last updated: 2026-03-31 — v3.0 Docs Engine Rearchitecture milestone started*
